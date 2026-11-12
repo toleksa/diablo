@@ -25,7 +25,8 @@ hands the hero to a small internal AI and lets the run play itself: the bot
 duels whatever it can actually **see** (a foe behind a wall is ignored, not
 walked into), rounds corners instead of pressing into geometry, picks up and
 equips any drop better than what it wears, springs chests, drinks when low,
-heads for the boss and steps through the portal once it opens, and it spends
+heads for the gate, stirs the overlord waiting there and duels him before
+stepping through, and it spends
 level-up attribute points in its class' proportions — a spectator
 run you can follow from the title screen to its death screen.
 
@@ -58,17 +59,20 @@ explore room by room like in Diablo, no pulls from across the map. Every
 Hollows under cold blue light, Bone Flats in pale dust — and the stones,
 torch flames and the dark between them change with them. The **tenth
 level is no dungeon at all** but the arena of **the Demon's Roost**: one
-vast hall ringed by broken pillars, and the boss waiting in the middle of
-it is bred bigger than any other — wider shoulders, thicker hide, heavier
+vast hall ringed by broken pillars, and its overlord waiting by the gate
+is bred bigger than any other — wider shoulders, thicker hide, heavier
 hand. Kill the
-quota of monsters' worth of progress, find the **boss waiting in the
-deepest room**, slay him to unlock the **portal behind his throne** (it
-stays dim while he lives, blazing bright once he falls) and descend one
-level deeper. **Treasure chests** hide among the rooms — walk up to one
+quota of monsters' worth of progress, find the **portal** — and the level is
+not over the moment you set foot near it: no overlord is placed in the deepest
+room any more — he waits *at the gate itself* and steps out when you come
+within **half of what your hero can see** of it, then comes straight at you. The
+gate stays dim and shut under him, so a level cannot be run past — slay him
+and it blazes open and you descend one level deeper. **Treasure chests** hide among the rooms — walk up to one
 and it springs open: a **magic-or-better** item plus gold. Die → stats
 screen → try again. Foes give chase only up to a **leash** — far from
 their spot they stop, glance around, and walk back to sleep where they
-started. The leash even holds the **Goblin Warboss** to his throne room: he
+started. The leash even holds each level's **overlord to his post by the
+portal**: he
 never hunts the whole dungeon, he is slower than a running hero, and he
 shuffles back to his mark at half pace. Stand **idle for a quarter of a
 minute** and the hero starts shifting weight on his own - shoulder roll,

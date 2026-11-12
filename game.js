@@ -132,6 +132,7 @@ const game = {
   demo: false, // spectator demo mode (issue #35)
   paused: false, // P freezes the whole simulation (issue #44)
   victoryOpen: false, victoryShown: false, // the tenth level's victory window (issue #51)
+  bossSpot: null, bossPending: false, // the overlord waits by the portal (issue #57)
 };
 function resetGame() {
   mcp = 1;
@@ -143,6 +144,7 @@ function resetGame() {
     totalKills: 0,
     paused: false,
     victoryOpen: false, victoryShown: false,
+    bossSpot: null, bossPending: false,
   });
   game.monsters = []; game.projectiles = []; game.globes = [];
   game.goldpiles = []; game.drops = []; game.particles = [];
@@ -198,6 +200,10 @@ function generateLevel(checkpoint) {
   game.quota = 6 + checkpoint * 3;
   game.killedForQuota = 0;
   game.bossMode = false;
+  game.boss = null; // no overlord stands on a fresh level: he waits at the
+  // portal and is woken by your approach (issue #57)
+  game.bossSpot = null;
+  game.bossPending = false;
   _seed = checkpoint * 7717 + 991;
   game.walls = [];
   game.torches = [];
@@ -267,13 +273,16 @@ function generateLevel(checkpoint) {
     if (!grid[(ty - 1) * GCOLS + tx] && ((tx + ty) & 1) === 0 && G(tx * 13, ty * 17) < 0.55)
       game.torches.push({ x: tx * TS + TS / 2, y: ty * TS + 12, ph: G(tx, ty) * TAU });
   }
-  // start room, boss room (farthest), portal behind the boss
+  // start room, the portal's far end, and the ground where the overlord waits
+  // (issue #57: no boss is placed on the level - he steps out when you come
+  // within half of your sight of the portal, so the spot is held, not a body)
   if (arena) {
     const r0 = rooms[0];
     game.startPos = { x: (r0.x + r0.w / 2) * TS, y: (r0.y + r0.h - 2.5) * TS }; // the south gate
     game.portal = { x: (r0.x + r0.w / 2) * TS, y: (r0.y + 2) * TS, t: 0 };      // the north gate
     P.x = game.startPos.x; P.y = game.startPos.y;
-    spawnBoss((r0.x + r0.w / 2) * TS, (r0.y + r0.h / 2) * TS - 40, 1.55);
+    game.bossSpot = { x: (r0.x + r0.w / 2) * TS, y: (r0.y + 5) * TS, big: 1.55 };
+    game.bossPending = true;
   } else {
   const s0 = rooms[0];
   game.startPos = { x: (cx(s0) + 1) * TS, y: (cy(s0) + 1) * TS };
@@ -287,10 +296,13 @@ function generateLevel(checkpoint) {
   let ppx = bx + Math.cos(away) * 84, ppy = by + Math.sin(away) * 84;
   if (solidAt(ppx, ppy, 26)) { ppx = bx; ppy = by; }
   game.portal = { x: ppx, y: ppy, t: 0 };
+  // the overlord stands between his portal and the approach, ready to come at
+  // you the moment you are close enough to see the gate
   let bxs = bx - Math.cos(away) * 100, bys = by - Math.sin(away) * 100;
   if (solidAt(bxs, bys, 30)) { bxs = bx; bys = by; }
   P.x = game.startPos.x; P.y = game.startPos.y;
-  spawnBoss(bxs, bys);
+  game.bossSpot = { x: bxs, y: bys, big: 1 };
+  game.bossPending = true;
   }
   // treasure chests (issue #19): sparse — a guaranteed one, sometimes a second,
   // never in the start room, rolled to hold a magic item
@@ -450,6 +462,28 @@ function preplaceMonsters() {
     mm.act = false;
     placed++;
   }
+}
+
+// the overlord is not walking the halls: he waits unseen at his portal and
+// steps out when the hero gets within half of what he can see (issue #57),
+// then comes straight at you. Only then can the gate open.
+function wakeBoss() {
+  if (!game.bossPending || !game.bossSpot || !game.portal) return false;
+  const sight = Math.min(VW, VH) * 0.5; // half of the hero's sight
+  if (Math.hypot(P.x - game.portal.x, P.y - game.portal.y) > sight) return false;
+  if (P.dead) return false;
+  const s = game.bossSpot;
+  spawnBoss(s.x, s.y, s.big);
+  // he comes out ASLEEP, so the game's own awakening (the roar, the banner,
+  // the exclamation) plays on the next frame exactly as it does for a foe the
+  // hero has walked into sight
+  game.boss.act = false;
+  game.bossPending = false;
+  game.bossMode = true;
+  game.shake = 10; S.elite();
+  banner(game.boss.name, '#c84a3a');
+  toast('The overlord steps out of the portal dark - slay him to open the gate', '');
+  return true;
 }
 
 function spawnBoss(x, y, big) {
@@ -914,7 +948,11 @@ function update(dt) {
       }
     }
     // portal lies behind the boss room — usable only after the boss is slain
-    if (game.portal && (game.boss === null || game.boss.dead) &&
+    // the overlord waits at the gate (issue #57): walking within half of
+    // your sight of it stirs him up, and the gate stays shut until he is
+    // down, so you can never slip past a level's boss
+    wakeBoss();
+    if (game.portal && (game.boss === null || game.boss.dead) && !game.bossPending &&
         Math.hypot(P.x - game.portal.x, P.y - game.portal.y) < 26) {
       // the Roost's own portal is not a descent: stepping into it wins the run
       if (game.checkpoint === FINAL_LEVEL) showVictory();
@@ -926,7 +964,8 @@ function update(dt) {
   // --- monsters ---
   const near = game.monsters.filter(m => Math.hypot(m.x - P.x, m.y - P.y) < 320);
   if (!P.dead) {
-    if (near.length === 0 && game.time > 1.5 && game.boss && !game.boss.dead) {
+    if (near.length === 0 && game.time > 1.5 && (game.boss || game.bossPending) &&
+        (!game.boss || !game.boss.dead)) {
       game.spawnDelay -= dt;
       if (game.spawnDelay <= 0) {
         game.spawnDelay = 1.2;
@@ -938,8 +977,9 @@ function update(dt) {
         }
       }
     }
-    // boss pre-spawns at level start in the farthest room (generateLevel);
-    // the quota is progress flavour only now
+    // no overlord is placed at level start any more: he is woken by the
+    // approach to the portal (issue #57), and the quota is progress
+    // flavour only now
   }
   for (const m of game.monsters) {
     if (m.dead) continue;
@@ -2002,7 +2042,9 @@ function drawGroundFX() {
 
 // two visual states (issue #9): dim + dashed ring while the boss lives,
 // bright, fast-spinning + pulsing once the boss is slain
-function portalActive() { return game.boss === null || game.boss.dead; }
+// the gate only blazes once this level's overlord has been put down;
+// while one is still pending (issue #57) it stays dark no matter what
+function portalActive() { return !game.bossPending && (game.boss === null || game.boss.dead); }
 function drawPortalG(t) {
   if (!game.portal) return;
   const p = game.portal;
@@ -2627,7 +2669,8 @@ function hudUpdate() {
   // acts follow the themes: three levels to an act (issue #49)
   const band = Math.min(Math.floor((game.checkpoint - 1) / 3) + 1, ROMAN.length - 1);
   HUD.objTitle.textContent = 'Act ' + ROMAN[band] + ' — ' + game.th.name + ' · Level ' + game.checkpoint;
-  if (game.boss && !game.boss.dead) HUD.objText.textContent = 'Boss: ' + game.boss.name + ' — far in the dungeon';
+  if (game.bossPending) HUD.objText.textContent = 'The overlord waits at the portal — walk up to it';
+  else if (game.boss && !game.boss.dead) HUD.objText.textContent = 'Boss: ' + game.boss.name + ' — guarding the portal';
   else if (game.checkpoint >= FINAL_LEVEL) HUD.objText.textContent = 'Enter the portal — the Crucible is yours';
   else HUD.objText.textContent = 'Enter portal';
   HUD.goldText.textContent = String(P.gold);
@@ -2841,13 +2884,19 @@ function botTick(dt) {
       const d = Math.hypot(ch.x - P.x, ch.y - P.y);
       if (d < 760 && (bd2 > 520 || d < bd2) && losClear(P.x, P.y, ch.x, ch.y)) { bd2 = d; best = ch; }
     }
-    const bossDown = game.boss === null || game.boss.dead;
+    // an overlord that has not been woken yet is not down: the bot goes to
+    // the gate and stirs him there (issue #57)
+    const bossDown = !game.bossPending && (game.boss === null || game.boss.dead);
     if (game.portal && bossDown) {
       const d = Math.hypot(game.portal.x - P.x, game.portal.y - P.y);
       if (d < 1100) best = game.portal;
     } else if (game.boss && !game.boss.dead) {
       const d = Math.hypot(game.boss.x - P.x, game.boss.y - P.y);
       if (d < 950) { best = game.boss; bd2 = 0; }
+    } else if (game.bossPending && game.portal) {
+      // nothing to fight yet: make for the gate, he will come out
+      const d = Math.hypot(game.portal.x - P.x, game.portal.y - P.y);
+      if (d < 1300) { best = game.portal; bd2 = 0; }
     }
     if (best) { gx = best.x; gy = best.y; }
     else {
