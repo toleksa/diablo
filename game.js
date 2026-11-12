@@ -375,10 +375,14 @@ function spawnBoss(x, y) {
   const d = mtier(BOSS, game.checkpoint);
   const b = {
     kind:'boss', type:'boss', name: d.name, x, y, r:d.r,
-    hp:d.hp, hpMax:d.hp, dmg:d.dmg, speed:d.speed, xp:d.xp, color:d.color,
+    hp:d.hp, hpMax:d.hp, dmg:d.dmg,
+    // slower bosses (issue #46): a warboss never out-runs a running hero,
+    // however deep the dungeon has scaled him
+    speed: Math.min(d.speed, 152), xp:d.xp, color:d.color,
     touchCd:d.touchCd, cd:1, ai:'boss', range: d.r + P.r + 6, elite:false,
     angle:0, hitFlash:0, slow:0, wob:0, dashCd:2.5, summonCd:5, stun:0, kx:0, ky:0,
     act: false, aggro: 460, // waits in the boss room until the player steps near
+    homeX: x, homeY: y, leash: 0, leashT: 0, // his throne: bosses leash like any foe (issue #46)
   };
   game.boss = b; game.monsters.push(b);
   return b;
@@ -821,12 +825,15 @@ function update(dt) {
     }
     if (!P.dead) m.angle = Math.atan2(dy, dx);
 
-    // chase leash (issue #29): too far from where it stood, the enemy stops
-    // chasing — first it pauses to look around, and if the player is still
-    // out of sight it walks (never teleports) back home and sleeps there
-    if (m.kind !== 'boss') {
+    // chase leash (issue #29, and issue #46 which hands it to the bosses too):
+    // too far from where it stood, the enemy stops chasing - first it pauses to
+    // look around, and if the player is still out of sight it walks (never
+    // teleports) back home and sleeps there. A boss only guards his own room, so
+    // his leash is shorter and his trudge home slower still: run and lose him
+    {
+      const LR = m.kind === 'boss' ? 520 : 560;
       const hdx = m.x - m.homeX, hdy = m.y - m.homeY;
-      if (!m.leash && hdx * hdx + hdy * hdy > 560 * 560) m.leash = 1; // looking around
+      if (!m.leash && hdx * hdx + hdy * hdy > LR * LR) m.leash = 1; // looking around
       if (m.leash) {
         if (d < m.aggro) m.leash = 0; // player spotted again: resume the chase
         else if (m.leash === 1) {
@@ -842,7 +849,7 @@ function update(dt) {
             m.act = false; // asleep again on its mark
             continue;
           }
-          const sp = m.speed * 0.8;
+          const sp = m.speed * (m.kind === 'boss' ? 0.55 : 0.8);
           const nx = m.x + hx / hd * sp * dt, ny = m.y + hy / hd * sp * dt;
           if (passableAt(nx, m.y)) m.x = nx;
           if (passableAt(m.x, ny)) m.y = ny;
