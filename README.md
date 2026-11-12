@@ -128,6 +128,13 @@ hero and lets the Roost be run again, as many times deep as you care to go.
   fan). **Mage** — **Frost Lance** (1.9x, chilled) and **Chain Bolt** (lightning
   through the four nearest foes you can see). The skillbar shows which pair you
   carry, and its tooltip spells out the Mana, the cooldown and the weapon it wants.
+- **Starting kit**: every run begins with the class' own tool already **in hand**,
+  equipped from the first frame — a **Barbarian** carries an **Axe**, a **Warrior**
+  a **Sword**, a **Rogue** a **Bow** and a **Mage** a **Staff**. It is a plain tool:
+  the kind's own damage at its lowest end, one flat line, no scaling bonus and no
+  affix behind it, so a fresh run starts able to fight without starting holding a
+  lucky draw. A saved journey keeps whatever it was carrying, and a hand that
+  saved empty is refilled with that same plain tool rather than started bare.
 - **Attributes**: Strength, Dexterity, Intelligence, Vitality — +3 points per
   level, spent from the character sheet: press anywhere on a stat's row and the
   plus spends one free point. Main attribute scales your weapon's

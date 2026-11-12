@@ -165,7 +165,9 @@ function resetPlayer(cls) {
     level: 1, gold: 0, atkT: 0, dead: false, leap: null,
     idleT: 0, idleP: 0,
     cd: { potion: 0, sk2: 0, sk3: 0 },
-    eq: { weapon: null, helm: null, armor: null },
+    // a class always starts with its own tool already equipped (issue #65),
+    // so the first swing of a fresh run is a swing with something
+    eq: { weapon: startWeapon(cls), helm: null, armor: null },
   });
 }
 
@@ -615,6 +617,21 @@ const WTYPE = [
   { k:'bow',   name:'Bow',   dmg:[5, 9],  attr:'dex', melee: false },
   { k:'staff', name:'Staff', dmg:[6, 11], attr:'int', melee: false },
 ];
+// ---------- the kit a class starts the run with (issue #65) ----------
+// the hand each class fights with, in the same keys the class buttons use
+const START_WKIND = { barbar: 'axe', war: 'sword', rog: 'bow', mage: 'staff' };
+// a plain tool, not a roll: the kind's own damage at its LOW end, one flat
+// stat, no scaling bonus and no affix behind it. The run has to start able
+// to fight, and it must not start holding a lucky draw (issue #65)
+function startWeapon(cls) {
+  const k = START_WKIND[(cls && CLASSES[cls]) ? cls : 'barbar'];
+  const wt = WTYPE.filter((w) => w.k === k)[0];
+  const v = wt.dmg[0];
+  const stats = [{ k: 'dmg', v, txt: 'Damage: +' + v }];
+  return { slot: 'weapon', name: wt.name, rarity: 'common', wk: wt.k, cp: 1,
+    stats, score: v * 2.2 }; // 2.2 is the weight rollItem lends a flat damage line
+}
+
 const BASES = {
   weapon: null, // a weapon is rolled from WTYPE, not from here
   helm:   { name:'Helm',  hp:[14,22] },
@@ -3038,6 +3055,9 @@ function beginRun(cls) {
   generateLevel(1);
   preplaceMonsters();
   cam.x = P.x - VW / 2; cam.y = P.y - VH / 2;
+  // the run should say what it starts holding, not leave the player to find
+  // the equipment panel by accident (issue #65)
+  toast('In hand: a plain ' + P.eq.weapon.name + ' - nothing on it but its own weight', '');
   // the run should say what the class brought, not leave the player to find
   // the skillbar by accident (issue #63)
   toast('Skills: ' + skillOf(2).name + ' (2) and ' + skillOf(3).name + ' (3)', '');
@@ -3057,7 +3077,9 @@ function beginContinue() {
   P.statPoints = d.statPoints;
   P.attr = { str: d.attr.str, dex: d.attr.dex, int: d.attr.int, vit: d.attr.vit };
   P.inv = Array.isArray(d.inv) ? d.inv : [];
-  if (d.eq) for (const s of SLOTS) P.eq[s] = d.eq[s] || null;
+  // a saved journey keeps whatever it was carrying, and an empty slot keeps
+  // what resetPlayer just handed the class, rather than blanking it (issue #65)
+  if (d.eq) for (const sl of SLOTS) if (d.eq[sl]) P.eq[sl] = d.eq[sl];
   refreshHpMax(); P.hp = P.hpMax; P.mana = mpMax();
   generateLevel(game.checkpoint);
   preplaceMonsters();
