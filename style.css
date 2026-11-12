@@ -273,8 +273,12 @@ body {
   box-shadow: 0 0 16px rgba(0, 0, 0, 0.55), 0 0 26px rgba(120, 90, 200, 0.16);
 }
 
-/* class picker on the start screen (issue #22) */
+/* class picker on the start screen (issue #22); every button is forced to the
+   same box (issue #54): flex grows all four from one basis, so a long label
+   like "Barbarian" no longer stretches its own button */
 #classRow { display: flex; gap: 10px; justify-content: center; margin: 14px 0 0; }
 #classRow button {
-  display: inline-block; padding: 8px 16px; font-size: 14px; letter-spacing: 1px;
+  flex: 1 1 120px; /* one basis for all four, so all four stay the same box */
+  display: inline-block; padding: 8px 10px; font-size: 14px; letter-spacing: 1px;
+  margin: 0; text-align: center; white-space: nowrap;
 }
