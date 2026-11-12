@@ -240,7 +240,7 @@ body {
 
 /* area map panel (M) */
 #miniMap {
-  position: absolute; top: 92px; left: 14px; z-index: 28;
+  position: absolute; top: 14px; right: 14px; z-index: 28;
   border: 2px solid #96702c;
   box-shadow: 0 0 16px rgba(0, 0, 0, 0.55), 0 0 26px rgba(120, 90, 200, 0.16);
 }
