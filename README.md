@@ -49,6 +49,11 @@ your last journey instead of starting over.
 
 ## Systems
 
+- **Classes** (chosen at the start screen): **Barbarian** (strong, hardy,
+  poor intellect), **Warrior** (hardiest, strong, poor intellect),
+  **Rogue** (quick, clever, frail) and **Mage** (mighty-minded, nimble,
+  fragile) — each starts with a different attribute spread and kit colours,
+  and the class is shown on the character sheet and saved with your journey.
 - **Attributes**: Strength, Dexterity, Intelligence, Vitality — +3 points per
   level, spent from the character sheet. Main attribute scales your weapon's
   damage (each weapon rolls one of str/dex/int), dexterity feeds crits,

@@ -84,6 +84,14 @@ const WORLD = { w: 2816, h: 2112 };
 const TS = 64, GCOLS = WORLD.w / TS, GROWS = WORLD.h / TS; // 44 x 33 tiles
 const WALL_H = 26;
 
+// ---------- Player classes (issue #22) ----------
+const CLASSES = {
+  barbar: { name:'Barbarian', attr:{ str:14, dex:9,  int:6,  vit:11 }, arm:'#3e4a5c', paul:'#7e8ea4', trim:'#c8a45a', crest:'#a03a3a' },
+  war:    { name:'Warrior',   attr:{ str:11, dex:9,  int:6,  vit:14 }, arm:'#59413a', paul:'#8a6a5a', trim:'#b08548', crest:'#d8d0c0' },
+  rog:    { name:'Rogue',     attr:{ str:6,  dex:14, int:11, vit:9  }, arm:'#2e4636', paul:'#5f7a63', trim:'#9a8a55', crest:'#3f6a4a' },
+  mage:   { name:'Mage',      attr:{ str:9,  dex:11, int:14, vit:6  }, arm:'#46346e', paul:'#8a7ab8', trim:'#c9a6e8', crest:'#d8c8f0' },
+};
+
 // ---------- Player ----------
 // P is the LIVE player object — dynamic fields reset by resetPlayer() on (re)start.
 const P = {
@@ -129,12 +137,14 @@ function resetGame() {
   game.texts = []; game.rings = [];
   game.decals = [];
 }
-function resetPlayer() {
+function resetPlayer(cls) {
+  const c = CLASSES[cls || 'barbar'];
   Object.assign(P, {
     x: WORLD.w / 2, y: WORLD.h - 200, aim: -Math.PI / 2, walkPhase: 0,
     hurtT: -1, hurtFlash: 0,
     hp: P.baseHp, hpMax: P.baseHp, mana: 0,
-    attr: { str: 8, dex: 8, int: 8, vit: 10 }, statPoints: 0, inv: [],
+    cls: (cls && CLASSES[cls]) ? cls : 'barbar',
+    attr: { str: c.attr.str, dex: c.attr.dex, int: c.attr.int, vit: c.attr.vit }, statPoints: 0, inv: [],
     xp: 0, xpNeed: 60,
     level: 1, gold: 0, atkT: 0, dead: false, leap: null,
     cd: { potion: 0, whirl: 0, leap: 0 },
@@ -978,7 +988,7 @@ const SAVEKEY = 'infernalCrucible_journey_v1';
 function saveSnapshot() {
   try {
     const data = {
-      v: 1, ts: Date.now(),
+      v: 1, ts: Date.now(), cls: P.cls,
       checkpoint: game.checkpoint,
       level: P.level, xp: P.xp, xpNeed: P.xpNeed, gold: P.gold,
       statPoints: P.statPoints,
@@ -1350,6 +1360,7 @@ function drawPlayer() {
   const bob = Math.sin(P.walkPhase) * (Math.abs(Math.cos(P.walkPhase)) > 0.2 ? 2 : 1);
   const r = P.r;
   const faceX = (P.faceX || 1);
+  const cl = CLASSES[P.cls || 'barbar']; // class colors (issue #22)
   // sword + slash
   if (P.atkT > P.atkCd - 0.3) {
     const pr = Math.max(0, Math.min(1, (P.atkCd - P.atkT) / 0.3));
@@ -1385,26 +1396,26 @@ function drawPlayer() {
   ctx.fillStyle = '#1f242e';
   ctx.beginPath(); ctx.arc(f1x, f1y + 1, r * 0.15, 0, TAU); ctx.arc(f2x, f2y + 1, r * 0.15, 0, TAU); ctx.fill();
   // tassets/skirt over the hips
-  ctx.fillStyle = '#353f50';
+  ctx.fillStyle = cl.arm;
   ctx.beginPath();
   ctx.moveTo(x - r * 0.42, hipY - 2); ctx.lineTo(x + r * 0.42, hipY - 2);
   ctx.lineTo(x + r * 0.34, hipY + r * 0.3); ctx.lineTo(x - r * 0.34, hipY + r * 0.3);
   ctx.closePath(); ctx.fill();
   // armored cuirass (trapezoid torso)
   ctx.lineJoin = 'round';
-  ctx.fillStyle = '#3e4a5c';
+  ctx.fillStyle = cl.arm;
   ctx.beginPath();
   ctx.moveTo(x - r * 0.44, shY); ctx.lineTo(x + r * 0.44, shY);
   ctx.lineTo(x + r * 0.36, hipY + 1); ctx.lineTo(x - r * 0.36, hipY + 1);
   ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = '#3e4a5c'; ctx.lineWidth = 3; ctx.stroke(); // round the corners
+  ctx.strokeStyle = cl.arm; ctx.lineWidth = 3; ctx.stroke(); // round the corners
   // gold central ridge + belt
-  ctx.strokeStyle = '#c8a45a'; ctx.lineWidth = 1.5;
+  ctx.strokeStyle = cl.trim; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.moveTo(x, shY + 1.5); ctx.lineTo(x, hipY); ctx.stroke();
   ctx.strokeStyle = '#8a6a34'; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(x - r * 0.38, hipY - 1); ctx.lineTo(x + r * 0.38, hipY - 1); ctx.stroke();
   // pauldrons
-  ctx.fillStyle = '#7e8ea4';
+  ctx.fillStyle = cl.paul;
   ctx.beginPath(); ctx.arc(x - r * 0.44, shY + 1, r * 0.21, 0, TAU); ctx.arc(x + r * 0.44, shY + 1, r * 0.21, 0, TAU); ctx.fill();
   // arms: right holds the sword (swings with the slash), left counter-swings
   const armS = moving ? Math.sin(w) : 0;
@@ -1412,7 +1423,7 @@ function drawPlayer() {
   const hRy = shY + r * 0.42 - (P.atkT > P.atkCd - 0.3 ? 2 : Math.abs(armS) * 1.2);
   const hLx = x - r * 0.52 + armS * faceX * r * 0.3;
   const hLy = shY + r * 0.44;
-  ctx.strokeStyle = '#46536a'; ctx.lineWidth = r * 0.19;
+  ctx.strokeStyle = cl.paul; ctx.lineWidth = r * 0.19;
   ctx.beginPath();
   ctx.moveTo(x + r * 0.4, shY + 2); ctx.lineTo(hRx, hRy);
   ctx.moveTo(x - r * 0.4, shY + 2); ctx.lineTo(hLx, hLy);
@@ -1426,7 +1437,7 @@ function drawPlayer() {
     ctx.moveTo(hRx, hRy);
     ctx.lineTo(hRx + Math.cos(P.aim) * r * 0.85, hRy + Math.sin(P.aim) * r * 0.85);
     ctx.stroke();
-    ctx.strokeStyle = '#c8a45a'; ctx.lineWidth = 2.4;
+    ctx.strokeStyle = cl.trim; ctx.lineWidth = 2.4;
     ctx.beginPath();
     ctx.moveTo(hRx - Math.cos(P.aim + Math.PI / 2) * 3, hRy - Math.sin(P.aim + Math.PI / 2) * 3);
     ctx.lineTo(hRx + Math.cos(P.aim + Math.PI / 2) * 3, hRy + Math.sin(P.aim + Math.PI / 2) * 3);
@@ -1435,12 +1446,12 @@ function drawPlayer() {
   // head + helmet
   ctx.fillStyle = '#b8a27c';
   ctx.beginPath(); ctx.arc(x, y - r * 1.15 + bob * 0.6, r * 0.36, 0, TAU); ctx.fill();
-  ctx.fillStyle = '#7e8ea4';
+  ctx.fillStyle = cl.paul;
   ctx.beginPath(); ctx.arc(x, y - r * 1.15 + bob * 0.6, r * 0.4, Math.PI * 1.02, Math.PI * 1.98); ctx.fill();
   ctx.fillStyle = '#5c6a7e';
   ctx.beginPath(); ctx.arc(x, y - r * 1.15 + bob * 0.6, r * 0.4, Math.PI * 0.05, Math.PI * 0.45); ctx.fill(); // visor brim
   // helmet crest
-  ctx.strokeStyle = '#a03a3a'; ctx.lineWidth = 2;
+  ctx.strokeStyle = cl.crest; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(x, y - r * 1.55 + bob * 0.6); ctx.lineTo(x - faceX * 3, y - r * 1.75 + bob * 0.6); ctx.stroke();
   // hurt flash
   if (P.hurtFlash > 0) {
@@ -1697,21 +1708,22 @@ cv.addEventListener('contextmenu', (e) => {
 });
 
 // ---------- run lifecycle ----------
-function beginRun() {
+function beginRun(cls) {
   clearSnapshot(); // a brand-new game discards the previous journey
-  resetGame(); resetPlayer();
+  resetGame(); resetPlayer(cls);
   generateLevel(1);
   preplaceMonsters();
   cam.x = P.x - VW / 2; cam.y = P.y - VH / 2;
   toast('Checkpoint 1 — Old Ruins', '');
-  toast('C — character and equipment · walk over items to pick them up', '');
+  toast('Class: ' + CLASSES[P.cls].name + ' · C — character and equipment', '');
 }
 
 // continue the journey saved at the last portal (issue #10)
 function beginContinue() {
   const d = loadSnapshot();
   if (!d) { beginRun(); return; }
-  resetGame(); resetPlayer();
+  resetGame(); resetPlayer(d.cls);
+  P.cls = (d.cls && CLASSES[d.cls]) ? d.cls : 'barbar';
   game.checkpoint = d.checkpoint;
   game.totalKills = d.totalKills || 0;
   P.level = d.level; P.xp = d.xp; P.xpNeed = d.xpNeed; P.gold = d.gold;
@@ -1737,6 +1749,15 @@ contBtn.addEventListener('click', () => {
   document.getElementById('startScreen').classList.add('hidden');
   beginContinue();
 });
+// choose your class at the start (issue #22): each class button begins that run
+for (const ck in CLASSES) {
+  const cb = document.getElementById('cls-' + ck);
+  if (cb && cb.addEventListener)
+    cb.addEventListener('click', () => {
+      document.getElementById('startScreen').classList.add('hidden');
+      beginRun(ck);
+    });
+}
 document.getElementById('restartBtn').addEventListener('click', () => {
   document.getElementById('deathScreen').classList.add('hidden');
   beginContinue(); // retry at the last saved portal; fresh start when there is no save
@@ -1921,7 +1942,7 @@ function renderChar() {
   if (!charEl || !charOpen) return;
   const dmg = Math.round(playerDmg());
   const crit = Math.round(critChance() * 100);
-  let h = '<div class="csTitle">Barbar — Level ' + P.level + ' <span class="csGold">◈ ' + P.gold + '</span></div>';
+  let h = '<div class="csTitle">' + CLASSES[P.cls || 'barbar'].name + ' — Level ' + P.level + ' <span class="csGold">◈ ' + P.gold + '</span></div>';
   const manaNow = Math.round(clamp(P.mana, 0, mpMax()));
   h += '<div class="csVitals"><span class="csHp">' + Math.ceil(Math.max(0, P.hp)) + '/' + P.hpMax + '</span> · ' +
        '<span class="csMp">' + manaNow + '/' + mpMax() + '</span> · dmg ' + dmg + '±15% · crit ' + crit + '% · exp ' +
