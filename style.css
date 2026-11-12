@@ -212,7 +212,7 @@ body {
 .csHp { color: #e08a7a; } .csMp { color: #7ab0e8; }
 .csSub { color: var(--gold); text-transform: uppercase; letter-spacing: 1px; padding: 6px 12px 1px; border-top: 1px solid var(--edge); }
 .csPts { color: #ffd76a; }
-.csAttrRow { display: flex; justify-content: space-between; padding: 2px 12px; }
+.csAttrRow { display: flex; justify-content: space-between; padding: 2px 12px; cursor: pointer; }
 .csPlus { color: #ffd76a; cursor: pointer; padding: 4px 10px; font-size: 15px; }
 .csPlus:hover { color: #fff; }
 .csGearRow { padding: 2px 12px; }

@@ -1755,6 +1755,9 @@ for (const sc of [
     sc[0].addEventListener('click', (e) => { if (e.button === 0 && game.running) sc[1](); });
 }
 
+// sheet re-render ticker: the vitals panel is refreshed a few times a second
+// instead of every frame, so pressing a row never races a DOM swap (issue #37)
+let sheetLive = 0;
 function hudUpdate() {
   const rn = ROMAN[Math.min(ROMAN.length - 1, game.checkpoint)];
   HUD.objTitle.textContent = 'Act ' + rn + ' — Old Ruins';
@@ -1784,7 +1787,10 @@ function hudUpdate() {
     r[0].classList.toggle('noFury', !r[2]);
   }
   if (mapOpen) drawMapUI();
-  if (charOpen) renderChar(); // keep vitals (mana/hp/crit) live, like the orbs (issue #20)
+  sheetLive = (sheetLive + 1) % 5;
+  if (charOpen && sheetLive === 0) renderChar(); // vitals stay live, but the
+    // sheet DOM is only swapped ~5x a second now: per-frame churn made the row
+    // we pressed vanish mid-press, so stat clicks did nothing (issue #37)
 }
 // ---------- input ----------
 window.addEventListener('keydown', (e) => {
@@ -2001,10 +2007,13 @@ const ATTRS4 = [['str', 'Strength'], ['dex', 'Dexterity'], ['int', 'Intelligence
 const SLOTPL = { weapon: 'Weapon', helm: 'Helmet', armor: 'Armor' };
 let charOpen = false;
 const charEl = document.getElementById('charSheet');
+// act on mousedown, not click: the sheet re-renders often, so by the time a
+// click event fires the row we pressed may already have been replaced by a
+// fresh render, and the click then lands on a detached node (issue #37)
 if (charEl && charEl.addEventListener) {
-  charEl.addEventListener('click', (e) => {
-    // the click target is often an inner <span> (item name / stat text), so
-    // walk up to the row element that actually carries data-attr / data-inv
+  charEl.addEventListener('mousedown', (e) => {
+    // the pressed node is often an inner <span> (stat text / item name), so
+    // walk up to the row element that carries data-attr / data-inv / data-discard
     let t = e.target;
     while (t && t !== charEl) {
       const ds = t.dataset;
@@ -2189,8 +2198,9 @@ function renderChar() {
   h += '<div class="csSub">Attributes — free: <span class="csPts">' + P.statPoints + '</span></div>';
   for (const row of ATTRS4) {
     const base = P.attr[row[0]], cur = curAttr(row[0]);
-    h += '<div class="csAttrRow"><span>' + row[1] + ' <b>' + base + (cur !== base ? ' (' + cur + ')' : '') + '</b></span>' +
-         (P.statPoints > 0 ? '<span class="csPlus" data-attr="' + row[0] + '">+</span>' : '') + '</div>';
+    h += '<div class="csAttrRow" data-attr="' + row[0] + '"><span>' + row[1] + ' <b>' + base +
+      (cur !== base ? ' (' + cur + ')' : '') + '</b></span>' +
+      (P.statPoints > 0 ? '<span class="csPlus">+</span>' : '') + '</div>';
   }
   h += '<div class="csSub">Equipment</div>';
   for (const s of SLOTS) h += '<div class="csGearRow">' + SLOTPL[s] + ': ' + statLine(P.eq[s]) + '</div>';

@@ -63,7 +63,8 @@ your last journey instead of starting over.
   fragile) — each starts with a different attribute spread and kit colours,
   and the class is shown on the character sheet and saved with your journey.
 - **Attributes**: Strength, Dexterity, Intelligence, Vitality — +3 points per
-  level, spent from the character sheet. Main attribute scales your weapon's
+  level, spent from the character sheet: press anywhere on a stat's row and the
+  plus spends one free point. Main attribute scales your weapon's
   damage (each weapon rolls one of str/dex/int), dexterity feeds crits,
   intelligence feeds max Mana, vitality feeds HP and very slow natural HP
   regen from level 5.
