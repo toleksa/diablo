@@ -378,6 +378,7 @@ const BASES = {
   armor:  { name:'Zbroja', hp:[24,36] },
 };
 const AFFIX = ['Might','Storm','Dragon','Shadow','Angel','Demon','Tempest','Wolf','Bone Claw','Blazing Fury'];
+const BONUSK = ['dmg', 'hp', 'mp', 'crit', 'spd']; // damage/life/mana/crit/move-speed
 
 function rollItem(cp, forceGood) {
   let total = RARITY.reduce((s,r)=>s+r.w,0);
@@ -401,24 +402,37 @@ function rollItem(cp, forceGood) {
   }
   const names = [];
   for (let i=0;i<rar.afx;i++){
-    // a bonus kind (dmg/hp) may appear on an item at most once
-    const pool = ['dmg', 'hp'].filter(k => !stats.some(st => st.k === k));
+    // a bonus kind (dmg/hp) may appear on an item at most once; affixes can
+    // also roll mana, critical chance and movement speed (issue #8)
+    const pool = BONUSK.filter(k => !stats.some(st => st.k === k));
     if (!pool.length) break;
     const a = pick(AFFIX);
-    if (pick(pool) === 'dmg') {
+    const kind = pick(pool);
+    if (kind === 'dmg') {
       const v = randInt(1, 3) * (1 + Math.floor(cp / 3));
       stats.push({k:'dmg', v, txt:'Damage: +'+v});
-    } else {
+    } else if (kind === 'hp') {
       const v = randInt(3, 8) * (1 + Math.floor(cp / 2));
       stats.push({k:'hp', v, txt:'Life: +'+v});
+    } else if (kind === 'mp') {
+      const v = randInt(5, 14) * (1 + Math.floor(cp / 3));
+      stats.push({k:'mp', v, txt:'Mana: +'+v});
+    } else if (kind === 'crit') {
+      const v = randInt(2, 5) + Math.floor(cp / 5);
+      stats.push({k:'crit', v, txt:'Critical Chance: +'+v+'%'});
+    } else {
+      const v = randInt(4, 12) + Math.floor(cp / 4);
+      stats.push({k:'spd', v, txt:'Movement Speed: +'+v+'%'});
     }
     names.push(a);
   }
   const nm = (rar.name ? rar.name+' ' : '') + b.name + (names.length ? ' '+names.join(' i ') : '');
   // score counts the scaling bonus at an assumed average attribute (~11):
   // bonus dmg ≈ pct × 11 / 100
+  // score weights each bonus kind; scaling bonus valued at an assumed attribute (~11)
+  const W8 = { dmg: 2.2, hp: 1, mp: 0.45, crit: 2.4, spd: 1.4 };
   const score = stats.reduce((s, st) =>
-    s + (st.k === 'dmg' ? (st.v + (st.pct || 0) * 0.11) * 2.2 : st.v), 0);
+    s + (st.k === 'dmg' ? (st.v + (st.pct || 0) * 0.11) : st.v) * (W8[st.k] || 1), 0);
   return { slot, name:nm, rarity:rar.id, stats, score, cp };
 }
 
@@ -443,8 +457,16 @@ function playerDmg() {
   }
   return d;
 }
-function mpMax() { return 100 + (P.attr.int - 8) * 4; }
-function critChance() { return 0.05 + (P.attr.dex - 8) * 0.006; }
+// equipment bonus sums for item affix kinds (issue #8: mana/crit/speed exist)
+function equipBonus(k) {
+  let b = 0;
+  for (const s of SLOTS) { const e = P.eq[s]; if (e) for (const st of e.stats) if (st.k === k) b += st.v; }
+  return b;
+}
+function mpMax() { return 100 + (P.attr.int - 8) * 4 + equipBonus('mp'); }
+function critChance() { return 0.05 + (P.attr.dex - 8) * 0.006 + equipBonus('crit') / 100; }
+// movement speed: base × (1 + rolled % bonus from items)
+function moveSpd() { return P.speed * (1 + equipBonus('spd') / 100); }
 function playerHpMax() {
   let h = P.baseHp + (P.level-1)*14 + (P.attr.vit - 10) * 6;
   for (const s of SLOTS) { const e = P.eq[s]; if (e) for (const st of e.stats) if (st.k==='hp') h += st.v; }
@@ -559,7 +581,7 @@ function update(dt) {
       if (K.w) my -= 1; if (K.s) my += 1; if (K.a) mx -= 1; if (K.d) mx += 1;
       if (mx || my) {
         const l = Math.hypot(mx, my);
-        moveWithCollide(P, mx / l * P.speed * dt, my / l * P.speed * dt);
+        moveWithCollide(P, mx / l * moveSpd() * dt, my / l * moveSpd() * dt);
         P.aim = Math.atan2(my, mx);
         game.moveTarget = null;
       } else if (game.moveTarget) {
@@ -567,7 +589,7 @@ function update(dt) {
         const d = Math.hypot(dx, dy);
         if (d < 8) game.moveTarget = null;
         else {
-          moveWithCollide(P, dx / d * P.speed * dt, dy / d * P.speed * dt);
+          moveWithCollide(P, dx / d * moveSpd() * dt, dy / d * moveSpd() * dt);
           P.aim = Math.atan2(dy, dx);
         }
       }
