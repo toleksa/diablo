@@ -42,7 +42,7 @@ run you can follow from the title screen to its death screen.
 | **C** | character sheet: attributes, equipment, inventory |
 | **M** | area map — fog of war: only parts the player has walked through are revealed (boss/portal/start markers appear once discovered) |
 | **P** | pause: the frame goes dark, nothing regenerates and no enemy stirs, until you press P again |
-| **T** | trade with the wandering merchant when you stand near him: the world stops and a two-tab stall opens (Sell / Buy) |
+| **T** | trade with the wandering merchant when you stand near him: the world stops and a two-tab stall opens (Sell / Buy) — the **X** in the stall's top right corner closes it too |
 
 Clicking an **icon of a skill with the left mouse button** casts it directly —
 potion, Whirlwind, Leap or the attack of whatever you are holding — handy when you
@@ -115,12 +115,16 @@ hero and lets the Roost be run again, as many times deep as you care to go.
   the item waits on the floor and you are told so,
   but you keep control too: each sheet row has a **discard ✕** (destroys the
   item), and every level hides a **wandering merchant** — stand near him and
-  press T and the world stops at his trade post: a panel with two tabs. **Sell**
+  press T and the world stops at his trade post: a **heading across the top of the
+  screen** names it a **Trading menu** and says what it does and what you carry
+  (your gold, your backpack, how many goods he has left), and the **stall itself
+  opens centred on the screen** below it, with two tabs. **Sell**
   lists your backpack and one click hands that item to him for gold (it lands on
   his shelf, so you can buy it back, pricier); **Buy** lists the pack he rolled
   when this level was generated - goods made by the same roll as any monster drop,
   so strong affixes stay rare. Every trader is a different man with a different
-  pack, and moving to the next level discards the old one. T again closes the stall.
+  pack, and moving to the next level discards the old one. Two ways out: press T
+  again, or hit the **X** pinned to the top right corner of the window.
 - **Globes**: slain enemies drop blue Mana globes and, with a 30% chance,
   a **red heal orb** that restores 30% of your life. XP is **not** a pickup
   — it lands on your player card the instant a kill lands, so nothing is

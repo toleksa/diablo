@@ -263,13 +263,36 @@ body {
 }
 #devMenu button:hover { background: #2a2140; box-shadow: 0 0 14px rgba(140,110,220,.35); }
 
-/* the trade post panel (T, near a merchant) */
-#tradeMenu {
-  position: absolute; right: 22px; bottom: 132px; width: 320px;
-  background: var(--panel); border: 1px solid var(--edge); border-radius: 4px;
-  z-index: 42; overflow: hidden; font-size: 13px;
+/* the trade post (T, near a merchant); issue #56 re-hung it: the heading that
+   names the menu sits in the upper part of the screen, the stall itself is
+   centred under it, and the X in its top right corner is its own way out */
+#tradeHeader {
+  position: absolute; top: 54px; left: 50%; transform: translateX(-50%);
+  width: min(580px, 64vw); z-index: 24; pointer-events: none; text-align: center;
+  background: linear-gradient(#1b1410, #0c0906); border: 1px solid var(--edge);
+  border-radius: 4px; padding: 9px 18px 8px;
+  box-shadow: 0 0 26px rgba(0, 0, 0, .8), inset 0 0 20px rgba(0, 0, 0, .6);
 }
-.trTitle { color: var(--gold); font-size: 15px; padding: 8px 12px 2px; }
+.trHdrTitle { color: var(--gold); font-size: 17px; letter-spacing: 2px; }
+.trHdrText { color: #c0b49c; font-size: 12.5px; margin-top: 5px; line-height: 1.5; }
+.trHdrStats { color: var(--gold); font-size: 12px; margin-top: 6px; }
+
+#tradeMenu {
+  position: absolute; left: 50%; top: 52%; transform: translate(-50%, -50%);
+  width: min(470px, 64vw); max-height: 62vh;
+  background: var(--panel); border: 2px solid var(--edge); border-radius: 4px;
+  z-index: 42; overflow: hidden; font-size: 13px;
+  box-shadow: 0 0 34px rgba(0, 0, 0, .85), inset 0 0 26px rgba(0, 0, 0, .6);
+}
+.trTitle { color: var(--gold); font-size: 15px; padding: 9px 34px 3px 12px; }
+/* the stall's X, pinned to the window's top right corner above its gutter */
+.trClose {
+  position: absolute; top: 7px; right: 9px; z-index: 2;
+  padding: 2px 8px; font-size: 13px; line-height: 1.2; color: #d6c8ae; cursor: pointer;
+  background: rgba(46, 34, 22, .92); border: 1px solid #8a6a34; border-radius: 3px;
+  font-family: inherit;
+}
+.trClose:hover { color: #ff9a72; border-color: #c07a4a; box-shadow: 0 0 12px rgba(220, 110, 60, .4); }
 .trTabs { padding: 6px 10px 2px; }
 .trTabs button {
   display: inline-block; padding: 3px 11px; font-size: 12px; letter-spacing: 1px;

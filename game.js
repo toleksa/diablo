@@ -2556,7 +2556,7 @@ function pauseVeil() {
   ctx.fillText(word, VW / 2, VH / 2);
   ctx.font = '12px Georgia';
   ctx.fillStyle = '#b2a278';
-  ctx.fillText(tradeOpen ? 'the world holds still · click a tab, T closes the stall'
+  ctx.fillText(tradeOpen ? 'the world holds still · click a tab, close with T or the X on the stall'
     : 'the world holds still · press P to resume', VW / 2, VH / 2 + 26);
   ctx.textAlign = 'left';
 }
@@ -3149,6 +3149,12 @@ const tradeEl = document.createElement('div');
 tradeEl.id = 'tradeMenu';
 tradeEl.classList.add('hidden');
 document.getElementById('game').appendChild(tradeEl);
+// the heading that names the stall, pinned to the upper part of the screen
+// while the stall itself sits centred below it (issue #56)
+const tradeHdr = document.createElement('div');
+tradeHdr.id = 'tradeHeader';
+tradeHdr.classList.add('hidden');
+document.getElementById('game').appendChild(tradeHdr);
 let tradeOpen = false, tradeTab = 'sell', tradeFreeze = false;
 const GEM = '\u25c8'; // the little coin mark the panels print gold with
 const MERCHANTS = ['Bonrik the Hooded', 'Old Harker', 'Cask & Coin', 'Fenrik Halfpouch',
@@ -3180,20 +3186,45 @@ function toggleTrade() {
   // with P - then their pause stands and we do not steal it back
   if (!game.paused) { game.paused = true; tradeFreeze = true; }
   if (tradeEl) tradeEl.classList.remove('hidden');
+  if (tradeHdr) tradeHdr.classList.remove('hidden');
   renderTrade();
-  toast('Trade post - click a tab, press T to close', '');
+  toast('Trade post - click a tab, close with T or the X on the stall', '');
   S.gold();
+}
+// the X drawn in the top corner of the stall: the same way out as pressing T
+function tradeWindowClose() {
+  if (!tradeOpen) return false;
+  closeTrade();
+  return true;
 }
 function closeTrade() {
   tradeOpen = false;
   if (tradeEl) tradeEl.classList.add('hidden');
+  if (tradeHdr) tradeHdr.classList.add('hidden');
   if (tradeFreeze) { game.paused = false; tradeFreeze = false; }
   toast('Trade closed', '');
+}
+// the heading over the stall: it names the trade post, says what it does and
+// counts where you stand, so the words sit above the window instead of buried
+// inside it (issue #56)
+function renderTradeHeader() {
+  if (!tradeHdr || !tradeOpen || !game.merchant) return;
+  const m = game.merchant;
+  tradeHdr.innerHTML =
+    '<div class="trHdrTitle">Trading menu</div>' +
+    '<div class="trHdrText">You are at the post of <b>' + m.name + '</b> and the world holds still while you browse. ' +
+    'Click <b>Sell</b> to put a backpack item on his shelf for gold, or <b>Buy</b> to take one off it and pay. ' +
+    'Switch with the two tabs; close with <b>T</b> or the <b>X</b> at the top corner of the stall.</div>' +
+    '<div class="trHdrStats"><span class="csGold">' + GEM + ' ' + P.gold + '</span>' +
+    ' gold &#183; Backpack ' + P.inv.length + '/' + INV_CAP + ' &#183; His pack ' + m.stock.length + ' items</div>';
 }
 function renderTrade() {
   if (!tradeEl || !tradeOpen || !game.merchant) return;
   const m = game.merchant;
-  let h = '<div class="trTitle">' + m.name + ' <span class="csGold">' + GEM + ' ' + P.gold + '</span></div>';
+  // the X at the top-right corner of the stall is the window's own way out,
+  // next to the merchant's nameplate and his price of gold (issue #56)
+  let h = '<div class="trTitle">' + m.name + ' <span class="csGold">' + GEM + ' ' + P.gold +
+    '</span><button class="trClose" data-close="1">&#10005;</button></div>';
   h += '<div class="trTabs">' +
     '<button class="trTab' + (tradeTab === 'buy' ? ' trOn' : '') + '" data-tab="buy">Buy</button>' +
     '<button class="trTab' + (tradeTab === 'sell' ? ' trOn' : '') + '" data-tab="sell">Sell</button></div>';
@@ -3217,6 +3248,9 @@ function renderTrade() {
     if (!m.stock.length) h += '<div class="csEmptyRow">his shelves are empty</div>';
   }
   tradeEl.innerHTML = h;
+  // the heading above the window follows every change: gold, backpack room
+  // and the size of his pack all move
+  renderTradeHeader();
 }
 function tradeSell(i) {
   const it = P.inv[i];
@@ -3248,10 +3282,12 @@ if (tradeEl && tradeEl.addEventListener) {
   tradeEl.addEventListener('mousedown', (e) => {
     let t = e.target;
     while (t && t !== tradeEl) {
-      if (t.dataset && (t.dataset.tab || t.dataset.sell !== undefined || t.dataset.buy !== undefined)) break;
+      if (t.dataset && (t.dataset.tab || t.dataset.sell !== undefined || t.dataset.buy !== undefined ||
+        t.dataset.close !== undefined)) break;
       t = t.parentNode;
     }
     if (!t || t === tradeEl) return;
+    if (t.dataset.close !== undefined) { tradeWindowClose(); return; } // the stall's own X (issue #56)
     if (t.dataset.tab) { tradeTab = t.dataset.tab; renderTrade(); return; }
     if (t.dataset.sell !== undefined) tradeSell(parseInt(t.dataset.sell, 10));
     else if (t.dataset.buy !== undefined) tradeBuy(parseInt(t.dataset.buy, 10));
