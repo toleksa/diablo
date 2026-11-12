@@ -70,7 +70,9 @@ your last journey instead of starting over.
 ## Notes
 
 - Rendering: Canvas 2D with a pseudo-3D wall pass, darkness layer with
-  torch/portal light holes and additive warm haloes.
+  torch/portal light holes and additive warm haloes. The player is a
+  hand-drawn armored warrior — cuirass, pauldrons, greaved legs and a
+  sword arm — with a walk cycle (limbs counter-swing, boots lift).
 - Deterministic dungeon layouts per checkpoint (seeded hash), monster waves
   vary per run.
 - Work in progress: it is a *reimagining of the moods*, not a clone — no

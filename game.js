@@ -583,6 +583,7 @@ function update(dt) {
       if (mx || my) {
         const l = Math.hypot(mx, my);
         moveWithCollide(P, mx / l * moveSpd() * dt, my / l * moveSpd() * dt);
+        if (mx) P.faceX = mx > 0 ? 1 : -1;
         P.aim = Math.atan2(my, mx);
         game.moveTarget = null;
       } else if (game.moveTarget) {
@@ -591,6 +592,7 @@ function update(dt) {
         if (d < 8) game.moveTarget = null;
         else {
           moveWithCollide(P, dx / d * moveSpd() * dt, dy / d * moveSpd() * dt);
+          if (dx) P.faceX = dx > 0 ? 1 : -1;
           P.aim = Math.atan2(dy, dx);
         }
       }
@@ -1255,8 +1257,9 @@ function drawMonster(m, t) {
 function drawPlayer() {
   const x = P.x - vx, y = P.y - vy;
   shadowAt(x, y + 6, P.r * 1.1, 0.4);
-  const bob = Math.sin(P.walkPhase) * 2;
+  const bob = Math.sin(P.walkPhase) * (Math.abs(Math.cos(P.walkPhase)) > 0.2 ? 2 : 1);
   const r = P.r;
+  const faceX = (P.faceX || 1);
   // sword + slash
   if (P.atkT > P.atkCd - 0.3) {
     const pr = Math.max(0, Math.min(1, (P.atkCd - P.atkT) / 0.3));
@@ -1272,29 +1275,91 @@ function drawPlayer() {
     ctx.arc(x, y - 6, P.atkRange * 0.8, P.aim - 1.0 + 1.6 * pr, P.aim - 0.2 + 1.6 * pr);
     ctx.stroke();
   }
-  // body (dark mail)
+  // --- walk cycle phase ---
+  const w = P.walkPhase;
+  const moving = w > 0.05;
+  const s = moving ? Math.sin(w) : 0;          // leg swing (-1..1)
+  const hipY = y - r * 0.34 + bob * 0.6;
+  const shY = y - r * 0.92 + bob * 0.6;        // shoulder line
+  const legLen = r * 0.62;
+  // legs: steel greaves swinging opposite under the hips
+  const f1x = x - r * 0.2 + s * faceX * r * 0.4, f1y = y - r * 0.34 + legLen + Math.abs(s) * 1.8;
+  const f2x = x + r * 0.2 - s * faceX * r * 0.4, f2y = y - r * 0.34 + legLen + Math.abs(s) * 1.8;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#2c3442'; ctx.lineWidth = r * 0.27;
+  ctx.beginPath();
+  ctx.moveTo(x - r * 0.19, hipY + 1); ctx.lineTo(f1x, f1y);
+  ctx.moveTo(x + r * 0.19, hipY + 1); ctx.lineTo(f2x, f2y);
+  ctx.stroke();
+  // boots
+  ctx.fillStyle = '#1f242e';
+  ctx.beginPath(); ctx.arc(f1x, f1y + 1, r * 0.15, 0, TAU); ctx.arc(f2x, f2y + 1, r * 0.15, 0, TAU); ctx.fill();
+  // tassets/skirt over the hips
+  ctx.fillStyle = '#353f50';
+  ctx.beginPath();
+  ctx.moveTo(x - r * 0.42, hipY - 2); ctx.lineTo(x + r * 0.42, hipY - 2);
+  ctx.lineTo(x + r * 0.34, hipY + r * 0.3); ctx.lineTo(x - r * 0.34, hipY + r * 0.3);
+  ctx.closePath(); ctx.fill();
+  // armored cuirass (trapezoid torso)
+  ctx.lineJoin = 'round';
   ctx.fillStyle = '#3e4a5c';
-  ctx.beginPath(); ctx.ellipse(x, y - r * 0.4 + bob, r * 0.82, r * 0.7, 0, 0, TAU); ctx.fill();
-  // trim
-  ctx.strokeStyle = '#c8a45a'; ctx.lineWidth = 1.4;
-  ctx.beginPath(); ctx.ellipse(x, y - r * 0.4 + bob, r * 0.82, r * 0.7, 0, Math.PI * 0.85, Math.PI * 1.5); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x - r * 0.44, shY); ctx.lineTo(x + r * 0.44, shY);
+  ctx.lineTo(x + r * 0.36, hipY + 1); ctx.lineTo(x - r * 0.36, hipY + 1);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#3e4a5c'; ctx.lineWidth = 3; ctx.stroke(); // round the corners
+  // gold central ridge + belt
+  ctx.strokeStyle = '#c8a45a'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(x, shY + 1.5); ctx.lineTo(x, hipY); ctx.stroke();
+  ctx.strokeStyle = '#8a6a34'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x - r * 0.38, hipY - 1); ctx.lineTo(x + r * 0.38, hipY - 1); ctx.stroke();
+  // pauldrons
+  ctx.fillStyle = '#7e8ea4';
+  ctx.beginPath(); ctx.arc(x - r * 0.44, shY + 1, r * 0.21, 0, TAU); ctx.arc(x + r * 0.44, shY + 1, r * 0.21, 0, TAU); ctx.fill();
+  // arms: right holds the sword (swings with the slash), left counter-swings
+  const armS = moving ? Math.sin(w) : 0;
+  const hRx = x + r * 0.52 + (P.atkT > P.atkCd - 0.3 ? Math.cos(P.aim) * r * 0.35 : -armS * faceX * r * 0.3);
+  const hRy = shY + r * 0.42 - (P.atkT > P.atkCd - 0.3 ? 2 : Math.abs(armS) * 1.2);
+  const hLx = x - r * 0.52 + armS * faceX * r * 0.3;
+  const hLy = shY + r * 0.44;
+  ctx.strokeStyle = '#46536a'; ctx.lineWidth = r * 0.19;
+  ctx.beginPath();
+  ctx.moveTo(x + r * 0.4, shY + 2); ctx.lineTo(hRx, hRy);
+  ctx.moveTo(x - r * 0.4, shY + 2); ctx.lineTo(hLx, hLy);
+  ctx.stroke();
+  ctx.fillStyle = '#b8a27c'; // gauntlet/hands
+  ctx.beginPath(); ctx.arc(hRx, hRy, r * 0.12, 0, TAU); ctx.arc(hLx, hLy, r * 0.12, 0, TAU); ctx.fill();
+  // sheathed sword at rest in the right hand
+  if (!(P.atkT > P.atkCd - 0.3)) {
+    ctx.strokeStyle = '#c9d2dd'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(hRx, hRy);
+    ctx.lineTo(hRx + Math.cos(P.aim) * r * 0.85, hRy + Math.sin(P.aim) * r * 0.85);
+    ctx.stroke();
+    ctx.strokeStyle = '#c8a45a'; ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(hRx - Math.cos(P.aim + Math.PI / 2) * 3, hRy - Math.sin(P.aim + Math.PI / 2) * 3);
+    ctx.lineTo(hRx + Math.cos(P.aim + Math.PI / 2) * 3, hRy + Math.sin(P.aim + Math.PI / 2) * 3);
+    ctx.stroke();
+  }
   // head + helmet
   ctx.fillStyle = '#b8a27c';
-  ctx.beginPath(); ctx.arc(x, y - r * 1.2 + bob, r * 0.42, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.arc(x, y - r * 1.15 + bob * 0.6, r * 0.36, 0, TAU); ctx.fill();
   ctx.fillStyle = '#7e8ea4';
-  ctx.beginPath(); ctx.arc(x, y - r * 1.2 + bob, r * 0.42, Math.PI * 1.05, Math.PI * 1.95); ctx.fill();
-  // eyes toward aim
-  const ex = Math.cos(P.aim) * r * 0.16, ey = Math.sin(P.aim) * r * 0.16;
-  ctx.fillStyle = '#f2ecd2';
-  ctx.beginPath();
-  ctx.arc(x - r * 0.15 + ex, y - r * 1.2 + ey + bob, 1.6, 0, TAU);
-  ctx.arc(x + r * 0.15 + ex, y - r * 1.2 + ey + bob, 1.6, 0, TAU);
-  ctx.fill();
+  ctx.beginPath(); ctx.arc(x, y - r * 1.15 + bob * 0.6, r * 0.4, Math.PI * 1.02, Math.PI * 1.98); ctx.fill();
+  ctx.fillStyle = '#5c6a7e';
+  ctx.beginPath(); ctx.arc(x, y - r * 1.15 + bob * 0.6, r * 0.4, Math.PI * 0.05, Math.PI * 0.45); ctx.fill(); // visor brim
+  // helmet crest
+  ctx.strokeStyle = '#a03a3a'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x, y - r * 1.55 + bob * 0.6); ctx.lineTo(x - faceX * 3, y - r * 1.75 + bob * 0.6); ctx.stroke();
   // hurt flash
   if (P.hurtFlash > 0) {
     ctx.fillStyle = 'rgba(220,40,40,' + Math.min(0.6, P.hurtFlash * 4) + ')';
-    ctx.beginPath(); ctx.ellipse(x, y - r * 0.4 + bob, r * 0.82, r * 0.7, 0, 0, TAU); ctx.fill();
-    ctx.beginPath(); ctx.arc(x, y - r * 1.2 + bob, r * 0.42, 0, TAU); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(x - r * 0.44, shY); ctx.lineTo(x + r * 0.44, shY);
+    ctx.lineTo(x + r * 0.36, hipY + 1); ctx.lineTo(x - r * 0.36, hipY + 1);
+    ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y - r * 1.15 + bob * 0.6, r * 0.38, 0, TAU); ctx.fill();
   }
 }
 // ============ PART 6d — FX, lighting, main render ============
