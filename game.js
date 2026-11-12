@@ -3074,6 +3074,7 @@ devMenu.innerHTML =
   '<button data-dev="level">Instant level up</button>' +
   '<button data-dev="items">Spawn items (one per tier)</button>' +
   '<button data-dev="merchant">Spawn merchant nearby</button>' +
+  '<button data-dev="map">Reveal the whole map</button>' +
   '<button data-dev="tp">Teleport to next level</button>';
 document.getElementById('game').appendChild(devMenu);
 devMenu.addEventListener('click', (e) => {
@@ -3095,6 +3096,8 @@ devMenu.addEventListener('click', (e) => {
     devSpawnItems();
   } else if (act === 'merchant') {
     devSpawnMerchant();
+  } else if (act === 'map') {
+    devRevealMap();
   } else if (act === 'tp') {
     if (game.running) { toast('DEV: teleporting deeper', ''); nextCheckpoint(); }
   }
@@ -3128,6 +3131,15 @@ function devSpawnMerchant() {
   game.merchant = mkMerchant(spot.x, spot.y);
   toast('DEV: merchant spawned near you (press T to trade)', '');
   S.gold();
+}
+// the M map keeps its fog of war (issue #13) - this dev switch simply lifts it
+// for the current level: every floor tile is stamped as walked into, so the
+// whole layout, its chests, gates and keeper stand exposed (issue #60)
+function devRevealMap() {
+  if (!game.visited || !game.grid) { toast('DEV: no level to reveal', ''); return; }
+  for (let i2 = 0; i2 < game.grid.length; i2++)
+    if (game.grid[i2]) game.visited[i2] = 1;
+  toast('DEV: the whole map is laid bare', '');
 }
 // dev menu (issue #43): exactly one item of every rarity tier, dropped on
 // clear ground around the hero instead of the old five legendaries
