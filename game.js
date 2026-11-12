@@ -407,6 +407,7 @@ const RARITY = [
   { id:'legend',  name:'Legendarny', w:3,  mult:3.4, afx:3 },
 ];
 const SLOTS = ['weapon','helm','armor'];
+const INV_CAP = 20; // backpack slots (issue #30)
 const BASES = {
   weapon: { name:'Sword', dmg:[6,10] },
   helm:   { name:'Helm',  hp:[14,22] },
@@ -604,7 +605,7 @@ function gainXpCheck() {
 // no autoequip: pickups always go to the backpack; the player equips
 // manually from the character sheet; full backpack -> sold to gold
 function pickUpItem(it) {
-  if (P.inv.length < 12) {
+  if (P.inv.length < INV_CAP) {
     P.inv.push(it);
     toast('Taken: ' + it.name + ' (backpack) · C = sheet', 'item-' + it.rarity);
   } else {
@@ -2010,7 +2011,7 @@ function renderChar() {
   }
   h += '<div class="csSub">Equipment</div>';
   for (const s of SLOTS) h += '<div class="csGearRow">' + SLOTPL[s] + ': ' + statLine(P.eq[s]) + '</div>';
-  h += '<div class="csSub">Backpack ' + P.inv.length + '/12 — click on item → equip</div>';
+  h += '<div class="csSub">Backpack ' + P.inv.length + '/' + INV_CAP + ' — click on item → equip</div>';
   for (let i = 0; i < P.inv.length; i++)
     h += '<div class="csInvRow" data-inv="' + i + '">' + SLOTPL[P.inv[i].slot] + ': ' + statLine(P.inv[i]) + '</div>';
   if (!P.inv.length) h += '<div class="csEmptyRow">empty</div>';

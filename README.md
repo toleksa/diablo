@@ -80,7 +80,7 @@ your last journey instead of starting over.
   `Damage: +14 (+87% Strength)` — the bonus is attribute value × that %.
   Affixes roll at most one bonus per kind out of **Damage / Life / Mana /
   Critical Chance / Movement Speed**, each shown on the item line. Every pickup
-  goes to your 12-slot **inventory** — you equip and swap gear manually from
+  goes to your 20-slot **inventory** — you equip and swap gear manually from
   the sheet (key C), even mid-fight.
 - **Zoom** scales with your monitor: the visible world stays readable on big
   screens.
