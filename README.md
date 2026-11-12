@@ -1,9 +1,9 @@
-# Piekielna Krucjata — Diablo-like
+# Infernal Crucible — a Diablo-like
 
 Dark hack-and-slash dungeon crawler reimagining the moods of **Diablo III**,
 written from scratch in pure **HTML / CSS / JavaScript** — a single canvas
 engine, zero dependencies, zero external assets (all sound effects are
-generated procedurally with WebAudio). UI is fully in Polish.
+generated procedurally with WebAudio). UI is fully in English.
 
 ## How to play
 
@@ -56,7 +56,7 @@ descend one level deeper. Die → stats screen → try again.
 | File | What |
 |---|---|
 | `index.html` | DOM contract: HUD, screens, character sheet, cooldown slots |
-| `style.css` | gothic UI: panels, cooldown conic rings, rarity colors, Polish labels |
+| `style.css` | gothic UI: panels, cooldown conic rings, rarity colors, English labels |
 | `game.js` | the whole engine: dungeon gen, lighting, AI, combat, progression, SFX |
 
 ## Notes

@@ -1,10 +1,10 @@
 "use strict";
 /* ============================================================
-   PIEKIELNA KRUCJATA — Diablo III-like w przeglądarce
-   Silnik: Canvas 2D, proceduralna grafika i dźwięk (WebAudio)
+   INFERNAL CRUCIBLE — a Diablo III-like in the browser
+   Engine: Canvas 2D, procedural graphics and sound (WebAudio)
    ============================================================ */
 
-// ---------- Narzędzia ----------
+// ---------- Utilities ----------
 const TAU = Math.PI * 2;
 const rand = (a, b) => a + Math.random() * (b - a);
 const randInt = (a, b) => Math.floor(rand(a, b + 1));
@@ -78,12 +78,12 @@ const S = {
   awaken()   { tone(150, 0.3, "sawtooth", 0.16, 75); noise(0.1, 0.12, 900); },
 };
 
-// ---------- Stałe ----------
+// ---------- Constants ----------
 const WORLD = { w: 2816, h: 2112 };
 const TS = 64, GCOLS = WORLD.w / TS, GROWS = WORLD.h / TS; // 44 x 33 tiles
 const WALL_H = 26;
 
-// ---------- Gracz ----------
+// ---------- Player ----------
 // P is the LIVE player object — dynamic fields reset by resetPlayer() on (re)start.
 const P = {
   r: 15, speed: 190, atkRange: 58, atkCd: 0.5, atkArc: 1.5,
@@ -141,7 +141,7 @@ function resetPlayer() {
   });
 }
 
-// ---------- Ściany / pokolenie poziomu ----------
+// ---------- Walls / level generation ----------
 function generateLevel(checkpoint) {
   mcp = checkpoint;
   game.quota = 6 + checkpoint * 3;
@@ -228,7 +228,7 @@ function solidAt(x, y, r) {
   return null;
 }
 function moveWithCollide(e, dx, dy) {
-  // osobno osie — ślizg po ścianach
+  // separate axes — slide along walls
   let nx = e.x + dx;
   if (!solidAt(nx, e.y, e.r)) e.x = nx;
   let ny = e.y + dy;
@@ -239,13 +239,13 @@ function moveWithCollide(e, dx, dy) {
 
 // ---------- MONSTERS ----------
 const MTYPES = {
-  fallen: { name:'Upadły', hp:34, dmg:7, speed:105, r:14, color:'#7a8a4a', xp:9, touchCd:1.0, ai:'melee' },
-  archer: { name:'Łucznik Upadłych', hp:26, dmg:8, speed:85, r:13, color:'#5a7a5a', xp:11, touchCd:1.4, ai:'ranged', range:340 },
-  zombie: { name:'Trup', hp:60, dmg:11, speed:62, r:16, color:'#6b6b52', xp:13, touchCd:1.2, ai:'melee' },
-  skeleton: { name:'Szkielet', hp:48, dmg:13, speed:118, r:14, color:'#c8c2ae', xp:15, touchCd:0.9, ai:'melee' },
-  cultist: { name:'Kultysta', hp:42, dmg:12, speed:80, r:14, color:'#8a4a4a', xp:17, touchCd:1.5, ai:'ranged', range:400 },
+  fallen: { name:'Fallen', hp:34, dmg:7, speed:105, r:14, color:'#7a8a4a', xp:9, touchCd:1.0, ai:'melee' },
+  archer: { name:'Fallen Archer', hp:26, dmg:8, speed:85, r:13, color:'#5a7a5a', xp:11, touchCd:1.4, ai:'ranged', range:340 },
+  zombie: { name:'Ghoul', hp:60, dmg:11, speed:62, r:16, color:'#6b6b52', xp:13, touchCd:1.2, ai:'melee' },
+  skeleton: { name:'Skeleton', hp:48, dmg:13, speed:118, r:14, color:'#c8c2ae', xp:15, touchCd:0.9, ai:'melee' },
+  cultist: { name:'Cultist', hp:42, dmg:12, speed:80, r:14, color:'#8a4a4a', xp:17, touchCd:1.5, ai:'ranged', range:400 },
 };
-const BOSS = { name:'Lech – Król Upadłych', hp:620, dmg:17, speed:90, r:30, color:'#b03a3a', xp:240, touchCd:0.8, ai:'boss' };
+const BOSS = { name:'Lech – King of the Fallen', hp:620, dmg:17, speed:90, r:30, color:'#b03a3a', xp:240, touchCd:0.8, ai:'boss' };
 
 function mtier(base, cp) {
   const s = 1 + (cp-1)*0.16;
@@ -261,7 +261,7 @@ function spawnMonster(type, x, y, elite, cp) {
   const d = mtier(MTYPES[type], cp);
   if (elite) { d.hp*=2.6; d.dmg=Math.round(d.dmg*1.4); d.xp*=4; d.r+=4; }
   const m = {
-    kind:'monster', type, name: (elite?'Elita: ':'')+d.name, x, y,
+    kind:'monster', type, name: (elite?'Elite: ':'')+d.name, x, y,
     r: d.r, hp: d.hp, hpMax: d.hp, dmg: d.dmg, speed: d.speed*(0.85+Math.random()*0.3),
     xp: d.xp, color: elite?'#d8a23c':d.color, touchCd: d.touchCd, cd: rand(0.4,1.2),
     ai: d.ai, range: d.range || (d.r + 27), elite: !!elite, angle: rand(0,TAU),
@@ -327,11 +327,10 @@ function spawnBoss(x, y) {
     act: false, aggro: 460, // waits in the boss room until the player steps near
   };
   game.boss = b; game.monsters.push(b);
-  banner('Nadszedł '+b.name+'!', '#c03030');
   return b;
 }
 
-// ---------- EFEKTY / ENCJE ----------
+// ---------- FX / ENTITIES ----------
 function ring(x, y, color) { game.rings.push({x,y,r:8,max:90,color,life:0.5}); }
 function banner(text, color) {
   const b = document.getElementById('checkpointBanner');
@@ -350,7 +349,7 @@ function burst(x, y, color, n, spd) {
 }
 function blood(x,y){ burst(x,y,'#8a1f1f',10,150); }
 
-// globy: xp (zielony), leczenie (czerwony), furia (niebieski)
+// globes: xp (green), heal (red), mana (blue)
 function dropGlobes(x, y, xp) {
   const n = clamp(Math.round(xp/6), 2, 6);
   const val = Math.max(2, Math.round(xp/n));
@@ -367,7 +366,7 @@ function dropGold(x, y, cp) {
   game.goldpiles.push({x, y, amount, r:8, life:26, bob:rand(0,TAU)});
 }
 
-// ---------- PRZEDMIOTY ----------
+// ---------- ITEMS ----------
 const RARITY = [
   { id:'common',  name:'',        w:56, mult:1.0,  afx:0 },
   { id:'magic',   name:'Magiczny',   w:28, mult:1.5, afx:1 },
@@ -380,7 +379,7 @@ const BASES = {
   helm:   { name:'Helm',  hp:[14,22] },
   armor:  { name:'Zbroja', hp:[24,36] },
 };
-const AFFIX = ['Siły','Gromu','Smoka','Cieni','Anioła','Demona','Burzy','Wilka','Kościanej Dłoni','Płonącej Furii'];
+const AFFIX = ['Might','Storm','Dragon','Shadow','Angel','Demon','Tempest','Wolf','Bone Claw','Blazing Fury'];
 
 function rollItem(cp, forceGood) {
   let total = RARITY.reduce((s,r)=>s+r.w,0);
@@ -394,16 +393,16 @@ function rollItem(cp, forceGood) {
   if (slot==='weapon') {
     wscale = pick(['str', 'dex', 'int']);
     const v = Math.round(rand(b.dmg[0], b.dmg[1]) * scale * rar.mult);
-    stats.push({k:'dmg', v, scale: wscale, txt: 'Obrażenia: +' + v + ' (' + ATTRPL[wscale] + ')'});
+    stats.push({k:'dmg', v, scale: wscale, txt: 'Damage: +' + v + ' (' + ATTRPL[wscale] + ')'});
   } else {
     const v = Math.round(rand(b.hp[0], b.hp[1]) * scale * rar.mult);
-    stats.push({k:'hp', v, txt:'Punkty życia: +'+v});
+    stats.push({k:'hp', v, txt:'Life: +'+v});
   }
   const names = [];
   for (let i=0;i<rar.afx;i++){
     const a = pick(AFFIX);
-    if (chance(0.5)) { const v = randInt(1,3)*(1+Math.floor(cp/3)); stats.push({k:'dmg', v, scale: wscale, txt: 'Obrażenia: +' + v + (wscale ? ' (' + ATTRPL[wscale] + ')' : '')}); }
-    else { const v = randInt(3,8)*(1+Math.floor(cp/2)); stats.push({k:'hp',v,txt:'Punkty życia: +'+v}); }
+    if (chance(0.5)) { const v = randInt(1,3)*(1+Math.floor(cp/3)); stats.push({k:'dmg', v, scale: wscale, txt: 'Damage: +' + v + (wscale ? ' (' + ATTRPL[wscale] + ')' : '')}); }
+    else { const v = randInt(3,8)*(1+Math.floor(cp/2)); stats.push({k:'hp',v,txt:'Life: +'+v}); }
     names.push(a);
   }
   const nm = (rar.name ? rar.name+' ' : '') + b.name + (names.length ? ' '+names.join(' i ') : '');
@@ -416,7 +415,7 @@ function dropItem(x, y, cp, guarantee) {
   game.drops.push({x, y, r:11, item:it, life:60, bob:rand(0,TAU)});
 }
 
-// ---------- WALKA / ROZWÓJ ----------
+// ---------- COMBAT / PROGRESSION ----------
 // dmg stats on items scale with their scale-attr (weapons carry one)
 function attrBonus(scale) { return 1 + (P.attr[scale || 'str'] - 8) * 0.025; }
 function playerDmg() {
@@ -448,7 +447,7 @@ function hurtPlayer(dmg, fromX, fromY) {
 function damageMonster(m, dmg, isCrit, knockFrom) {
   m.act = true; // getting hit wakes a sleeping monster
   m.hp -= dmg; m.hitFlash = 0.12;
-  dmgText(m.x + rand(-8,8), m.y - m.r, (isCrit?'KRYTYK ':'')+Math.round(dmg), isCrit?'#ffd75e':'#ffffff');
+  dmgText(m.x + rand(-8,8), m.y - m.r, (isCrit?'CRIT! ':'')+Math.round(dmg), isCrit?'#ffd75e':'#ffffff');
   isCrit ? S.crit() : S.hit();
   blood(m.x, m.y);
   if (knockFrom) {
@@ -491,7 +490,7 @@ function gainXpCheck() {
     refreshHpMax(); P.hp = P.hpMax; P.mana = mpMax();
     P.statPoints += 3;
     S.levelUp(); ring(P.x, P.y, '#ffd75e'); ring(P.x, P.y, '#ffffff');
-    banner('Poziom ' + P.level + '! · +3 pkt atributów (C)', '#ffd75e');
+    banner('Level ' + P.level + '! · +3 attribute points (C)', '#ffd75e');
     if (charOpen) renderChar();
   }
 }
@@ -504,10 +503,10 @@ function pickUpItem(it) {
       if (P.inv.length < 12) P.inv.push(cur);
       else { const g = 8 + cur.cp*4 + Math.round(cur.score*0.6); P.gold += g; }
     }
-    toast('Dropped: ' + it.name, 'item-' + it.rarity);
+    toast('Equipped: ' + it.name, 'item-' + it.rarity);
   } else if (P.inv.length < 12) {
     P.inv.push(it);
-    toast('Picked up: ' + it.name + ' (backpack) · C = card', '');
+    toast('Picked up: ' + it.name + ' (backpack) · C = sheet', '');
   } else {
     const g = 10 + it.cp*6 + Math.round(it.score);
     P.gold += g;
@@ -530,13 +529,13 @@ function toast(msg, cls) {
   while (t.children.length > 4) t.removeChild(t.firstChild);
 }
 
-// ============ GŁÓWNA PĘTLA AKTUALIZACJI ============
+// ============ MAIN UPDATE LOOP ============
 function update(dt) {
   game.time += dt;
   game.shake *= Math.pow(0.001, dt);
 
   if (!P.dead) {
-    // --- gracz ---
+    // --- player ---
     if (P.leap) {
       const L = P.leap;
       L.t += dt / L.dur;
@@ -578,7 +577,7 @@ function update(dt) {
     if (game.mouseDown && P.atkT <= 0) tryAttack();
   }
 
-  // --- potwory ---
+  // --- monsters ---
   const near = game.monsters.filter(m => Math.hypot(m.x - P.x, m.y - P.y) < 320);
   if (!P.dead) {
     if (near.length === 0 && game.time > 1.5 && game.boss && !game.boss.dead) {
@@ -620,7 +619,7 @@ function update(dt) {
         if (m.kind === 'boss') {
           S.bossRoar();
           game.shake = Math.max(game.shake, 14);
-          banner('Nadszedł ' + m.name + '!', '#c03030');
+          banner('Here wakes ' + m.name + '!', '#c03030');
         } else S.awaken();
         dmgText(m.x, m.y - m.r - 16, '!', '#e8d8a0');
       } else continue;
@@ -632,7 +631,7 @@ function update(dt) {
       if (m.summonCd <= 0) {
         m.summonCd = 8;
         S.elite();
-        banner('Lech wzywa sługi!', '#ff5060');
+        banner('Lech summons minions!', '#ff5060');
         for (let i = 0; i < 2; i++) {
           const a = Math.random() * Math.PI * 2;
           const sx = m.x + Math.cos(a) * 110, sy = m.y + Math.sin(a) * 110;
@@ -646,7 +645,7 @@ function update(dt) {
         m.dashCd = 4.2;
         m.dash = { t: 0, dur: 0.55, sx: m.x, sy: m.y, tx: P.x, ty: P.y, hit: false };
         S.shoot();
-        dmgText(m.x, m.y - m.r - 24, 'SZARŻA!', '#ff8040');
+        dmgText(m.x, m.y - m.r - 24, 'CHARGE!', '#ff8040');
       }
       if (m.dash) {
         const D = m.dash;
@@ -697,7 +696,7 @@ function update(dt) {
       if (d > m.range) {
         const sp = m.speed * (m.slow ? 0.4 : 1);
         let mvx = dx / d * sp * dt, mvy = dy / d * sp * dt;
-        // unik przed innymi potworami
+        // friendly fire: monsters avoid hurting each other
         for (const o of near) {
           if (o === m) continue;
           const ox = m.x - o.x, oy = m.y - o.y;
@@ -717,7 +716,7 @@ function update(dt) {
 
   game.monsters = game.monsters.filter(m => !m.dead);
 
-  // --- pociski ---
+  // --- projectiles ---
   for (const pr of game.projectiles) {
     pr.x += pr.vx * dt; pr.y += pr.vy * dt; pr.life -= dt;
     if (pr.life <= 0 || !passableAt(pr.x, pr.y)) { pr.life = 0; continue; }
@@ -728,7 +727,7 @@ function update(dt) {
   }
   game.projectiles = game.projectiles.filter(pr => pr.life > 0);
 
-  // --- globy / przedmioty / efekty ---
+  // --- globes / items / fx ---
   for (const g of game.globes) {
     g.life -= dt;
     const d = Math.hypot(P.x - g.x, P.y - g.y);
@@ -914,7 +913,7 @@ function showDeath() {
     ' · Time: ' + mins + ':' + String(secs).padStart(2, '0');
   banner('You have fallen', '#c03a3a');
 }
-// ============ PART 6a — GRAFICA: set-up + world ============
+// ============ PART 6a — GRAPHICS: setup + world ============
 const cv = document.getElementById('canvas');
 const ctx = cv.getContext('2d');
 const darkCv = document.createElement('canvas');
