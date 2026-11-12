@@ -53,6 +53,8 @@ your last journey instead of starting over.
   intelligence feeds max Mana, vitality feeds HP and very slow natural HP
   regen from level 5.
 - **Mana** (blue) regenerates slowly; combat swings feed it back.
+- **Globes**: slain enemies drop green XP globes, blue Mana globes and,
+  with a 30% chance, a **red heal orb** that restores 30% of your life.
 - **Items**: common/magic/rare/legendary gear for weapon/helm/armour with
   affixes. Each weapon rolls an attribute-scaling bonus **(+1–200% of one
   attribute, high rolls progressively rarer)**, shown on the item like
