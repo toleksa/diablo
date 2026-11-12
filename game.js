@@ -1450,17 +1450,20 @@ function drawPlayer() {
   ctx.stroke();
   ctx.fillStyle = '#b8a27c'; // gauntlet/hands
   ctx.beginPath(); ctx.arc(hRx, hRy, r * 0.12, 0, TAU); ctx.arc(hLx, hLy, r * 0.12, 0, TAU); ctx.fill();
-  // sheathed sword at rest in the right hand
+  // sheathed sword at rest in the right hand — it does NOT track the cursor
+  // while idle (issue #27): fixed diagonal down in facing direction, only
+  // the attack arc swings with the aim
   if (!(P.atkT > P.atkCd - 0.3)) {
+    const idleA = faceX > 0 ? 0.55 : Math.PI - 0.55; // blade tip down-forward
     ctx.strokeStyle = '#c9d2dd'; ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(hRx, hRy);
-    ctx.lineTo(hRx + Math.cos(P.aim) * r * 0.85, hRy + Math.sin(P.aim) * r * 0.85);
+    ctx.lineTo(hRx + Math.cos(idleA) * r * 0.85, hRy + Math.sin(idleA) * r * 0.85);
     ctx.stroke();
     ctx.strokeStyle = cl.trim; ctx.lineWidth = 2.4;
     ctx.beginPath();
-    ctx.moveTo(hRx - Math.cos(P.aim + Math.PI / 2) * 3, hRy - Math.sin(P.aim + Math.PI / 2) * 3);
-    ctx.lineTo(hRx + Math.cos(P.aim + Math.PI / 2) * 3, hRy + Math.sin(P.aim + Math.PI / 2) * 3);
+    ctx.moveTo(hRx - Math.cos(idleA + Math.PI / 2) * 3, hRy - Math.sin(idleA + Math.PI / 2) * 3);
+    ctx.lineTo(hRx + Math.cos(idleA + Math.PI / 2) * 3, hRy + Math.sin(idleA + Math.PI / 2) * 3);
     ctx.stroke();
   }
   // head + helmet
