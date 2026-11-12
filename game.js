@@ -1471,8 +1471,16 @@ let charOpen = false;
 const charEl = document.getElementById('charSheet');
 if (charEl && charEl.addEventListener) {
   charEl.addEventListener('click', (e) => {
-    const ds = e.target && e.target.dataset;
-    if (!ds) return;
+    // the click target is often an inner <span> (item name / stat text), so
+    // walk up to the row element that actually carries data-attr / data-inv
+    let t = e.target;
+    while (t && t !== charEl) {
+      const ds = t.dataset;
+      if (ds && (ds.attr || (ds.inv !== undefined && ds.inv !== ''))) break;
+      t = t.parentNode;
+    }
+    if (!t || t === charEl) return;
+    const ds = t.dataset;
     if (ds.attr) addAttrPoint(ds.attr);
     else if (ds.inv !== undefined && ds.inv !== '') equipFromInv(parseInt(ds.inv, 10));
   });
