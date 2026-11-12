@@ -1519,6 +1519,17 @@ const HUD = {
   slotLMB: document.getElementById('slotLMB'),
 };
 
+// LMB-clicking a skill icon uses that skill directly (issue #15)
+for (const sc of [
+  [HUD.slotPotion, drinkPotion],
+  [HUD.slotSkill2, tryWhirlwind],
+  [HUD.slotSkill3, tryLeap],
+  [HUD.slotLMB, tryAttack],
+]) {
+  if (sc[0] && sc[0].addEventListener)
+    sc[0].addEventListener('click', (e) => { if (e.button === 0 && game.running) sc[1](); });
+}
+
 function hudUpdate() {
   const rn = ROMAN[Math.min(ROMAN.length - 1, game.checkpoint)];
   HUD.objTitle.textContent = 'Act ' + rn + ' — Old Ruins';

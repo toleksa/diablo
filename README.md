@@ -27,6 +27,10 @@ python3 -m http.server 8123   # then open http://localhost:8123/
 | **C** | character sheet: attributes, equipment, inventory |
 | **M** | area map — fog of war: only parts the player has walked through are revealed (boss/portal/start markers appear once discovered) |
 
+Clicking an **icon of a skill with the left mouse button** casts it directly —
+potion, Whirlwind, Leap or the sword swing — handy when you don't want to
+reach the keyboard.
+
 ## The loop
 
 Each act is a **procedurally generated dungeon** — rooms connected by
