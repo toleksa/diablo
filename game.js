@@ -74,6 +74,8 @@ const S = {
   treasure() { tone(520, 0.22, "triangle", 0.2, 880); tone(770, 0.3, "sine", 0.22, 1240); noise(0.3, 0.06, 260); },
   item()     { [660, 880, 1100].forEach((f, i) => setTimeout(() => tone(f, 0.15, "triangle", 0.16), i * 90)); },
   shoot()    { tone(900, 0.06, "square", 0.08, 400); },
+  bow()      { noise(0.05, 0.1, 2600); tone(1500, 0.05, "sine", 0.05, 1150); },
+  zap()      { tone(760, 0.14, "sine", 0.12, 1500); tone(1180, 0.09, "triangle", 0.1, 640); },
   elite()    { tone(110, 0.5, "sawtooth", 0.25, 55); noise(0.3, 0.2, 500); },
   bossRoar() { tone(70, 1.1, "sawtooth", 0.35, 40); noise(0.8, 0.3, 420); },
   awaken()   { tone(150, 0.3, "sawtooth", 0.16, 75); noise(0.1, 0.12, 900); },
@@ -563,8 +565,17 @@ function fortune(luck, cp) {
   return clamp((luck || 0) + P.level * 0.025 + (cp - 1) * 0.08, 0, RARI_LUCK_MAX);
 }
 const INV_CAP = 20; // backpack slots (issue #30)
+// weapon types (issue #53): a kind decides BOTH the attribute it scales with
+// and how the hero uses it - the axe and the sword swing, the bow and the staff
+// never touch a foe, they shoot arrows and magic missiles.
+const WTYPE = [
+  { k:'sword', name:'Sword', dmg:[6, 10], attr:'dex', melee: true  },
+  { k:'axe',   name:'Axe',   dmg:[8, 13], attr:'str', melee: true  },
+  { k:'bow',   name:'Bow',   dmg:[5, 9],  attr:'dex', melee: false },
+  { k:'staff', name:'Staff', dmg:[6, 11], attr:'int', melee: false },
+];
 const BASES = {
-  weapon: { name:'Sword', dmg:[6,10] },
+  weapon: null, // a weapon is rolled from WTYPE, not from here
   helm:   { name:'Helm',  hp:[14,22] },
   armor:  { name:'Armour', hp:[24,36] },
 };
@@ -628,12 +639,14 @@ function rollItem(cp, forceGood, forceRar, luck) {
   let rar;
   if (forceRar) { for (const r of RARITY) if (r.id === forceRar) { rar = r; break; } }
   else rar = rarityRoll(fl, forceGood ? 1 : 0);
-  const slot = pick(SLOTS), b = BASES[slot];
+  const slot = pick(SLOTS);
+  const wk = slot === 'weapon' ? pick(WTYPE) : null; // weapon kind (issue #53)
+  const b = slot === 'weapon' ? { name: wk.name, dmg: wk.dmg } : BASES[slot];
   const scale = 1 + (cp-1)*0.3;
   const stats = [];
   let wscale = null;
   if (slot==='weapon') {
-    wscale = pick(['str', 'dex', 'int']);
+    wscale = wk.attr; // the kind decides its attribute (issue #53)
     // scaling %: 1..200 on a steep exponential curve (issue #36) — past 100
     // is quite rare, past 150 a once-in-a-long-run roll
     const pct = rollBonus(1, 200, 4.2, fl);
@@ -684,7 +697,7 @@ function rollItem(cp, forceGood, forceRar, luck) {
   const W8 = { dmg: 2.2, hp: 1, mp: 0.45, crit: 2.4, spd: 1.4, str: 1.8, dex: 1.8, int: 1.8, vit: 1.8 };
   const score = stats.reduce((s, st) =>
     s + (st.k === 'dmg' ? (st.v + (st.pct || 0) * 0.11) : st.v) * (W8[st.k] || 1), 0);
-  return { slot, name:nm, rarity:rar.id, stats, score, cp };
+  return { slot, name:nm, rarity:rar.id, stats, score, cp, wk: wk ? wk.k : null };
 }
 // treasure chests roll at-least-magic (issue #36), never common: the minTier
 // floor plus a small luck so a chest sometimes hides a rare or legendary
@@ -1087,6 +1100,38 @@ function update(dt) {
   for (const pr of game.projectiles) {
     pr.x += pr.vx * dt; pr.y += pr.vy * dt; pr.life -= dt;
     if (pr.life <= 0 || !passableAt(pr.x, pr.y)) { pr.life = 0; continue; }
+    if (pr.side === 'p') {
+      // the hero's own shots (issue #53): a magic missile bends toward the
+      // nearest foe, an arrow flies straight and true
+      if (pr.home) {
+        let ht = null, hd = 250;
+        for (const m of game.monsters) {
+          if (m.hp <= 0) continue;
+          const d = Math.hypot(m.x - pr.x, m.y - pr.y);
+          if (d >= hd) continue;
+          hd = d; ht = m;
+        }
+        if (ht) {
+          const sp = Math.hypot(pr.vx, pr.vy) || 1;
+          const ca = Math.atan2(pr.vy, pr.vx);
+          const a = Math.atan2(ht.y - pr.y, ht.x - pr.x);
+          let da = Math.atan2(Math.sin(a - ca), Math.cos(a - ca));
+          da = clamp(da, -4.4 * dt, 4.4 * dt);
+          const na = ca + da;
+          pr.vx = Math.cos(na) * sp; pr.vy = Math.sin(na) * sp;
+        }
+      }
+      for (const m of game.monsters) {
+        if (m.hp <= 0) continue;
+        if (Math.hypot(pr.x - m.x, pr.y - m.y) < m.r + 6) {
+          const crit = chance(critChance());
+          damageMonster(m, Math.round(pr.dmg * (crit ? 1.9 : rand(0.9, 1.1))), crit, P);
+          pr.life = 0;
+          break;
+        }
+      }
+      continue;
+    }
     if (!P.dead && Math.hypot(pr.x - P.x, pr.y - P.y) < P.r + 5) {
       hurtPlayer(pr.dmg, pr.x, pr.y);
       pr.life = 0;
@@ -1182,7 +1227,38 @@ function swingAt(m) {
   if (!P.dead && Math.hypot(P.x - m.x, P.y - m.y) < 460) S.swing();
 }
 
+// the hand's gear decides the attack (issue #53): a bow or a staff shoots and
+// never swings; bare fists still swing
+function rangedWeapon() {
+  const w = P.eq.weapon;
+  return !!w && (w.wk === 'bow' || w.wk === 'staff');
+}
+function shootRanged() {
+  const w = P.eq.weapon;
+  const bowly = w.wk === 'bow';
+  const rng = bowly ? 520 : 460;
+  P.atkT = P.atkCd;
+  // loose on the nearest foe you can see, otherwise straight ahead
+  let best = null, bd = rng;
+  for (const m of game.monsters) {
+    if (m.hp <= 0) continue;
+    const d = Math.hypot(m.x - P.x, m.y - P.y);
+    if (d >= bd || !losClear(P.x, P.y, m.x, m.y)) continue;
+    bd = d; best = m;
+  }
+  if (best) P.aim = Math.atan2(best.y - P.y, best.x - P.x);
+  else if (game.moveTarget) P.aim = Math.atan2(game.moveTarget.y - P.y, game.moveTarget.x - P.x);
+  const spd = bowly ? 660 : 450; // an arrow is quick and flat, a missile drifts and homes
+  const hx = P.x + Math.cos(P.aim) * (P.r + 6), hy = P.y + Math.sin(P.aim) * (P.r + 6) - 4;
+  if (bowly) S.bow(); else S.zap();
+  game.projectiles.push({ x: hx, y: hy, vx: Math.cos(P.aim) * spd, vy: Math.sin(P.aim) * spd,
+    dmg: playerDmg(), life: rng / spd + 0.25, color: bowly ? '#e0d2ae' : '#8ac7e8',
+    side: 'p', arrow: bowly, home: !bowly });
+  if (!bowly) ring(hx, hy, '#8ac7e8');
+}
+
 function tryAttack() {
+  if (rangedWeapon()) { shootRanged(); return; } // a bow or a staff never swings (issue #53)
   P.atkT = P.atkCd;
   // auto-aim at the nearest monster in reach
   let best = null, bd = 1e9;
@@ -1211,6 +1287,7 @@ function tryAttack() {
 
 function tryWhirlwind() {
   if (P.dead || P.leap || P.cd.whirl > 0) return false;
+  if (rangedWeapon()) { toast('A bow or a staff cannot whirl', ''); return false; }
   if (P.mana < 30) { toast('Not enough mana', ''); return false; }
   P.cd.whirl = 6; P.mana -= 30;
   S.whirl();
@@ -1839,6 +1916,86 @@ function drawMonster(m, t) {
   }
 }
 
+// the equipped weapon, painted in the hero's hand (issue #53): what you wear
+// is what you see, and an empty hand is a bare fist
+function drawHandWeapon(wk, hx, hy, ang, flare) {
+  if (!wk) return;
+  if (wk === 'sword') {
+    ctx.strokeStyle = '#cad3de'; ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(hx - Math.cos(ang) * 3, hy - Math.sin(ang) * 3);
+    ctx.lineTo(hx + Math.cos(ang) * 14, hy + Math.sin(ang) * 14);
+    ctx.stroke();
+    ctx.strokeStyle = '#c8a45a'; ctx.lineWidth = 2.4; // the guard
+    ctx.beginPath();
+    ctx.moveTo(hx - Math.cos(ang + Math.PI / 2) * 3.4, hy - Math.sin(ang + Math.PI / 2) * 3.4);
+    ctx.lineTo(hx + Math.cos(ang + Math.PI / 2) * 3.4, hy + Math.sin(ang + Math.PI / 2) * 3.4);
+    ctx.stroke();
+    return;
+  }
+  if (wk === 'axe') {
+    ctx.strokeStyle = '#6b4a28'; ctx.lineWidth = 2.6; // the haft
+    ctx.beginPath();
+    ctx.moveTo(hx - Math.cos(ang) * 6, hy - Math.sin(ang) * 6);
+    ctx.lineTo(hx + Math.cos(ang) * 13, hy + Math.sin(ang) * 13);
+    ctx.stroke();
+    const pa = ang + Math.PI / 2;
+    const ax = hx + Math.cos(ang) * 10, ay = hy + Math.sin(ang) * 10;
+    ctx.fillStyle = '#b8c1cb'; // a broad axe head
+    ctx.beginPath();
+    ctx.moveTo(ax - Math.cos(ang) * 4, ay - Math.sin(ang) * 4);
+    ctx.lineTo(ax + Math.cos(pa) * 7.5, ay + Math.sin(pa) * 7.5);
+    ctx.lineTo(ax + Math.cos(ang) * 6 + Math.cos(pa) * 4, ay + Math.sin(ang) * 6 + Math.sin(pa) * 4);
+    ctx.lineTo(ax + Math.cos(ang) * 6 - Math.cos(pa) * 4, ay + Math.sin(ang) * 6 - Math.sin(pa) * 4);
+    ctx.lineTo(ax - Math.cos(pa) * 7.5, ay - Math.sin(pa) * 7.5);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#7f8791'; ctx.lineWidth = 1; // the socket
+    ctx.beginPath();
+    ctx.moveTo(ax - Math.cos(pa) * 7, ay - Math.sin(pa) * 7);
+    ctx.lineTo(ax + Math.cos(pa) * 7, ay + Math.sin(pa) * 7);
+    ctx.stroke();
+    return;
+  }
+  if (wk === 'bow') {
+    const pa = ang; // the belly of the bow faces the hero, the tips point down
+    ctx.strokeStyle = '#7a5230'; ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.arc(hx, hy, 10, pa + Math.PI - 1.2, pa + Math.PI + 1.2);
+    ctx.stroke();
+    const t1 = pa + Math.PI - 1.2, t2 = pa + Math.PI + 1.2;
+    ctx.strokeStyle = 'rgba(228,222,200,0.85)'; ctx.lineWidth = 1; // the string
+    ctx.beginPath();
+    ctx.moveTo(hx + Math.cos(t1) * 10, hy + Math.sin(t1) * 10);
+    ctx.lineTo(hx + Math.cos(t2) * 10, hy + Math.sin(t2) * 10);
+    ctx.stroke();
+    if (flare) { // an arrow nocked while the shot is being drawn
+      ctx.strokeStyle = '#cbb795'; ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(hx - Math.cos(ang) * 5, hy - Math.sin(ang) * 5);
+      ctx.lineTo(hx + Math.cos(ang) * 15, hy + Math.sin(ang) * 15);
+      ctx.stroke();
+    }
+    return;
+  }
+  if (wk === 'staff') { // a long haft topped with an arcane crystal
+    ctx.strokeStyle = '#6e4b2c'; ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    ctx.moveTo(hx - Math.cos(ang) * 7, hy - Math.sin(ang) * 7);
+    ctx.lineTo(hx + Math.cos(ang) * 16, hy + Math.sin(ang) * 16);
+    ctx.stroke();
+    const sx = hx + Math.cos(ang) * 16, sy = hy + Math.sin(ang) * 16;
+    const rad = flare ? 9 : 6.5;
+    const g2 = ctx.createRadialGradient(sx, sy, 0, sx, sy, rad);
+    g2.addColorStop(0, '#ecf8ff');
+    g2.addColorStop(0.45, flare ? 'rgba(180,225,255,0.9)' : 'rgba(138,199,232,0.65)');
+    g2.addColorStop(1, 'rgba(138,199,232,0)');
+    ctx.fillStyle = g2;
+    ctx.beginPath(); ctx.arc(sx, sy, rad, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#cfeaf8';
+    ctx.beginPath(); ctx.arc(sx, sy, 2.4, 0, TAU); ctx.fill();
+  }
+}
+
 function drawPlayer() {
   const x = P.x - vx, y = P.y - vy;
   shadowAt(x, y + 6, P.r * 1.1, 0.4);
@@ -1857,19 +2014,22 @@ function drawPlayer() {
   const r = P.r;
   const cl = CLASSES[P.cls || 'barbar']; // class colors (issue #22)
   const bare = !!cl.topless; // the barbarian wears furs, not a cuirass (issue #52)
-  // sword + slash
-  if (P.atkT > P.atkCd - 0.3) {
-    const pr = Math.max(0, Math.min(1, (P.atkCd - P.atkT) / 0.3));
-    const sa = P.aim - 0.7 + 1.4 * pr;
+  const eqw = P.eq.weapon;
+  const wk = eqw ? eqw.wk : null; // what is in the hand (issue #53)
+  const ranged = rangedWeapon(); // a bow or a staff shoots: it never swings
+  // the swing arc: only a weapon that swings leaves one (issue #53)
+  const swingT = (P.atkT > P.atkCd - 0.3) ? Math.max(0, Math.min(1, (P.atkCd - P.atkT) / 0.3)) : -1;
+  if (swingT >= 0 && !ranged) {
+    const sa = P.aim - 0.7 + 1.4 * swingT;
     ctx.strokeStyle = 'rgba(235,238,250,0.85)'; ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(x + Math.cos(sa) * 8, y - 6 + Math.sin(sa) * 8);
     ctx.lineTo(x + Math.cos(sa) * 30, y - 6 + Math.sin(sa) * 30);
     ctx.stroke();
-    ctx.strokeStyle = 'rgba(245,245,255,' + (0.8 * (1 - pr)) + ')';
+    ctx.strokeStyle = 'rgba(245,245,255,' + (0.8 * (1 - swingT)) + ')';
     ctx.lineWidth = 4.5;
     ctx.beginPath();
-    ctx.arc(x, y - 6, P.atkRange * 0.8, P.aim - 1.0 + 1.6 * pr, P.aim - 0.2 + 1.6 * pr);
+    ctx.arc(x, y - 6, P.atkRange * 0.8, P.aim - 1.0 + 1.6 * swingT, P.aim - 0.2 + 1.6 * swingT);
     ctx.stroke();
   }
   // --- walk cycle phase ---
@@ -1945,22 +2105,14 @@ function drawPlayer() {
   ctx.stroke();
   ctx.fillStyle = bare ? cl.skin : '#b8a27c'; // gauntlet/hands (bare fists for the barbarian)
   ctx.beginPath(); ctx.arc(hRx, hRy, r * 0.12, 0, TAU); ctx.arc(hLx, hLy, r * 0.12, 0, TAU); ctx.fill();
-  // sheathed sword at rest in the right hand — it does NOT track the cursor
-  // while idle (issue #27): fixed diagonal down in facing direction, only
-  // the attack arc swings with the aim
-  if (!(P.atkT > P.atkCd - 0.3)) {
-    const idleA = (faceX > 0 ? 0.55 : Math.PI - 0.55) - ip * 0.52 * (faceX > 0 ? 1 : -1);
-    ctx.strokeStyle = '#c9d2dd'; ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(hRx, hRy);
-    ctx.lineTo(hRx + Math.cos(idleA) * r * 0.85, hRy + Math.sin(idleA) * r * 0.85);
-    ctx.stroke();
-    ctx.strokeStyle = cl.trim; ctx.lineWidth = 2.4;
-    ctx.beginPath();
-    ctx.moveTo(hRx - Math.cos(idleA + Math.PI / 2) * 3, hRy - Math.sin(idleA + Math.PI / 2) * 3);
-    ctx.lineTo(hRx + Math.cos(idleA + Math.PI / 2) * 3, hRy + Math.sin(idleA + Math.PI / 2) * 3);
-    ctx.stroke();
-  }
+  // the weapon in hand: what you actually wear (issue #53). At rest it hangs in
+  // the facing direction (issue #27 keeps it off the cursor), during a swing it
+  // rides the arc, and a drawn bow or a charging staff points at the aim
+  let wa;
+  if (ranged) wa = P.aim;
+  else if (swingT >= 0) wa = P.aim - 0.7 + 1.4 * swingT;
+  else wa = (faceX > 0 ? 0.55 : Math.PI - 0.55) - ip * 0.52 * (faceX > 0 ? 1 : -1);
+  drawHandWeapon(wk, hRx, hRy, wa, (ranged && swingT >= 0) ? 1 : 0);
   // head + helmet - during the idle stretch the neck turns to scan the halls
   const hx2 = x + ip * faceX * 2.6, hy2 = y - r * 1.15 + bob * 0.6 - ip * 1.2;
   ctx.fillStyle = cl.skin; // the face: every class shows its own skin
@@ -2003,6 +2155,43 @@ function drawProjectiles() {
     const x = pr.x - vx, y = pr.y - vy;
     if (x < -40 || x > VW + 40 || y < -40 || y > VH + 40) continue;
     const a = Math.atan2(pr.vy, pr.vx);
+    if (pr.arrow) {
+      // an arrow of the hero's bow: a slim shaft, a steel point, fletching at
+      // the tail (issue #53)
+      ctx.strokeStyle = '#cbb795'; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x - Math.cos(a) * 17, y - Math.sin(a) * 17); ctx.lineTo(x, y);
+      ctx.stroke();
+      ctx.strokeStyle = '#dde4ec'; ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * 5, y + Math.sin(a) * 5);
+      ctx.stroke();
+      ctx.strokeStyle = pr.color; ctx.lineWidth = 1.2;
+      for (let f2 = -1; f2 <= 1; f2 += 2) {
+        const bx = x - Math.cos(a) * 15, by = y - Math.sin(a) * 15;
+        ctx.beginPath();
+        ctx.moveTo(bx, by);
+        ctx.lineTo(bx + Math.cos(a + 2.3 * f2) * 5.5, by + Math.sin(a + 2.3 * f2) * 5.5);
+        ctx.stroke();
+      }
+      continue;
+    }
+    if (pr.side === 'p') {
+      // a magic missile off a staff: an arcane head with a halo and a trail
+      const g2 = ctx.createRadialGradient(x, y, 0, x, y, 11);
+      g2.addColorStop(0, 'rgba(215,240,255,0.95)');
+      g2.addColorStop(0.4, 'rgba(138,199,232,0.6)');
+      g2.addColorStop(1, 'rgba(138,199,232,0)');
+      ctx.fillStyle = g2;
+      ctx.beginPath(); ctx.arc(x, y, 11, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(160,215,255,0.75)'; ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.moveTo(x - Math.cos(a) * 18, y - Math.sin(a) * 18); ctx.lineTo(x, y);
+      ctx.stroke();
+      ctx.fillStyle = '#eaf6ff';
+      ctx.beginPath(); ctx.arc(x, y, 3.1, 0, TAU); ctx.fill();
+      continue;
+    }
     ctx.strokeStyle = pr.color; ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(x - Math.cos(a) * 14, y - Math.sin(a) * 14);
@@ -2368,12 +2557,13 @@ function botTick(dt) {
     bd = d; tgt = m;
   }
   if (tgt) {
-    if (bd > P.atkRange + 20) { gx = tgt.x; gy = tgt.y; }
-    game.mouseDown = bd < P.atkRange + 26;
+    const wr = rangedWeapon() ? 500 : P.atkRange; // a bow fights at arm's length (issue #53)
+    if (bd > wr + 20) { gx = tgt.x; gy = tgt.y; }
+    game.mouseDown = bd < wr + 26;
     if (P.hp < P.hpMax * 0.4 && P.cd.potion <= 0) drinkPotion();
     let near = 0;
     for (const m of game.monsters) if (Math.hypot(m.x - P.x, m.y - P.y) < 100) near++;
-    if (near >= 2 && P.mana >= 30) tryWhirlwind();
+    if (near >= 2 && P.mana >= 30 && !rangedWeapon()) tryWhirlwind();
   } else {
     game.mouseDown = false;
     // 2) loot / orbs / gold, 3) chests, 4) portal (when boss down) or boss —

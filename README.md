@@ -28,7 +28,7 @@ run you can follow from the title screen to its death screen.
 | Input | Action |
 |---|---|
 | **Right mouse button / click** | move to the clicked point; **hold it down** and the character keeps following the cursor, stopping the instant you release |
-| **Left mouse button** (hold) | sword attack (auto-aims at nearest foe) |
+| **Left mouse button** (hold) | attack with whatever is in your hand — an axe or a sword swings, a bow fires an arrow, a staff looses a magic missile |
 | **WASD / arrows** | movement (same as click-to-move) |
 | **1** | healing potion — unlimited uses, one charge per 60 s (fresh at each checkpoint) |
 | **2** | Whirlwind — AoE spin, spends 30 Mana |
@@ -39,8 +39,8 @@ run you can follow from the title screen to its death screen.
 | **T** | trade with the wandering merchant when you stand near him: the world stops and a two-tab stall opens (Sell / Buy) |
 
 Clicking an **icon of a skill with the left mouse button** casts it directly —
-potion, Whirlwind, Leap or the sword swing — handy when you don't want to
-reach the keyboard.
+potion, Whirlwind, Leap or the attack of whatever you are holding — handy when you
+don't want to reach the keyboard.
 
 ## The loop
 
@@ -101,9 +101,9 @@ hero and lets the Roost be run again, as many times deep as you care to go.
 - **Attributes**: Strength, Dexterity, Intelligence, Vitality — +3 points per
   level, spent from the character sheet: press anywhere on a stat's row and the
   plus spends one free point. Main attribute scales your weapon's
-  damage (each weapon rolls one of str/dex/int), dexterity feeds crits,
-  intelligence feeds max Mana, vitality feeds HP and very slow natural HP
-  regen from level 5.
+  damage (an axe wants Strength, a sword Dexterity, a staff Intelligence —
+  see **Weapon types** below), dexterity feeds crits, intelligence feeds max
+  Mana, vitality feeds HP and very slow natural HP regen from level 5.
 - **Mana** (blue) regenerates slowly; combat swings feed it back.
 - **Inventory**: 20-slot backpack. A full backpack **refuses new loot** —
   the item waits on the floor and you are told so,
@@ -139,7 +139,7 @@ hero and lets the Roost be run again, as many times deep as you care to go.
   land in the top of their range far more often. **Treasure chests never hold
   common gear** — they roll magic-or-better. Ground drops glow **white /
   blue / purple / orange** by rarity.
-  Names come from the bonuses themselves — Sword/Helm/Armour plus the
+  Names come from the bonuses themselves — Sword/Axe/Bow/Staff/Helm/Armour plus the
   first bonus's affix-linked prefix and an `of X` suffix for each later
   bonus, so no bonus ever lends two words (e.g. `Keen Armour
   of the Lucky Blade`), legendaries also get a grand title (`Ancient …`).
@@ -153,6 +153,12 @@ hero and lets the Roost be run again, as many times deep as you care to go.
   far harder to hit than the bottom, each shown on the item line. Every pickup
   goes to your 20-slot **inventory** — you equip and swap gear manually from
   the sheet (key C), even mid-fight.
+- **Weapon types** decide both the attribute a weapon scales with and how the
+  hero uses it, and you can **see** what you are holding: an **Axe** (Strength,
+  swings), a **Sword** (Dexterity, swings), a **Bow** (Dexterity, fires arrows
+  and never swings) and a **Staff** (Intelligence, fires arcane homing missiles
+  and never swings). A bow or a staff also cannot be whirled — the Whirlwind
+  needs something to spin. Bare fists still punch, and Whirlwind works with them.
 - **Zoom** scales with your monitor: the visible world stays readable on big
   screens.
 
