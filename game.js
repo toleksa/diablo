@@ -1892,10 +1892,12 @@ function botTick(dt) {
   B.stuckT = (moved < 2 && B.wasAlive !== undefined) ? B.stuckT + dt : 0;
   B.wasAlive = true;
   B.lx = P.x; B.ly = P.y;
+  botEquip(); // keep the best gear on, even mid-fight (issue #35)
   let gx = null, gy = null;
   // 1) fight: nearest monster in sight
   let tgt = null, bd = 460;
   for (const m of game.monsters) {
+    if (m.hp <= 0) continue; // corpses are not targets
     const d = Math.hypot(m.x - P.x, m.y - P.y);
     if (d < bd) { bd = d; tgt = m; }
   }
@@ -1908,7 +1910,6 @@ function botTick(dt) {
     if (near >= 2 && P.mana >= 30) tryWhirlwind();
   } else {
     game.mouseDown = false;
-    botEquip();
     // 2) loot / orbs / gold, 3) chests, 4) portal (when boss down) or boss
     let best = null, bd2 = 520;
     for (const it of game.drops) { const d = Math.hypot(it.x - P.x, it.y - P.y); if (d < bd2) { bd2 = d; best = it; } }
