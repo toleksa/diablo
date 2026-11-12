@@ -242,7 +242,7 @@ function generateLevel(checkpoint) {
       if (Math.hypot(wx - game.startPos.x, wy - game.startPos.y) < 260) continue;
       if (game.portal && Math.hypot(wx - game.portal.x, wy - game.portal.y) < 80) continue;
       for (const oc of game.chests) if (Math.hypot(wx - oc.x, wy - oc.y) < 120) return;
-      game.chests.push({ x: wx, y: wy, item: rollMagicItem(checkpoint), open: false });
+      game.chests.push({ x: wx, y: wy, item: rollChestItem(checkpoint), open: false });
       return;
     }
   };
@@ -423,6 +423,26 @@ const RARITY = [
   { id:'rare',    name:'Rare',     w:13, mult:2.2, afx:2 },
   { id:'legend',  name:'Legendary',w:3,  mult:3.4, afx:3 },
 ];
+// rarity roll (issue #36): odds strictly descend common -> magic -> rare ->
+// legendary, and a `luck` bonus lifts the share of the better tiers. `minTier`
+// skips the weak tiers outright, so a chest is magic-or-better, never common
+function rarityRoll(luck, minTier) {
+  const w = [];
+  let tot = 0;
+  for (let i = minTier; i < RARITY.length; i++) {
+    const boost = i === 0 ? 1 : 1 + luck * (0.5 + i * 0.5);
+    w.push(RARITY[i].w * boost);
+    tot += w[w.length - 1];
+  }
+  let roll = rand(0, tot);
+  for (let i = 0; i < w.length; i++) { if (roll < w[i]) return RARITY[minTier + i]; roll -= w[i]; }
+  return RARITY[RARITY.length - 1];
+}
+// bonus values (issue #36): min..max on an exponential curve, so the top of
+// the range is far rarer than the bottom — past half the range gets scarce
+function rollBonus(min, max, curve) {
+  return Math.max(min, Math.round(min + (max - min) * Math.pow(rand(0, 1), curve)));
+}
 const SLOTS = ['weapon','helm','armor'];
 const INV_CAP = 20; // backpack slots (issue #30)
 const BASES = {
@@ -444,23 +464,21 @@ const NLEG = ['The ','Grand ','Ancient ','Forgotten ','Glorious ',
 const BONUSK = ['dmg', 'hp', 'mp', 'crit', 'spd', 'str', 'dex', 'int', 'vit'];
 // dmg/life/mana/crit/move-speed + direct attribute bonuses (issue #25)
 
-function rollItem(cp, forceGood, forceRar) {
-  let total = RARITY.reduce((s,r)=>s+r.w,0);
-  let roll = rand(0, total);
-  // forceGood guarantees better-than-common: the old weight cap fell inside
-  // common's range and forced COMMON instead (fixed for issue #23)
-  if (forceGood && !forceRar) roll = total - rand(0, total - RARITY[0].w);
-  let rar = RARITY[0];
+function rollItem(cp, forceGood, forceRar, luck) {
+  // forceGood = magic-or-better; `luck` is the caller's bonus (enemy rank) on
+  // top of the player-level and checkpoint bonuses (issue #36)
+  let rar;
   if (forceRar) { for (const r of RARITY) if (r.id === forceRar) { rar = r; break; } }
-  else for (const r of RARITY) { if (roll < r.w) { rar = r; break; } roll -= r.w; }
+  else rar = rarityRoll((luck || 0) + P.level * 0.006 + (cp - 1) * 0.012, forceGood ? 1 : 0);
   const slot = pick(SLOTS), b = BASES[slot];
   const scale = 1 + (cp-1)*0.3;
   const stats = [];
   let wscale = null;
   if (slot==='weapon') {
     wscale = pick(['str', 'dex', 'int']);
-    // scaling %: 1..200, higher rolls progressively rarer
-    const pct = Math.max(1, Math.round(200 * Math.pow(rand(0, 1), 2.6)));
+    // scaling %: 1..200 on a steep exponential curve (issue #36) — past 100
+    // is quite rare, past 150 a once-in-a-long-run roll
+    const pct = rollBonus(1, 200, 4.2);
     const v = Math.round(rand(b.dmg[0], b.dmg[1]) * scale * rar.mult);
     stats.push({k:'dmg', v, scale: wscale, pct,
       txt: 'Damage: +' + v + ' (+' + pct + '% ' + ATTRPL[wscale] + ')'});
@@ -474,23 +492,25 @@ function rollItem(cp, forceGood, forceRar) {
     const pool = BONUSK.filter(k => !stats.some(st => st.k === k));
     if (!pool.length) break;
     const kind = pick(pool);
+    // every bonus rolls min..(max scaled by depth) on an exponential curve
+    // (issue #36), so the high end of each range is much harder to hit
     if (kind === 'dmg') {
-      const v = randInt(1, 3) * (1 + Math.floor(cp / 3));
+      const v = rollBonus(1, 3 * (1 + Math.floor(cp / 3)), 2.4);
       stats.push({k:'dmg', v, txt:'Damage: +'+v});
     } else if (kind === 'hp') {
-      const v = randInt(3, 8) * (1 + Math.floor(cp / 2));
+      const v = rollBonus(3, 8 * (1 + Math.floor(cp / 2)), 2.4);
       stats.push({k:'hp', v, txt:'Life: +'+v});
     } else if (kind === 'mp') {
-      const v = randInt(5, 14) * (1 + Math.floor(cp / 3));
+      const v = rollBonus(5, 14 * (1 + Math.floor(cp / 3)), 2.4);
       stats.push({k:'mp', v, txt:'Mana: +'+v});
     } else if (kind === 'crit') {
-      const v = randInt(2, 5) + Math.floor(cp / 5);
+      const v = rollBonus(2, 5 + Math.floor(cp / 5), 2.4);
       stats.push({k:'crit', v, txt:'Critical Chance: +'+v+'%'});
     } else if (kind === 'str' || kind === 'dex' || kind === 'int' || kind === 'vit') {
-      const v = randInt(1, 3) + Math.floor(cp / 6); // +N to an attribute (issue #25)
+      const v = rollBonus(1, 3 + Math.floor(cp / 6), 2.4); // +N to an attribute (issue #25)
       stats.push({k: kind, v, txt: ATTRPL[kind] + ': +' + v});
     } else {
-      const v = randInt(4, 12) + Math.floor(cp / 4);
+      const v = rollBonus(4, 12 + Math.floor(cp / 4), 2.4);
       stats.push({k:'spd', v, txt:'Movement Speed: +'+v+'%'});
     }
   }
@@ -510,11 +530,15 @@ function rollItem(cp, forceGood, forceRar) {
     s + (st.k === 'dmg' ? (st.v + (st.pct || 0) * 0.11) : st.v) * (W8[st.k] || 1), 0);
   return { slot, name:nm, rarity:rar.id, stats, score, cp };
 }
-// exactly-magic roll for treasure chests (issue #19): reroll until magic
-function rollMagicItem(cp) { return rollItem(cp, false, 'magic'); }
+// treasure chests roll at-least-magic (issue #36), never common: the minTier
+// floor plus a small luck so a chest sometimes hides a rare or legendary
+function rollChestItem(cp) { return rollItem(cp, true, null, 0.06); }
 
-function dropItem(x, y, cp, guarantee) {
-  const it = rollItem(cp, guarantee || chance(0.14 + cp*0.01));
+// enemy drops roll rarity too, with an enemy-rank bonus on top: normal none,
+// elite a small one, boss a big one (issue #36)
+function dropItem(x, y, cp, guarantee, rank) {
+  const luck = rank === 'boss' ? 0.35 : rank === 'elite' ? 0.1 : 0;
+  const it = rollItem(cp, guarantee || chance(0.14 + cp * 0.01), null, luck);
   game.drops.push({x, y, r:11, item:it, life:60, bob:rand(0,TAU)});
 }
 
@@ -595,11 +619,12 @@ function killMonster(m) {
   dropGlobes(m.x, m.y);
   dropGold(m.x, m.y, game.checkpoint);
   if (chance(m.elite ? 0.9 : (m.type==='boss' ? 1 : 0.16)))
-    dropItem(m.x + rand(-20,20), m.y + rand(-20,20), game.checkpoint, m.elite || m.type==='boss');
+    dropItem(m.x + rand(-20,20), m.y + rand(-20,20), game.checkpoint, m.elite || m.type==='boss',
+      m.type === 'boss' ? 'boss' : m.elite ? 'elite' : 'normal');
   if (m.type === 'boss') {
     game.boss = null; game.bossMode = false;
     game.shake = 18; S.impact();
-    for (let i=0;i<3;i++) dropItem(m.x+rand(-40,40), m.y+rand(-40,40), game.checkpoint, true);
+    for (let i=0;i<3;i++) dropItem(m.x+rand(-40,40), m.y+rand(-40,40), game.checkpoint, true, 'boss');
     S.portal();
     banner('Boss defeated — portal active!', '#58c8f0');
   } else {

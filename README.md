@@ -47,7 +47,7 @@ quota of monsters' worth of progress, find the **boss waiting in the
 deepest room**, slay him to unlock the **portal behind his throne** (it
 stays dim while he lives, blazing bright once he falls) and descend one
 level deeper. **Treasure chests** hide among the rooms — walk up to one
-and it springs open: a guaranteed magic item plus gold. Die → stats
+and it springs open: a **magic-or-better** item plus gold. Die → stats
 screen → try again. Foes give chase only up to a **leash** — far from
 their spot they stop, glance around, and walk back to sleep where they
 started. Every portal you enter
@@ -85,15 +85,23 @@ your last journey instead of starting over.
 - **Items**: common/magic/rare/legendary gear for weapon/helm/armour with
   affixes — common carries only its base stat (damage + attribute scaling
   for weapons, life for armour), magic/rare/legendary add exactly 1/2/3
-  bonuses. Ground drops glow **white / blue / purple / orange** by rarity.
+  bonuses. Odds fall strictly tier by tier, and every roll gets a **luck
+  bonus from your level, the depth you stand on and the enemy's rank**
+  (normal none, elite small, boss big), so the better tiers become
+  noticeably likelier the further you get; **treasure chests never hold
+  common gear** — they roll magic-or-better. Ground drops glow **white /
+  blue / purple / orange** by rarity.
   Names come from the bonuses themselves — Sword/Helm/Armour plus an
   affix-linked prefix and an `of X` suffix per bonus (e.g. `Keen Armour
   of the Lucky Blade`), legendaries also get a grand title (`Ancient …`).
   Each weapon rolls an attribute-scaling bonus **(+1–200% of one
-  attribute, high rolls progressively rarer)**, shown on the item like
+  attribute, on an exponential curve where past 100 is quite rare and past
+  150 a once-in-a-long-run roll)**, shown on the item like
   `Damage: +14 (+87% Strength)` — the bonus is attribute value × that %.
   Affixes roll at most one bonus per kind out of **Damage / Life / Mana /
-  Critical Chance / Movement Speed**, each shown on the item line. Every pickup
+  Critical Chance / Movement Speed** and the four attributes, every one of them
+  rolled on an exponential min-to-max curve (issue #36) so the top of a range is
+  far harder to hit than the bottom, each shown on the item line. Every pickup
   goes to your 20-slot **inventory** — you equip and swap gear manually from
   the sheet (key C), even mid-fight.
 - **Zoom** scales with your monitor: the visible world stays readable on big
