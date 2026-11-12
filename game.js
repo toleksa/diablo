@@ -414,11 +414,15 @@ const BASES = {
 const AFFIX = ['Might','Storm','Dragon','Shadow','Angel','Demon','Tempest','Wolf','Bone Claw','Blazing Fury'];
 const BONUSK = ['dmg', 'hp', 'mp', 'crit', 'spd']; // damage/life/mana/crit/move-speed
 
-function rollItem(cp, forceGood) {
+function rollItem(cp, forceGood, forceRar) {
   let total = RARITY.reduce((s,r)=>s+r.w,0);
-  let roll = rand(0, total); if (forceGood) roll = Math.min(roll, 3); // rzadziej ale nigdy common wymuszony
+  let roll = rand(0, total);
+  // forceGood guarantees better-than-common: the old weight cap fell inside
+  // common's range and forced COMMON instead (fixed for issue #23)
+  if (forceGood && !forceRar) roll = total - rand(0, total - RARITY[0].w);
   let rar = RARITY[0];
-  for (const r of RARITY) { if (roll < r.w) { rar = r; break; } roll -= r.w; }
+  if (forceRar) { for (const r of RARITY) if (r.id === forceRar) { rar = r; break; } }
+  else for (const r of RARITY) { if (roll < r.w) { rar = r; break; } roll -= r.w; }
   const slot = pick(SLOTS), b = BASES[slot];
   const scale = 1 + (cp-1)*0.3;
   const stats = [];
@@ -470,11 +474,7 @@ function rollItem(cp, forceGood) {
   return { slot, name:nm, rarity:rar.id, stats, score, cp };
 }
 // exactly-magic roll for treasure chests (issue #19): reroll until magic
-function rollMagicItem(cp) {
-  let it = rollItem(cp, false);
-  for (let k = 0; k < 40 && it.rarity !== 'magic'; k++) it = rollItem(cp, false);
-  return it;
-}
+function rollMagicItem(cp) { return rollItem(cp, false, 'magic'); }
 
 function dropItem(x, y, cp, guarantee) {
   const it = rollItem(cp, guarantee || chance(0.14 + cp*0.01));
@@ -1842,9 +1842,9 @@ devMenu.addEventListener('click', (e) => {
         const tx = P.x + Math.cos(a) * dd, ty = P.y + Math.sin(a) * dd;
         if (!solidAt(tx, ty, 12)) { px = tx; py = ty; break; }
       }
-      dropItem(px, py, game.checkpoint, true);
+      game.drops.push({ x: px, y: py, r: 11, item: rollItem(game.checkpoint, false, 'legend'), life: 60, bob: rand(0, TAU) });
     }
-    toast('DEV: 5 items spawned around you', '');
+    toast('DEV: 5 legendary items spawned around you', 'item-legend');
   } else if (act === 'tp') {
     if (game.running) { toast('DEV: teleporting deeper', ''); nextCheckpoint(); }
   }
