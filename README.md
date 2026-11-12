@@ -70,6 +70,9 @@ your last journey instead of starting over.
   affixes — common carries only its base stat (damage + attribute scaling
   for weapons, life for armour), magic/rare/legendary add exactly 1/2/3
   bonuses. Ground drops glow **white / blue / purple / orange** by rarity.
+  Names come from the bonuses themselves — Sword/Helm/Armour plus an
+  affix-linked prefix and an `of X` suffix per bonus (e.g. `Keen Armour
+  of the Lucky Blade`), legendaries also get a grand title (`Ancient …`).
   Each weapon rolls an attribute-scaling bonus **(+1–200% of one
   attribute, high rolls progressively rarer)**, shown on the item like
   `Damage: +14 (+87% Strength)` — the bonus is attribute value × that %.

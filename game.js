@@ -407,11 +407,21 @@ const RARITY = [
 ];
 const SLOTS = ['weapon','helm','armor'];
 const BASES = {
-  weapon: { name:'Miecz', dmg:[6,10] },
+  weapon: { name:'Sword', dmg:[6,10] },
   helm:   { name:'Helm',  hp:[14,22] },
-  armor:  { name:'Zbroja', hp:[24,36] },
+  armor:  { name:'Armour', hp:[24,36] },
 };
-const AFFIX = ['Might','Storm','Dragon','Shadow','Angel','Demon','Tempest','Wolf','Bone Claw','Blazing Fury'];
+// bonus-linked naming (issue #26): prefixes/suffixes tied to the bonus kinds
+const NSUF = { dmg:'of Slaying', hp:'of Life', mp:'of the Mana', crit:'of the Lucky Blade',
+  spd:'of the Wind', str:'of the Bear', dex:'of the Cat', int:'of the Owl', vit:'of the Ox' };
+const NPRE = {
+  dmg:['Mighty','Savage','Cruel'], hp:['Sturdy','Ironclad','Vigorous'], mp:['Arcane','Mystic','Ember'],
+  crit:['Keen','Tricky','Deft'], spd:['Swift','Fleet','Nimble'],
+  str:['Strong','Brawny','Muscular'], dex:['Agile','Wiry','Dexterous'],
+  int:['Clever','Enlightened','Wise'], vit:['Hardy','Robust','Tough'],
+};
+const NLEG = ['The ','Grand ','Ancient ','Forgotten ','Glorious ',
+  'Cursed ',];
 const BONUSK = ['dmg', 'hp', 'mp', 'crit', 'spd', 'str', 'dex', 'int', 'vit'];
 // dmg/life/mana/crit/move-speed + direct attribute bonuses (issue #25)
 
@@ -439,13 +449,11 @@ function rollItem(cp, forceGood, forceRar) {
     const v = Math.round(rand(b.hp[0], b.hp[1]) * scale * rar.mult);
     stats.push({k:'hp', v, txt:'Life: +'+v});
   }
-  const names = [];
   for (let i=0;i<rar.afx;i++){
     // a bonus kind (dmg/hp) may appear on an item at most once; affixes can
-    // also roll mana, critical chance and movement speed (issue #8)
+    // also roll mana, critical chance, movement speed and attributes
     const pool = BONUSK.filter(k => !stats.some(st => st.k === k));
     if (!pool.length) break;
-    const a = pick(AFFIX);
     const kind = pick(pool);
     if (kind === 'dmg') {
       const v = randInt(1, 3) * (1 + Math.floor(cp / 3));
@@ -466,9 +474,15 @@ function rollItem(cp, forceGood, forceRar) {
       const v = randInt(4, 12) + Math.floor(cp / 4);
       stats.push({k:'spd', v, txt:'Movement Speed: +'+v+'%'});
     }
-    names.push(a);
   }
-  const nm = (rar.name ? rar.name+' ' : '') + b.name + (names.length ? ' '+names.join(' i ') : '');
+  // naming (issue #26): base name only on common; the bonuses themselves
+  // decide the name — a prefix tied to the first bonus, 'of X' suffix per
+  // bonus kind, and a grand title on legendaries
+  const bonuses = stats.slice(1);
+  let nm = (rar.id === 'legend' ? pick(NLEG) : '');
+  if (bonuses.length) nm += pick(NPRE[bonuses[0].k]) + ' ';
+  nm += b.name;
+  for (const st of bonuses) nm += ' ' + NSUF[st.k];
   // score counts the scaling bonus at an assumed average attribute (~11):
   // bonus dmg ≈ pct × 11 / 100
   // score weights each bonus kind; scaling bonus valued at an assumed attribute (~11)
