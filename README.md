@@ -47,7 +47,14 @@ reach the keyboard.
 Each act is a **procedurally generated dungeon** — rooms connected by
 corridors, lit by wall torches. Monsters **sleep where they stand** and
 wake up only when you step into their aggro radius (or when you hit them):
-explore room by room like in Diablo, no pulls from across the map. Kill the
+explore room by room like in Diablo, no pulls from across the map. Every
+**three levels the theme changes** — Old Ruins in warm stone, Frozen
+Hollows under cold blue light, Bone Flats in pale dust — and the stones,
+torch flames and the dark between them change with them. The **tenth
+level is no dungeon at all** but the arena of **the Demon's Roost**: one
+vast hall ringed by broken pillars, and the boss waiting in the middle of
+it is bred bigger than any other — wider shoulders, thicker hide, heavier
+hand. Kill the
 quota of monsters' worth of progress, find the **boss waiting in the
 deepest room**, slay him to unlock the **portal behind his throne** (it
 stays dim while he lives, blazing bright once he falls) and descend one

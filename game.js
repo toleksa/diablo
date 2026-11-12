@@ -121,6 +121,7 @@ const game = {
   portal: null, boss: null, visited: null,
   chests: [],
   merchant: null, // wandering trader (issue #34)
+  th: null, // the palette of the level you are standing in (issue #49)
   moveTarget: null, mouseDown: false, rmbDown: false, deathShown: false,
   totalKills: 0,
   demo: false, // spectator demo mode (issue #35)
@@ -159,8 +160,34 @@ function resetPlayer(cls) {
 }
 
 // ---------- Walls / level generation ----------
+// ---------- LEVEL THEMES (issue #49) ----------
+// every third level shifts the whole palette: the stones, the torchlight, the
+// dark between them. Level ten is not a ruin at all but the Demon's Roost
+// (the stone tones follow the muted primaries of ART_BIBLE.md)
+const THEMES = [
+  { name: 'Old Ruins', fb: 24, fv: 9, ft: [8, 3, -4], fm: 'rgba(92,84,66,0.55)',
+    wf: '#191410', wt: '#39322a', we: 'rgba(120,102,74,0.2)', ws: 'rgba(150,132,98,0.22)',
+    br: '#241b10', fl: 'rgba(255,188,74,0.92)', fc: 'rgba(255,242,190,0.92)',
+    halo: '255,145,45', dark: 'rgba(4,3,8,0.87)', void: '#070503' },
+  { name: 'Frozen Hollows', fb: 22, fv: 9, ft: [-6, 6, 16], fm: 'rgba(74,100,146,0.5)',
+    wf: '#111621', wt: '#2b3446', we: 'rgba(122,142,196,0.2)', ws: 'rgba(162,182,226,0.24)',
+    br: '#1a2230', fl: 'rgba(126,192,255,0.92)', fc: 'rgba(222,242,255,0.95)',
+    halo: '104,168,255', dark: 'rgba(3,5,14,0.87)', void: '#05060b' },
+  { name: 'Bone Flats', fb: 29, fv: 8, ft: [12, 9, 2], fm: 'rgba(150,140,116,0.5)',
+    wf: '#221e17', wt: '#4a4436', we: 'rgba(172,158,118,0.22)', ws: 'rgba(196,180,132,0.26)',
+    br: '#2c2417', fl: 'rgba(255,214,118,0.92)', fc: 'rgba(255,250,222,0.95)',
+    halo: '255,192,88', dark: 'rgba(8,7,4,0.84)', void: '#0b0906' },
+  { name: "The Demon's Roost", fb: 19, fv: 8, ft: [16, -2, -6], fm: 'rgba(158,52,40,0.5)',
+    wf: '#160a08', wt: '#3b1b16', we: 'rgba(190,80,58,0.26)', ws: 'rgba(222,112,70,0.3)',
+    br: '#2a110b', fl: 'rgba(255,120,58,0.95)', fc: 'rgba(255,224,130,0.95)',
+    halo: '255,92,40', dark: 'rgba(12,3,3,0.86)', void: '#0b0403' },
+];
+function themeOf(cp) { return THEMES[clamp(Math.floor((cp - 1) / 3), 0, THEMES.length - 1)]; }
+
+
 function generateLevel(checkpoint) {
   mcp = checkpoint;
+  game.th = themeOf(checkpoint); // the palette this whole level is drawn in
   game.quota = 6 + checkpoint * 3;
   game.killedForQuota = 0;
   game.bossMode = false;
@@ -207,6 +234,23 @@ function generateLevel(checkpoint) {
   };
   for (let i = 0; i + 1 < rooms.length; i++) link(i, i + 1);
   for (let i = 0; i + 2 < rooms.length; i += 2) link(i, i + 2);
+  // the tenth level is not a dungeon: it is the arena of the Demon's Roost,
+  // one vast hall ringed by pillars so the big boss has room to run and the
+  // hero has room to circle him (issue #49)
+  const arena = checkpoint >= 10;
+  if (arena) {
+    const ax = 4, ay = 4, aw = GCOLS - 8, ah = GROWS - 8;
+    for (let ty = ay; ty < ay + ah; ty++) for (let tx = ax; tx < ax + aw; tx++) set(tx, ty);
+    for (let t2 = 0; t2 < 10; t2++) {
+      const ptx = ax + 2 + Math.floor(G(t2, 131) * (aw - 5)), pty = ay + 2 + Math.floor(G(t2, 137) * (ah - 5));
+      if (Math.hypot(ptx - (ax + aw / 2), pty - (ay + ah / 2)) < 5) continue; // keep the ring clear
+      grid[pty * GCOLS + ptx] = 0;
+      if (ptx + 1 < ax + aw) grid[pty * GCOLS + ptx + 1] = 0;
+      if (pty + 1 < ay + ah) grid[(pty + 1) * GCOLS + ptx] = 0;
+    }
+    rooms.length = 0;
+    rooms.push({ x: ax, y: ay, w: aw, h: ah });
+  }
   // wall rects for drawing (culling in drawWalls keeps this cheap)
   for (let ty = 0; ty < GROWS; ty++) for (let tx = 0; tx < GCOLS; tx++)
     if (!grid[ty * GCOLS + tx]) game.walls.push({ x: tx * TS, y: ty * TS, w: TS, h: TS });
@@ -217,6 +261,13 @@ function generateLevel(checkpoint) {
       game.torches.push({ x: tx * TS + TS / 2, y: ty * TS + 12, ph: G(tx, ty) * TAU });
   }
   // start room, boss room (farthest), portal behind the boss
+  if (arena) {
+    const r0 = rooms[0];
+    game.startPos = { x: (r0.x + r0.w / 2) * TS, y: (r0.y + r0.h - 2.5) * TS }; // the south gate
+    game.portal = { x: (r0.x + r0.w / 2) * TS, y: (r0.y + 2) * TS, t: 0 };      // the north gate
+    P.x = game.startPos.x; P.y = game.startPos.y;
+    spawnBoss((r0.x + r0.w / 2) * TS, (r0.y + r0.h / 2) * TS - 40, 1.55);
+  } else {
   const s0 = rooms[0];
   game.startPos = { x: (cx(s0) + 1) * TS, y: (cy(s0) + 1) * TS };
   let far = s0, fd = -1;
@@ -233,6 +284,7 @@ function generateLevel(checkpoint) {
   if (solidAt(bxs, bys, 30)) { bxs = bx; bys = by; }
   P.x = game.startPos.x; P.y = game.startPos.y;
   spawnBoss(bxs, bys);
+  }
   // treasure chests (issue #19): sparse — a guaranteed one, sometimes a second,
   // never in the start room, rolled to hold a magic item
   const tryChest = () => {
@@ -372,17 +424,21 @@ function preplaceMonsters() {
   }
 }
 
-function spawnBoss(x, y) {
+function spawnBoss(x, y, big) {
   if (x == null) { const p = findSpawnPoint(); x = p.x; y = p.y; }
   const d = mtier(BOSS, game.checkpoint);
+  // the tenth level's boss is bred big: wider shoulders, a thicker hide, a
+  // heavier hand (issue #49)
+  const g = big || 1;
   const b = {
-    kind:'boss', type:'boss', name: d.name, x, y, r:d.r,
-    hp:d.hp, hpMax:d.hp, dmg:d.dmg,
+    kind:'boss', type:'boss', name: d.name, x, y, r: Math.round(d.r * g),
+    hp: Math.round(d.hp * (1 + (g - 1) * 1.5)), hpMax: Math.round(d.hp * (1 + (g - 1) * 1.5)),
+    dmg: Math.round(d.dmg * (1 + (g - 1) * 0.8)),
     // slower bosses (issue #46): a warboss never out-runs a running hero,
     // however deep the dungeon has scaled him
-    speed: Math.min(d.speed, 152), xp:d.xp, color:d.color,
-    touchCd:d.touchCd, cd:1, ai:'boss', range: d.r + P.r + 6, elite:false,
-    angle:0, hitFlash:0, slow:0, wob:0, dashCd:2.5, summonCd:5, stun:0, kx:0, ky:0,
+    speed: Math.min(d.speed, 152), xp: Math.round(d.xp * (1 + (g - 1) * 1.2)), color: d.color,
+    touchCd: d.touchCd, cd: 1, ai: 'boss', range: Math.round(d.r * g) + P.r + 6, elite: false,
+    angle: 0, hitFlash: 0, slow: 0, wob: 0, dashCd: 2.5, summonCd: 5, stun: 0, kx: 0, ky: 0,
     act: false, aggro: 460, // waits in the boss room until the player steps near
     homeX: x, homeY: y, leash: 0, leashT: 0, // his throne: bosses leash like any foe (issue #46)
   };
@@ -1260,16 +1316,17 @@ function shadowAt(x, y, r, a) {
 }
 
 function drawFloor() {
+  const th = game.th;
   const ts = 64;
   const x0 = Math.floor(vx / ts), x1 = Math.floor((vx + VW) / ts);
   const y0 = Math.floor(vy / ts), y1 = Math.floor((vy + VH) / ts);
   for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++) {
     const h1 = hash2(tx, ty);
-    const base = 24 + Math.floor(h1 * 9);
-    ctx.fillStyle = 'rgb(' + (base + 8) + ',' + (base + 3) + ',' + (base - 4) + ')';
+    const base = th.fb + Math.floor(h1 * th.fv);
+    ctx.fillStyle = 'rgb(' + (base + th.ft[0]) + ',' + (base + th.ft[1]) + ',' + (base + th.ft[2]) + ')';
     ctx.fillRect(tx * ts - vx, ty * ts - vy, ts + 1, ts + 1);
     if (h1 > 0.9) {
-      ctx.fillStyle = 'rgba(92,84,66,0.55)';
+      ctx.fillStyle = th.fm;
       ctx.beginPath();
       ctx.arc(tx * ts - vx + hash2(ty, tx) * ts, ty * ts - vy + h1 * ts * 0.8, 3.4, 0, TAU);
       ctx.fill();
@@ -1285,20 +1342,21 @@ function drawFloor() {
 }
 
 function drawWalls() {
+  const th = game.th;
   for (const w of game.walls) {
     const x = w.x - vx, y = w.y - vy;
     if (x + w.w < -40 || x > VW + 40 || y + w.h < -90 || y > VH + 40) continue;
     // front (south-facing) side — pseudo-3D
-    ctx.fillStyle = '#191410';
+    ctx.fillStyle = th.wf;
     ctx.fillRect(x, y + w.h - WALL_H, w.w, WALL_H);
-    ctx.strokeStyle = 'rgba(120,102,74,0.2)'; ctx.lineWidth = 1;
+    ctx.strokeStyle = th.we; ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(x, y + w.h + 0.5 - WALL_H); ctx.lineTo(x + w.w, y + w.h + 0.5 - WALL_H);
     ctx.stroke();
     // top
-    ctx.fillStyle = '#39322a';
+    ctx.fillStyle = th.wt;
     ctx.fillRect(x, y - WALL_H, w.w, w.h);
-    ctx.strokeStyle = 'rgba(150,132,98,0.22)'; ctx.lineWidth = 1.5;
+    ctx.strokeStyle = th.ws; ctx.lineWidth = 1.5;
     ctx.strokeRect(x, y - WALL_H, w.w, w.h);
     ctx.fillStyle = 'rgba(0,0,0,0.22)';
     for (let bx = x; bx < x + w.w - 14; bx += 28)
@@ -1307,16 +1365,17 @@ function drawWalls() {
 }
 
 function drawTorches(t) {
+  const th = game.th;
   for (const tc of game.torches) {
     const x = tc.x - vx, y = tc.y - vy;
     if (x < -50 || x > VW + 50 || y < -50 || y > VH + 50) continue;
     const fl = Math.sin(t * 7 + tc.ph) * 0.5 + Math.sin(t * 13.7 + tc.ph * 2) * 0.3;
     const fx = x + fl * 1.6;
-    ctx.fillStyle = '#241b10';
+    ctx.fillStyle = th.br;
     ctx.fillRect(x - 1.5, y - 13, 3, 13);
-    ctx.fillStyle = 'rgba(255,188,74,0.92)';
+    ctx.fillStyle = th.fl;
     ctx.beginPath(); ctx.ellipse(fx, y - 17 - fl * 2, 4.4, 7.5 + fl * 1.5, 0, 0, TAU); ctx.fill();
-    ctx.fillStyle = 'rgba(255,242,190,0.92)';
+    ctx.fillStyle = th.fc;
     ctx.beginPath(); ctx.ellipse(fx, y - 17 - fl * 2, 2.1, 3.7, 0, 0, TAU); ctx.fill();
   }
 }
@@ -1722,8 +1781,9 @@ function drawFX() {
 }
 
 function lightPass(t) {
+  const th = game.th;
   dctx.setTransform(1, 0, 0, 1, 0, 0);
-  dctx.fillStyle = 'rgba(4,3,8,0.87)';
+  dctx.fillStyle = th.dark;
   dctx.fillRect(0, 0, darkCv.width, darkCv.height);
   dctx.globalCompositeOperation = 'destination-out';
   const D = SC;
@@ -1754,8 +1814,8 @@ function lightPass(t) {
     const x = tc.x - vx, y = tc.y - vy;
     if (x < -70 || x > VW + 70 || y < -70 || y > VH + 70) continue;
     const g = ctx.createRadialGradient(x, y, 0, x, y, 62);
-    g.addColorStop(0, 'rgba(255,145,45,0.15)');
-    g.addColorStop(1, 'rgba(255,145,45,0)');
+    g.addColorStop(0, 'rgba(' + th.halo + ',0.15)');
+    g.addColorStop(1, 'rgba(' + th.halo + ',0)');
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.arc(x, y, 62, 0, TAU); ctx.fill();
   }
@@ -1810,7 +1870,7 @@ function render(dt) {
   vx = Math.round(cam.x + (sh > 0.2 ? rand(-sh, sh) : 0));
   vy = Math.round(cam.y + (sh > 0.2 ? rand(-sh, sh) : 0));
   ctx.setTransform(SC, 0, 0, SC, 0, 0);
-  ctx.fillStyle = '#070503';
+  ctx.fillStyle = game.th.void;
   ctx.fillRect(0, 0, VW, VH);
   drawFloor();
   drawGroundFX();
@@ -1864,8 +1924,9 @@ for (const sc of [
 // instead of every frame, so pressing a row never races a DOM swap (issue #37)
 let sheetLive = 0;
 function hudUpdate() {
-  const rn = ROMAN[Math.min(ROMAN.length - 1, game.checkpoint)];
-  HUD.objTitle.textContent = 'Act ' + rn + ' — Old Ruins';
+  // acts follow the themes: three levels to an act (issue #49)
+  const band = Math.min(Math.floor((game.checkpoint - 1) / 3) + 1, ROMAN.length - 1);
+  HUD.objTitle.textContent = 'Act ' + ROMAN[band] + ' — ' + game.th.name + ' · Level ' + game.checkpoint;
   if (game.boss && !game.boss.dead) HUD.objText.textContent = 'Boss: ' + game.boss.name + ' — far in the dungeon';
   else HUD.objText.textContent = 'Enter portal';
   HUD.goldText.textContent = String(P.gold);
