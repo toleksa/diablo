@@ -41,7 +41,7 @@ still holds, the pack turned back into gold.
 | Input | Action |
 |---|---|
 | **Right mouse button / click** | move to the clicked point; **hold it down** and the character keeps following the cursor, stopping the instant you release |
-| **Left mouse button** (hold) | attack with whatever is in your hand — an axe or a sword swings, a bow fires an arrow, a staff looses a magic missile |
+| **Left mouse button** (hold) | attack with whatever is in your hand — an axe or a sword swings, a bow fires an arrow straight at the cursor, a staff looses a homing magic missile |
 | **WASD / arrows** | movement (same as click-to-move) |
 | **1** | healing potion — unlimited uses, one charge per 60 s (fresh at each checkpoint) |
 | **2** | Whirlwind — AoE spin, spends 30 Mana |

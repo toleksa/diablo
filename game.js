@@ -1278,16 +1278,21 @@ function shootRanged() {
   const bowly = w.wk === 'bow';
   const rng = bowly ? 520 : 460;
   P.atkT = P.atkCd;
-  // loose on the nearest foe you can see, otherwise straight ahead
-  let best = null, bd = rng;
-  for (const m of game.monsters) {
-    if (m.hp <= 0) continue;
-    const d = Math.hypot(m.x - P.x, m.y - P.y);
-    if (d >= bd || !losClear(P.x, P.y, m.x, m.y)) continue;
-    bd = d; best = m;
+  // a staff missile still finds the nearest foe you can see (it homes
+  // anyway); the BOW does not (issue #61): an arrow takes exactly the line
+  // the cursor drew, so P.aim stays where the mouse left it and no foe,
+  // however politely standing in reach, can steal the shot
+  if (!bowly) {
+    let best = null, bd = rng;
+    for (const m of game.monsters) {
+      if (m.hp <= 0) continue;
+      const d = Math.hypot(m.x - P.x, m.y - P.y);
+      if (d >= bd || !losClear(P.x, P.y, m.x, m.y)) continue;
+      bd = d; best = m;
+    }
+    if (best) P.aim = Math.atan2(best.y - P.y, best.x - P.x);
+    else if (game.moveTarget) P.aim = Math.atan2(game.moveTarget.y - P.y, game.moveTarget.x - P.x);
   }
-  if (best) P.aim = Math.atan2(best.y - P.y, best.x - P.x);
-  else if (game.moveTarget) P.aim = Math.atan2(game.moveTarget.y - P.y, game.moveTarget.x - P.x);
   const spd = bowly ? 660 : 450; // an arrow is quick and flat, a missile drifts and homes
   const hx = P.x + Math.cos(P.aim) * (P.r + 6), hy = P.y + Math.sin(P.aim) * (P.r + 6) - 4;
   if (bowly) S.bow(); else S.zap();
@@ -2254,12 +2259,14 @@ function drawHandWeapon(wk, hx, hy, ang, flare) {
     return;
   }
   if (wk === 'bow') {
-    const pa = ang; // the belly of the bow faces the hero, the tips point down
+    const pa = ang; // issue #61: the centre of the wooden arc LEADS toward
+    // the cursor and the string chord rides behind the grip - the other way
+    // round it reads as a bow carried by the limb, tip-first into the fight
     ctx.strokeStyle = '#7a5230'; ctx.lineWidth = 2.2;
     ctx.beginPath();
-    ctx.arc(hx, hy, 10, pa + Math.PI - 1.2, pa + Math.PI + 1.2);
+    ctx.arc(hx, hy, 10, pa - 1.2, pa + 1.2);
     ctx.stroke();
-    const t1 = pa + Math.PI - 1.2, t2 = pa + Math.PI + 1.2;
+    const t1 = pa - 1.2, t2 = pa + 1.2;
     ctx.strokeStyle = 'rgba(228,222,200,0.85)'; ctx.lineWidth = 1; // the string
     ctx.beginPath();
     ctx.moveTo(hx + Math.cos(t1) * 10, hy + Math.sin(t1) * 10);
@@ -2864,6 +2871,7 @@ function botTick(dt) {
     // the real distance the blade's tip can actually bite at (issue #59 -
     // it used to flail at foes a hand's width past reach)
     const wr = ranged ? 500 : P.atkRange + tgt.r - 4;
+    if (ranged) P.aim = Math.atan2(tgt.y - P.y, tgt.x - P.x); // its 'cursor' (issue #61)
     if (bd > wr) { gx = tgt.x; gy = tgt.y; }
     game.mouseDown = bd <= wr;
     // a swing that ended without the foe losing a single hit point was thin
