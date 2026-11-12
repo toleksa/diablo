@@ -79,7 +79,8 @@ your last journey instead of starting over.
   intelligence feeds max Mana, vitality feeds HP and very slow natural HP
   regen from level 5.
 - **Mana** (blue) regenerates slowly; combat swings feed it back.
-- **Inventory**: 20-slot backpack. Full-capacity overflow still auto-sells,
+- **Inventory**: 20-slot backpack. A full backpack **refuses new loot** —
+  the item waits on the floor and you are told so,
   but you keep control too: each sheet row has a **discard ✕** (destroys the
   item), and every level hides a **wandering merchant** — stand near him and
   press T and the world stops at his trade post: a panel with two tabs. **Sell**

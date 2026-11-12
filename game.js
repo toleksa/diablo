@@ -694,17 +694,17 @@ function gainXpCheck() {
 // no autoequip: pickups always go to the backpack; the player equips
 // manually from the character sheet; full backpack -> sold to gold
 function pickUpItem(it) {
-  if (P.inv.length < INV_CAP) {
-    P.inv.push(it);
-    toast('Taken: ' + it.name + ' (backpack) · C = sheet', 'item-' + it.rarity);
-  } else {
-    const g = 10 + it.cp * 6 + Math.round(it.score);
-    P.gold += g;
-    toast(it.name + ' → sold (+' + g + ' gold)', 'item-' + it.rarity);
-    S.gold();
+  // issue #48: with a full backpack nothing is sold - the item stays on the
+  // level and the player is told why it did not come aboard
+  if (P.inv.length >= INV_CAP) {
+    toast('Backpack is full (' + P.inv.length + '/' + INV_CAP + ')', '');
+    return false;
   }
+  P.inv.push(it);
+  toast('Taken: ' + it.name + ' (backpack) · C = sheet', 'item-' + it.rarity);
   S.item();
   if (charOpen) renderChar();
+  return true;
 }
 
 function toast(msg, cls) {
@@ -1030,9 +1030,20 @@ function update(dt) {
   }
   game.goldpiles = game.goldpiles.filter(gp => gp.life > 0);
   for (const it of game.drops) {
-    it.life -= dt;
     it.bob += dt * 3;
     const d = Math.hypot(P.x - it.x, P.y - it.y);
+    // a full backpack refuses the pickup: nothing is sold and the goods are
+    // not even aged away, so they wait on the floor until you make room
+    // (issue #48)
+    if (d < P.r + 14 && !P.dead && it.life > 0 && P.inv.length >= INV_CAP) {
+      it.hintCd = (it.hintCd || 0) - dt;
+      if (it.hintCd <= 0) {
+        it.hintCd = 2;
+        dmgText(it.x, it.y - 16, 'backpack full', '#c8a45a');
+      }
+      continue;
+    }
+    it.life -= dt;
     if (d < P.r + 14 && !P.dead && it.life > 0) { it.life = 0; pickUpItem(it.item); }
   }
   game.drops = game.drops.filter(it => it.life > 0);
