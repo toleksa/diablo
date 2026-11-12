@@ -102,6 +102,7 @@ const P = {
   attr: { str: 8, dex: 8, int: 8, vit: 10 }, statPoints: 0, inv: [],
   xp: 0, xpNeed: 80, level: 1, gold: 0,
   atkT: 0, dead: false, leap: null,
+  idleT: 0, idleP: 0, // fifteen idle seconds start a short stretch (issue #47)
   cd: { potion: 0, whirl: 0, leap: 0 },
   eq: { weapon: null, helm: null, armor: null },
 };
@@ -151,6 +152,7 @@ function resetPlayer(cls) {
     attr: { str: c.attr.str, dex: c.attr.dex, int: c.attr.int, vit: c.attr.vit }, statPoints: 0, inv: [],
     xp: 0, xpNeed: 60,
     level: 1, gold: 0, atkT: 0, dead: false, leap: null,
+    idleT: 0, idleP: 0,
     cd: { potion: 0, whirl: 0, leap: 0 },
     eq: { weapon: null, helm: null, armor: null },
   });
@@ -761,6 +763,19 @@ function update(dt) {
     P.hurtFlash = Math.max(0, P.hurtFlash - dt);
     if (K.w || K.a || K.s || K.d || game.moveTarget) P.walkPhase += dt * 11;
     else P.walkPhase *= Math.pow(0.02, dt);
+    // idle animation (issue #47): a quarter-minute with nothing asked of the
+    // hero and he starts shifting weight - shoulder roll, blade lifting off
+    // the shoulder, head scanning. Any input stops it on the very next frame.
+    if (K.w || K.a || K.s || K.d || game.moveTarget || game.mouseDown ||
+        P.dead || P.leap || P.atkT > 0) {
+      P.idleT = 0; P.idleP = 0;
+    } else if (P.idleP > 0) {
+      P.idleP += dt / 1.9; // the routine itself runs about two seconds
+      if (P.idleP >= 1) { P.idleP = 0; P.idleT = 0; } // settled: wait again
+    } else {
+      P.idleT += dt;
+      if (P.idleT >= 15) P.idleP = 0.001;
+    }
     // fog of war: stamp the tiles around the player as visited (issue #13)
     if (game.visited) {
       const pcx = (P.x / TS) | 0, pcy = (P.y / TS) | 0;
@@ -1534,9 +1549,19 @@ function drawMonster(m, t) {
 function drawPlayer() {
   const x = P.x - vx, y = P.y - vy;
   shadowAt(x, y + 6, P.r * 1.1, 0.4);
-  const bob = Math.sin(P.walkPhase) * (Math.abs(Math.cos(P.walkPhase)) > 0.2 ? 2 : 1);
-  const r = P.r;
   const faceX = (P.faceX || 1);
+  // idle animation progress: 0 stands, 0..1 arcs through the stretch (issue #47)
+  const ip = (P.idleP > 0) ? Math.sin(Math.min(1, P.idleP) * Math.PI) : 0;
+  if (ip > 0) {
+    // the whole figure leans over its planted feet as the weight shifts side to
+    // side, so the shadow stays put while the body rocks above it
+    ctx.save();
+    ctx.translate(x, y + 4);
+    ctx.rotate(ip * 0.055 * faceX);
+    ctx.translate(-x, -(y + 4));
+  }
+  const bob = Math.sin(P.walkPhase) * (Math.abs(Math.cos(P.walkPhase)) > 0.2 ? 2 : 1) + ip * 1.8;
+  const r = P.r;
   const cl = CLASSES[P.cls || 'barbar']; // class colors (issue #22)
   // sword + slash
   if (P.atkT > P.atkCd - 0.3) {
@@ -1561,8 +1586,8 @@ function drawPlayer() {
   const shY = y - r * 0.92 + bob * 0.6;        // shoulder line
   const legLen = r * 0.62;
   // legs: steel greaves swinging opposite under the hips
-  const f1x = x - r * 0.2 + s * faceX * r * 0.4, f1y = y - r * 0.34 + legLen + Math.abs(s) * 1.8;
-  const f2x = x + r * 0.2 - s * faceX * r * 0.4, f2y = y - r * 0.34 + legLen + Math.abs(s) * 1.8;
+  const f1x = x - r * 0.2 + s * faceX * r * 0.4 + ip * faceX * r * 0.16, f1y = y - r * 0.34 + legLen + Math.abs(s) * 1.8;
+  const f2x = x + r * 0.2 - s * faceX * r * 0.4 - ip * faceX * r * 0.16, f2y = y - r * 0.34 + legLen + Math.abs(s) * 1.8;
   ctx.lineCap = 'round';
   ctx.strokeStyle = '#2c3442'; ctx.lineWidth = r * 0.27;
   ctx.beginPath();
@@ -1596,10 +1621,10 @@ function drawPlayer() {
   ctx.beginPath(); ctx.arc(x - r * 0.44, shY + 1, r * 0.21, 0, TAU); ctx.arc(x + r * 0.44, shY + 1, r * 0.21, 0, TAU); ctx.fill();
   // arms: right holds the sword (swings with the slash), left counter-swings
   const armS = moving ? Math.sin(w) : 0;
-  const hRx = x + r * 0.52 + (P.atkT > P.atkCd - 0.3 ? Math.cos(P.aim) * r * 0.35 : -armS * faceX * r * 0.3);
-  const hRy = shY + r * 0.42 - (P.atkT > P.atkCd - 0.3 ? 2 : Math.abs(armS) * 1.2);
-  const hLx = x - r * 0.52 + armS * faceX * r * 0.3;
-  const hLy = shY + r * 0.44;
+  const hRx = x + r * 0.52 + (P.atkT > P.atkCd - 0.3 ? Math.cos(P.aim) * r * 0.35 : -armS * faceX * r * 0.3 + ip * faceX * r * 0.12);
+  const hRy = shY + r * 0.42 - (P.atkT > P.atkCd - 0.3 ? 2 : Math.abs(armS) * 1.2 + ip * 3.4);
+  const hLx = x - r * 0.52 + armS * faceX * r * 0.3 - ip * faceX * r * 0.1;
+  const hLy = shY + r * 0.44 - ip * 1.4;
   ctx.strokeStyle = cl.paul; ctx.lineWidth = r * 0.19;
   ctx.beginPath();
   ctx.moveTo(x + r * 0.4, shY + 2); ctx.lineTo(hRx, hRy);
@@ -1611,7 +1636,7 @@ function drawPlayer() {
   // while idle (issue #27): fixed diagonal down in facing direction, only
   // the attack arc swings with the aim
   if (!(P.atkT > P.atkCd - 0.3)) {
-    const idleA = faceX > 0 ? 0.55 : Math.PI - 0.55; // blade tip down-forward
+    const idleA = (faceX > 0 ? 0.55 : Math.PI - 0.55) - ip * 0.52 * (faceX > 0 ? 1 : -1);
     ctx.strokeStyle = '#c9d2dd'; ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(hRx, hRy);
@@ -1623,16 +1648,17 @@ function drawPlayer() {
     ctx.lineTo(hRx + Math.cos(idleA + Math.PI / 2) * 3, hRy + Math.sin(idleA + Math.PI / 2) * 3);
     ctx.stroke();
   }
-  // head + helmet
+  // head + helmet - during the idle stretch the neck turns to scan the halls
+  const hx2 = x + ip * faceX * 2.6, hy2 = y - r * 1.15 + bob * 0.6 - ip * 1.2;
   ctx.fillStyle = '#b8a27c';
-  ctx.beginPath(); ctx.arc(x, y - r * 1.15 + bob * 0.6, r * 0.36, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.arc(hx2, hy2, r * 0.36, 0, TAU); ctx.fill();
   ctx.fillStyle = cl.paul;
-  ctx.beginPath(); ctx.arc(x, y - r * 1.15 + bob * 0.6, r * 0.4, Math.PI * 1.02, Math.PI * 1.98); ctx.fill();
+  ctx.beginPath(); ctx.arc(hx2, hy2, r * 0.4, Math.PI * 1.02, Math.PI * 1.98); ctx.fill();
   ctx.fillStyle = '#5c6a7e';
-  ctx.beginPath(); ctx.arc(x, y - r * 1.15 + bob * 0.6, r * 0.4, Math.PI * 0.05, Math.PI * 0.45); ctx.fill(); // visor brim
+  ctx.beginPath(); ctx.arc(hx2, hy2, r * 0.4, Math.PI * 0.05, Math.PI * 0.45); ctx.fill(); // visor brim
   // helmet crest
   ctx.strokeStyle = cl.crest; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(x, y - r * 1.55 + bob * 0.6); ctx.lineTo(x - faceX * 3, y - r * 1.75 + bob * 0.6); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(hx2, hy2 - r * 0.4); ctx.lineTo(hx2 - faceX * (3 + ip * 3), hy2 - r * 0.6); ctx.stroke();
   // hurt flash
   if (P.hurtFlash > 0) {
     ctx.fillStyle = 'rgba(220,40,40,' + Math.min(0.6, P.hurtFlash * 4) + ')';
@@ -1640,8 +1666,9 @@ function drawPlayer() {
     ctx.moveTo(x - r * 0.44, shY); ctx.lineTo(x + r * 0.44, shY);
     ctx.lineTo(x + r * 0.36, hipY + 1); ctx.lineTo(x - r * 0.36, hipY + 1);
     ctx.closePath(); ctx.fill();
-    ctx.beginPath(); ctx.arc(x, y - r * 1.15 + bob * 0.6, r * 0.38, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(hx2, hy2, r * 0.38, 0, TAU); ctx.fill();
   }
+  if (ip > 0) ctx.restore(); // undo the idle lean
 }
 // ============ PART 6d — FX, lighting, main render ============
 function drawProjectiles() {

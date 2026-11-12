@@ -57,7 +57,10 @@ screen → try again. Foes give chase only up to a **leash** — far from
 their spot they stop, glance around, and walk back to sleep where they
 started. The leash even holds the **Goblin Warboss** to his throne room: he
 never hunts the whole dungeon, he is slower than a running hero, and he
-shuffles back to his mark at half pace. Every portal you enter
+shuffles back to his mark at half pace. Stand **idle for a quarter of a
+minute** and the hero starts shifting weight on his own - shoulder roll,
+blade lifting off the shoulder, head scanning the hall - a two-second
+stretch that stops the frame any input comes back. Every portal you enter
 **saves your journey in the browser** (checkpoint, level, attributes,
 gear, gold) — close the tab and the title screen will offer to continue
 your last journey instead of starting over.
