@@ -405,9 +405,9 @@ function dropGold(x, y, cp) {
 // ---------- ITEMS ----------
 const RARITY = [
   { id:'common',  name:'',        w:56, mult:1.0,  afx:0 },
-  { id:'magic',   name:'Magiczny',   w:28, mult:1.5, afx:1 },
-  { id:'rare',    name:'Ekskluzywny',w:13, mult:2.2, afx:2 },
-  { id:'legend',  name:'Legendarny', w:3,  mult:3.4, afx:3 },
+  { id:'magic',   name:'Magic',    w:28, mult:1.5, afx:1 },
+  { id:'rare',    name:'Rare',     w:13, mult:2.2, afx:2 },
+  { id:'legend',  name:'Legendary',w:3,  mult:3.4, afx:3 },
 ];
 const SLOTS = ['weapon','helm','armor'];
 const INV_CAP = 20; // backpack slots (issue #30)
