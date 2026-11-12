@@ -126,6 +126,7 @@ const game = {
   totalKills: 0,
   demo: false, // spectator demo mode (issue #35)
   paused: false, // P freezes the whole simulation (issue #44)
+  victoryOpen: false, victoryShown: false, // the tenth level's victory window (issue #51)
 };
 function resetGame() {
   mcp = 1;
@@ -136,6 +137,7 @@ function resetGame() {
     moveTarget: null, mouseDown: false, rmbDown: false, deathShown: false,
     totalKills: 0,
     paused: false,
+    victoryOpen: false, victoryShown: false,
   });
   game.monsters = []; game.projectiles = []; game.globes = [];
   game.goldpiles = []; game.drops = []; game.particles = [];
@@ -237,7 +239,7 @@ function generateLevel(checkpoint) {
   // the tenth level is not a dungeon: it is the arena of the Demon's Roost,
   // one vast hall ringed by pillars so the big boss has room to run and the
   // hero has room to circle him (issue #49)
-  const arena = checkpoint >= 10;
+  const arena = checkpoint >= FINAL_LEVEL;
   if (arena) {
     const ax = 4, ay = 4, aw = GCOLS - 8, ah = GROWS - 8;
     for (let ty = ay; ty < ay + ah; ty++) for (let tx = ax; tx < ax + aw; tx++) set(tx, ty);
@@ -352,7 +354,28 @@ const MTYPES = {
   orc:      { name:'Orc Brute', hp:110, dmg:16, speed:66, r:18, color:'#4f6a30', xp:24, touchCd:1.6, ai:'melee' },
   cultist:  { name:'Orc Shaman', hp:40, dmg:13, speed:72, r:14, color:'#6a5a4a', xp:17, touchCd:1.5, ai:'ranged', range:420 },
 };
-const BOSS = { name:'Goruk — Goblin Warboss', hp:620, dmg:17, speed:90, r:30, color:'#b03a3a', xp:240, touchCd:0.8, ai:'boss' };
+// the tenth level is the last one: it is the Roost, and slaying its overlord
+// wins the run (issue #51)
+const FINAL_LEVEL = 10;
+// one overlord per level (issue #51): ten named bosses, each with its own
+// nameplate, silhouette signature and character. mtier() still scales them by
+// depth, and the table itself only ramps gently - a couple of hundred life and
+// one point of damage per level - because the hero is growing too: levels,
+// attribute points and the loot ladder of issue #50 all climb with the descent.
+// The names follow the themes: goblins and orcs in the Old Ruins, frost in the
+// Frozen Hollows, bone in the Bone Flats, the demon overlord in the Roost.
+const BOSSES = [
+  { name:'Goruk — Goblin Warboss',    hp:560,  dmg:16, speed:92, r:27, color:'#b03a3a', xp:230, touchCd:0.8, ai:'boss', sig:0 },
+  { name:'Kragg — Iron Juggernaut',   hp:610,  dmg:17, speed:70, r:30, color:'#7d4a2c', xp:290, touchCd:1.7, ai:'boss', sig:1 },
+  { name:'Ugruk — Lord of the Bone Pits', hp:640, dmg:18, speed:86, r:28, color:'#8a5a3a', xp:350, touchCd:1.1, ai:'boss', sig:2 },
+  { name:'Vessara — The Frostweaver',  hp:660,  dmg:19, speed:96, r:27, color:'#4f7f9a', xp:420, touchCd:1.2, ai:'boss', sig:3 },
+  { name:'Kryon — Winterbound Colossus', hp:700, dmg:20, speed:64, r:33, color:'#3f6f8a', xp:500, touchCd:1.9, ai:'boss', sig:4 },
+  { name:'Hrolfr — The Icebreaker',    hp:700,  dmg:20, speed:78, r:30, color:'#5d87a0', xp:580, touchCd:1.5, ai:'boss', sig:5 },
+  { name:'Sessith — Oracle of the Flats', hp:720, dmg:21, speed:88, r:27, color:'#b0a688', xp:660, touchCd:1.3, ai:'boss', sig:6 },
+  { name:'Tharkas — Dune Reaver',      hp:740,  dmg:22, speed:104, r:28, color:'#a0874f', xp:750, touchCd:0.9, ai:'boss', sig:7 },
+  { name:'Vomir — Carrion King',       hp:760,  dmg:23, speed:80, r:31, color:'#8f7a5a', xp:840, touchCd:1.6, ai:'boss', sig:8 },
+  { name:'Vermithe the Undying — Overlord of the Roost', hp:770, dmg:23, speed:84, r:32, color:'#c2482e', xp:950, touchCd:1.4, ai:'boss', sig:9 },
+];
 
 function mtier(base, cp) {
   const s = 1 + (cp-1)*0.16;
@@ -426,12 +449,15 @@ function preplaceMonsters() {
 
 function spawnBoss(x, y, big) {
   if (x == null) { const p = findSpawnPoint(); x = p.x; y = p.y; }
-  const d = mtier(BOSS, game.checkpoint);
+  // the overlord of the level you are standing in (issue #51): each level has
+  // its own man, and past the tenth the Roost's overlord keeps coming back
+  const bi = clamp(Math.floor(game.checkpoint) - 1, 0, BOSSES.length - 1);
+  const d = mtier(BOSSES[bi], game.checkpoint);
   // the tenth level's boss is bred big: wider shoulders, a thicker hide, a
   // heavier hand (issue #49)
   const g = big || 1;
   const b = {
-    kind:'boss', type:'boss', name: d.name, x, y, r: Math.round(d.r * g),
+    kind:'boss', type:'boss', name: d.name, sig: BOSSES[bi].sig, x, y, r: Math.round(d.r * g),
     hp: Math.round(d.hp * (1 + (g - 1) * 1.5)), hpMax: Math.round(d.hp * (1 + (g - 1) * 1.5)),
     dmg: Math.round(d.dmg * (1 + (g - 1) * 0.8)),
     // slower bosses (issue #46): a warboss never out-runs a running hero,
@@ -873,7 +899,11 @@ function update(dt) {
     }
     // portal lies behind the boss room — usable only after the boss is slain
     if (game.portal && (game.boss === null || game.boss.dead) &&
-        Math.hypot(P.x - game.portal.x, P.y - game.portal.y) < 26) nextCheckpoint();
+        Math.hypot(P.x - game.portal.x, P.y - game.portal.y) < 26) {
+      // the Roost's own portal is not a descent: stepping into it wins the run
+      if (game.checkpoint === FINAL_LEVEL) showVictory();
+      else nextCheckpoint();
+    }
     if (game.mouseDown && P.atkT <= 0) tryAttack();
   }
 
@@ -1304,6 +1334,126 @@ function showDeath() {
     ' · Time: ' + mins + ':' + String(secs).padStart(2, '0');
   banner('You have fallen', '#c03a3a');
 }
+
+// ---------- the victory window (issue #51) ----------
+// slaying the Roost's overlord and stepping into his portal wins the run: a
+// window comes up over the world, painted in code with the Roost's own muse -
+// a draped marble figure on a plinth, laurel in her raised hand, the overlord's
+// broken crown shattered at her feet. The trophy is a statue, not a person: the
+// shipped art stays tasteful while the words carry the fame and the glory.
+const WIN_W = 268, WIN_H = 252;
+function paintMuse(g, w, h) {
+  const px = w / 2, py = h * 0.86;
+  const bg = g.createLinearGradient(0, 0, 0, h);
+  bg.addColorStop(0, '#1d1723'); bg.addColorStop(0.6, '#151017'); bg.addColorStop(1, '#0a0710');
+  g.fillStyle = bg; g.fillRect(0, 0, w, h);
+  // a moonbeam down the hall
+  const beam = g.createLinearGradient(0, 0, 0, h);
+  beam.addColorStop(0, 'rgba(230,214,180,0.26)'); beam.addColorStop(1, 'rgba(230,214,180,0)');
+  g.beginPath();
+  g.moveTo(w * 0.32, 0); g.lineTo(w * 0.68, 0); g.lineTo(w * 0.9, h); g.lineTo(w * 0.1, h);
+  g.closePath(); g.fillStyle = beam; g.fill();
+  // the floor of the Roost, laid stone
+  g.fillStyle = '#1f1a21'; g.fillRect(0, py, w, h - py);
+  g.strokeStyle = 'rgba(190,168,128,0.16)'; g.lineWidth = 1;
+  for (let i = 0; i < 5; i++) {
+    g.beginPath(); g.moveTo(0, py + 8 + i * 7); g.lineTo(w, py + 4 + i * 7); g.stroke();
+  }
+  // plinth
+  g.fillStyle = '#3a343a'; g.fillRect(px - 48, py - 16, 96, 18);
+  g.fillStyle = '#4a4146'; g.fillRect(px - 41, py - 23, 82, 8);
+  // marble: legs under a long drape, torso, one arm raised
+  const stone = g.createLinearGradient(px - 30, py - 160, px + 34, py);
+  stone.addColorStop(0, '#e4dcc4'); stone.addColorStop(0.55, '#c3bba6'); stone.addColorStop(1, '#8b8474');
+  g.fillStyle = stone;
+  g.beginPath();
+  g.moveTo(px - 22, py - 22); g.lineTo(px - 12, py - 86); g.lineTo(px + 12, py - 86); g.lineTo(px + 22, py - 22);
+  g.closePath(); g.fill();
+  g.beginPath();
+  g.moveTo(px - 13, py - 86); g.lineTo(px - 17, py - 120); g.lineTo(px + 16, py - 118); g.lineTo(px + 13, py - 86);
+  g.closePath(); g.fill();
+  g.strokeStyle = 'rgba(116,108,92,0.6)'; g.lineWidth = 2;
+  g.beginPath(); g.moveTo(px - 15, py - 114); g.lineTo(px + 11, py - 88); g.stroke();
+  g.beginPath(); g.moveTo(px - 9, py - 82); g.lineTo(px + 17, py - 26); g.stroke();
+  g.beginPath(); g.moveTo(px + 4, py - 80); g.lineTo(px + 8, py - 30); g.stroke();
+  g.lineCap = 'round';
+  g.strokeStyle = '#cfc7b2'; g.lineWidth = 5;
+  g.beginPath(); g.moveTo(px - 15, py - 114); g.lineTo(px - 27, py - 76); g.stroke();
+  g.beginPath(); g.moveTo(px + 14, py - 114); g.lineTo(px + 27, py - 140); g.stroke();
+  // head, with the hair dressed up
+  g.fillStyle = '#ddd5bf';
+  g.beginPath(); g.arc(px, py - 130, 9, 0, TAU); g.fill();
+  g.fillStyle = '#c1b7a2';
+  g.beginPath(); g.arc(px - 1, py - 133, 10.5, 0.1, Math.PI * 0.9, true); g.fill();
+  // laurel wreathed in the raised hand
+  g.fillStyle = '#6e8b4c';
+  for (let li = 0; li < 8; li++) {
+    const a = -0.7 + li * 0.26;
+    g.beginPath();
+    g.ellipse(px + 27 + Math.cos(a) * 14, py - 140 + Math.sin(a) * 14, 4.4, 2.2, a, 0, TAU);
+    g.fill();
+  }
+  g.strokeStyle = '#5d7440'; g.lineWidth = 1.5;
+  g.beginPath(); g.arc(px + 27, py - 140, 14, -0.7, 1.4); g.stroke();
+  // the overlord's broken crown, hurled at the plinth's foot
+  g.fillStyle = '#8a6834';
+  g.beginPath();
+  g.moveTo(px - 44, py - 24); g.lineTo(px - 24, py - 24); g.lineTo(px - 30, py - 35); g.lineTo(px - 38, py - 30);
+  g.closePath(); g.fill();
+  g.strokeStyle = '#8a6834'; g.lineWidth = 2.5;
+  g.beginPath(); g.moveTo(px - 22, py - 25); g.lineTo(px - 11, py - 28); g.stroke();
+  g.beginPath(); g.moveTo(px + 26, py - 24); g.lineTo(px + 40, py - 30); g.stroke();
+  // embers drifting off the Roost
+  for (let i = 0; i < 30; i++) {
+    const ex = (i * 71 + 13) % w, ey = h - (i * 43 + 9) % Math.round(h * 0.62);
+    g.fillStyle = 'rgba(226,112,44,' + (0.10 + (i % 5) * 0.05) + ')';
+    g.beginPath(); g.arc(ex, ey, 1 + (i % 3), 0, TAU); g.fill();
+  }
+  // vignette so the statue reads out of the dark
+  const vg = g.createRadialGradient(px, h * 0.52, 40, px, h * 0.52, w * 0.78);
+  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(4,2,9,0.78)');
+  g.fillStyle = vg; g.fillRect(0, 0, w, h);
+}
+const winEl = document.getElementById('winScreen');
+const winStatsEl = document.getElementById('winStats');
+const winArtBox = document.getElementById('winArt');
+const winMenuBtn = document.getElementById('menuBtn');
+const winJourneyBtn = document.getElementById('journeyBtn');
+if (winArtBox && winArtBox.appendChild) {
+  const museCv = document.createElement('canvas');
+  museCv.width = WIN_W; museCv.height = WIN_H;
+  winArtBox.appendChild(museCv); // the muse is painted once, at load
+  paintMuse(museCv.getContext('2d'), WIN_W, WIN_H);
+}
+function showVictory() {
+  if (game.victoryShown) return;
+  game.victoryShown = true;
+  game.victoryOpen = true;
+  game.paused = true; // the world holds still while the window is up
+  if (winEl) winEl.classList.remove('hidden');
+  const mins = Math.floor(game.time / 60),
+        secs = String(Math.floor(game.time % 60)).padStart(2, '0');
+  const fell = (game.boss && game.boss.name) ? game.boss.name : BOSSES[BOSSES.length - 1].name;
+  winStatsEl.textContent =
+    fell + ' lies felled on the floor of the Roost. The Infernal Crucible is yours:' +
+    ' FAME ' + game.totalKills + ' for the monsters you cleared, GLORY ' + P.gold +
+    ' for the gold you hoarded, and the muse above you, carved in marble for the season.' +
+    ' Level ' + P.level + ' · Time ' + mins + ':' + secs;
+  banner('The Crucible Is Yours', '#e8c477');
+}
+function closeVictoryWindow() {
+  game.victoryOpen = false;
+  game.paused = false;
+  if (winEl) winEl.classList.add('hidden');
+  game.moveTarget = null; // the hero stands still until you ask
+}
+function backToMenu() {
+  closeVictoryWindow();
+  game.running = false;
+  const scr = document.getElementById('startScreen');
+  if (scr) scr.classList.remove('hidden');
+  if (loadSnapshot()) document.getElementById('continueBtn').classList.remove('hidden');
+}
 // ============ PART 6a — GRAPHICS: setup + world ============
 const cv = document.getElementById('canvas');
 const ctx = cv.getContext('2d');
@@ -1605,16 +1755,56 @@ function drawMonster(m, t) {
     ctx.moveTo(x + r * 0.2, y - r * 1.05 + bob); ctx.lineTo(x + r * 0.34, y - r * 1.34 + bob); ctx.lineTo(x + r * 0.06, y - r * 1.16 + bob); ctx.closePath(); ctx.fill();
   } else if (m.type === 'boss') {
     ctx.fillStyle = '#3a2222';
+    // horns + a sigil read off the overlord's index (issue #51), so the ten
+    // fights look like ten men and not the same one ten times over
+    const hl = 0.9 + ((m.sig || 0) % 4) * 0.17;
     ctx.beginPath();
     ctx.moveTo(x - r * 0.62, y - r * 1.5 + bob);
     ctx.lineTo(x - r * 0.32, y - r * 0.8 + bob);
-    ctx.lineTo(x - r * 0.9, y - r * 0.9 + bob);
+    ctx.lineTo(x - r * 0.9, y - r * (0.72 + hl) + bob);
     ctx.closePath(); ctx.fill();
     ctx.beginPath();
     ctx.moveTo(x + r * 0.62, y - r * 1.5 + bob);
     ctx.lineTo(x + r * 0.32, y - r * 0.8 + bob);
-    ctx.lineTo(x + r * 0.9, y - r * 0.9 + bob);
+    ctx.lineTo(x + r * 0.9, y - r * (0.72 + hl) + bob);
     ctx.closePath(); ctx.fill();
+    if ((m.sig || 0) % 3 === 0) {
+      // a spiked crown
+      ctx.fillStyle = '#c8a24c';
+      for (let ci = -1; ci <= 1; ci++) {
+        const cx2 = x + ci * r * 0.24;
+        ctx.beginPath();
+        ctx.moveTo(cx2 - r * 0.07, y - r * 1.52 + bob);
+        ctx.lineTo(cx2, y - r * (1.74 + (ci === 0 ? 0.16 : 0)) + bob);
+        ctx.lineTo(cx2 + r * 0.07, y - r * 1.52 + bob);
+        ctx.closePath(); ctx.fill();
+      }
+    } else if ((m.sig || 0) % 3 === 1) {
+      // iron spauldrons
+      ctx.fillStyle = '#3c424c';
+      ctx.beginPath();
+      ctx.arc(x - r * 0.62, y - r * 0.56 + bob, r * 0.3, 0, TAU);
+      ctx.arc(x + r * 0.62, y - r * 0.56 + bob, r * 0.3, 0, TAU);
+      ctx.fill();
+    } else {
+      // a torn mantle over the shoulders
+      ctx.fillStyle = 'rgba(26,12,18,0.8)';
+      ctx.beginPath(); ctx.ellipse(x, y - r * 0.62 + bob, r * 0.95, r * 0.42, 0, 0, TAU); ctx.fill();
+    }
+    if ((m.sig || 0) >= 8) {
+      // the two crowned overlords carry a second, shorter pair inside the first
+      ctx.fillStyle = '#241318';
+      ctx.beginPath();
+      ctx.moveTo(x - r * 0.3, y - r * 1.44 + bob);
+      ctx.lineTo(x - r * 0.12, y - r * 0.9 + bob);
+      ctx.lineTo(x - r * 0.46, y - r * (1.5 + hl * 0.5) + bob);
+      ctx.closePath(); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(x + r * 0.3, y - r * 1.44 + bob);
+      ctx.lineTo(x + r * 0.12, y - r * 0.9 + bob);
+      ctx.lineTo(x + r * 0.46, y - r * (1.5 + hl * 0.5) + bob);
+      ctx.closePath(); ctx.fill();
+    }
   } else if (m.type === 'fallen') {
     ctx.fillStyle = col;
     ctx.beginPath();
@@ -1880,7 +2070,7 @@ function pauseVeil() {
   ctx.textAlign = 'center';
   ctx.font = 'bold 30px Georgia';
   ctx.fillStyle = '#0b0705';
-  const word = tradeOpen ? 'Trading' : 'Paused';
+  const word = tradeOpen ? 'Trading' : game.victoryOpen ? 'Victory' : 'Paused';
   ctx.fillText(word, VW / 2 + 2, VH / 2 + 2);
   ctx.fillStyle = '#d8b25a';
   ctx.fillText(word, VW / 2, VH / 2);
@@ -1958,6 +2148,7 @@ function hudUpdate() {
   const band = Math.min(Math.floor((game.checkpoint - 1) / 3) + 1, ROMAN.length - 1);
   HUD.objTitle.textContent = 'Act ' + ROMAN[band] + ' — ' + game.th.name + ' · Level ' + game.checkpoint;
   if (game.boss && !game.boss.dead) HUD.objText.textContent = 'Boss: ' + game.boss.name + ' — far in the dungeon';
+  else if (game.checkpoint >= FINAL_LEVEL) HUD.objText.textContent = 'Enter the portal — the Crucible is yours';
   else HUD.objText.textContent = 'Enter portal';
   HUD.goldText.textContent = String(P.gold);
   HUD.hpFill.style.height = clamp(P.hp / P.hpMax, 0, 1) * 100 + '%';
@@ -2254,6 +2445,17 @@ document.getElementById('restartBtn').addEventListener('click', () => {
   document.getElementById('deathScreen').classList.add('hidden');
   beginContinue(); // retry at the last saved portal; fresh start when there is no save
 });
+// the victory window's two ways out (issue #51): back to the title screen, or
+// close the window and let the hero walk again — the journey then goes on
+// beyond the Roost, running it once more for every level past the tenth
+if (winEl && winMenuBtn.addEventListener)
+  winMenuBtn.addEventListener('click', () => { backToMenu(); });
+if (winEl && winJourneyBtn.addEventListener)
+  winJourneyBtn.addEventListener('click', () => {
+    closeVictoryWindow();
+    nextCheckpoint();
+    toast('The journey continues — deeper than the Crucible was drawn', '');
+  });
 
 // ---------- main loop ----------
 let lastT = 0;

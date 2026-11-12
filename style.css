@@ -184,6 +184,13 @@ body {
 
 .red { color: #e05a4a; }
 .cyan { color: #58c8e0; }
+.gold { color: #e6c477; }
+#winArt {
+  width: 268px; height: 252px; margin: 10px auto 14px; background: #0a0710;
+  border: 2px solid #6b4f22; border-radius: 3px;
+  box-shadow: 0 0 26px rgba(230,170,60,.28), inset 0 0 22px rgba(0,0,0,.7);
+}
+#winStats { color: #c8b48a; font-size: 14px; line-height: 1.7; margin-top: 4px; }
 
 /* ---------- checkpoint banner ---------- */
 #checkpointBanner {

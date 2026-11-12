@@ -72,6 +72,22 @@ stretch that stops the frame any input comes back. Every portal you enter
 gear, gold) — close the tab and the title screen will offer to continue
 your last journey instead of starting over.
 
+**The Crucible is ten levels deep and every level has its own overlord**: Goruk,
+Kragg and Ugruk in the Old Ruins, Vessara, Kryon and Hrolfr out in the Frozen
+Hollows, Sessith, Tharkas and Vomir across the Bone Flats, and **Vermithe the
+Undying** waiting in the Roost — ten men, ten nameplates, ten silhouettes, the
+last one bred taller and heavier than any before him. Foes and overlords get
+stronger the deeper you go, and so do you: your level feeds the loot ladder
+(issue #50), your attributes and your affixes grow with it, so the climb stays a
+fight rather than a slide. Felling the Roost's overlord and stepping into his
+portal **wins the run**: the world holds still and a victory window comes up over
+it, painted with the Roost's own muse — a draped marble figure on a plinth,
+laurel in her raised hand, the overlord's broken crown shattered at her feet —
+above a tally of the **fame** you cleared and the **glory** you hoarded. Two
+buttons sit at its foot: **Return to the Menu** takes you back to the title
+screen, **Continue the Journey** closes the window, hands control back to your
+hero and lets the Roost be run again, as many times deep as you care to go.
+
 ## Systems
 
 - **Classes** (chosen at the start screen): **Barbarian** (strong, hardy,
