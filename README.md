@@ -62,6 +62,10 @@ your last journey instead of starting over.
   intelligence feeds max Mana, vitality feeds HP and very slow natural HP
   regen from level 5.
 - **Mana** (blue) regenerates slowly; combat swings feed it back.
+- **Inventory**: 20-slot backpack. Full-capacity overflow still auto-sells,
+  but you keep control too: each sheet row has a **discard ✕** (destroys the
+  item), and every level hides a **wandering merchant** — stand near him and
+  press T and he'll buy your weakest backpack item for gold.
 - **Globes**: slain enemies drop blue Mana globes and, with a 30% chance,
   a **red heal orb** that restores 30% of your life. XP is **not** a pickup
   — it lands on your player card the instant a kill lands, so nothing is

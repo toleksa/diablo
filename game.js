@@ -119,6 +119,7 @@ const game = {
   walls: [], torches: [], grid: null, startPos: null,
   portal: null, boss: null, visited: null,
   chests: [],
+  merchant: null, // wandering trader (issue #34)
   moveTarget: null, mouseDown: false, rmbDown: false, deathShown: false,
   totalKills: 0,
 };
@@ -245,6 +246,20 @@ function generateLevel(checkpoint) {
     }
   };
   if (rooms.length > 1) { tryChest(); if (chance(0.35)) tryChest(); }
+  // merchant: one trader per level, in a random room away from the start
+  game.merchant = null;
+  for (let t2 = 0; t2 < 20; t2++) {
+    const r = rooms[Math.floor(Math.random() * rooms.length)];
+    if (!r) continue;
+    const tx = r.x + 1 + Math.floor(Math.random() * Math.max(1, r.w - 2));
+    const ty = r.y + 1 + Math.floor(Math.random() * Math.max(1, r.h - 2));
+    const wx = tx * TS + TS / 2, wy = ty * TS + TS / 2;
+    if (solidAt(wx, wy, 26)) continue;
+    if (Math.hypot(wx - game.startPos.x, wy - game.startPos.y) < 320) continue;
+    if (game.portal && Math.hypot(wx - game.portal.x, wy - game.portal.y) < 80) continue;
+    game.merchant = { x: wx, y: wy, hintCd: 0, bob: rand(0, TAU) };
+    break;
+  }
 }
 
 function solidAt(x, y, r) {
@@ -896,6 +911,17 @@ function update(dt) {
     S.treasure();
     toast('Treasure chest — a magic item inside!', 'item-magic');
   }
+  // merchant: near him the trade offer floats up (issue #34)
+  if (game.merchant && !P.dead) {
+    const md = Math.hypot(P.x - game.merchant.x, P.y - game.merchant.y);
+    if (md < 150) {
+      game.merchant.hintCd -= dt;
+      if (game.merchant.hintCd <= 0) {
+        game.merchant.hintCd = 5;
+        dmgText(game.merchant.x, game.merchant.y - 34, 'press T to trade', '#e8c860');
+      }
+    }
+  }
   // gold — magnet pull + walk over to pick up
   for (const gp of game.goldpiles) {
     gp.life -= dt;
@@ -1222,6 +1248,29 @@ function drawGroundFX() {
       ctx.beginPath(); ctx.arc(x + ox, y + oy, 3.4, 0, TAU); ctx.fill();
       ctx.fillStyle = '#fff3bc';
       ctx.beginPath(); ctx.arc(x + ox - 1, y + oy - 1, 1.2, 0, TAU); ctx.fill();
+    }
+  }
+  // the wandering merchant: cart + hooded trader + coin pouch glint (issue #34)
+  if (game.merchant) {
+    const mx = game.merchant.x - vx, my = game.merchant.y - vy;
+    if (mx > -40 && mx < VW + 40 && my > -40 && my < VH + 40) {
+      shadowAt(mx, my + 6, 18, 0.3);
+      ctx.fillStyle = '#4a3318'; ctx.fillRect(mx - 19, my - 8, 16, 12);
+      ctx.fillStyle = '#c8a45a'; ctx.fillRect(mx - 19, my - 11, 16, 3);
+      ctx.fillStyle = '#2a2218';
+      ctx.beginPath(); ctx.arc(mx - 14, my + 5, 3, 0, TAU); ctx.arc(mx - 6, my + 5, 3, 0, TAU); ctx.fill();
+      const b = Math.sin(game.time * 2.2 + game.merchant.bob) * 1.2;
+      ctx.fillStyle = '#6a4a3a';
+      ctx.beginPath();
+      ctx.moveTo(mx + 8, my - 14 + b); ctx.lineTo(mx + 16, my - 14 + b);
+      ctx.lineTo(mx + 18, my + 6); ctx.lineTo(mx + 6, my + 6);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#8a6a5a';
+      ctx.beginPath(); ctx.arc(mx + 12, my - 16 + b, 4.4, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#1d1712';
+      ctx.beginPath(); ctx.arc(mx + 12.6, my - 15.4 + b, 3, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#e8c860';
+      ctx.beginPath(); ctx.arc(mx + 17, my - 2, 2.6 + Math.sin(game.time * 4) * 0.6, 0, TAU); ctx.fill();
     }
   }
   // treasure chests — closed: proud lid + gold trim + lock; opened: tipped lid
@@ -1723,6 +1772,8 @@ window.addEventListener('keydown', (e) => {
     case 'Digit3': case 'Numpad3': if (game.running) tryLeap(); break;
     case 'KeyC': if (game.running) toggleChar(); break;
     case 'KeyM': if (game.running) toggleMap(); break;
+    case 'KeyT': if (game.running && game.merchant &&
+        Math.hypot(P.x - game.merchant.x, P.y - game.merchant.y) < 95) invSellWorst(); break;
     case 'KeyL': toggleDevMenu(); break;
   }
 });
@@ -1848,12 +1899,13 @@ if (charEl && charEl.addEventListener) {
     let t = e.target;
     while (t && t !== charEl) {
       const ds = t.dataset;
-      if (ds && (ds.attr || (ds.inv !== undefined && ds.inv !== ''))) break;
+      if (ds && (ds.discard !== undefined || ds.attr || (ds.inv !== undefined && ds.inv !== ''))) break;
       t = t.parentNode;
     }
     if (!t || t === charEl) return;
     const ds = t.dataset;
-    if (ds.attr) addAttrPoint(ds.attr);
+    if (ds.discard !== undefined) invDiscard(parseInt(ds.discard, 10));
+    else if (ds.attr) addAttrPoint(ds.attr);
     else if (ds.inv !== undefined && ds.inv !== '') equipFromInv(parseInt(ds.inv, 10));
   });
 }
@@ -1980,6 +2032,26 @@ function addAttrPoint(k) {
   refreshHpMax();
   if (charOpen) renderChar();
 }
+function invDiscard(i) {
+  const it = P.inv[i];
+  if (!it) return;
+  P.inv.splice(i, 1);
+  toast('Discarded: ' + it.name, 'item-' + it.rarity);
+  S.item();
+  if (charOpen) renderChar();
+}
+// merchant trade: sells one backpack item (the weakest) for gold (issue #34)
+function invSellWorst() {
+  if (P.inv.length === 0) { toast('Merchant: "nothing to buy"', ''); return; }
+  let wi = 0;
+  for (let i = 1; i < P.inv.length; i++) if (P.inv[i].score < P.inv[wi].score) wi = i;
+  const it = P.inv.splice(wi, 1)[0];
+  const g = 10 + it.cp * 6 + Math.round(it.score);
+  P.gold += g;
+  toast('Merchant bought ' + it.name + ' (+' + g + ' gold)', 'item-' + it.rarity);
+  S.gold();
+  if (charOpen) renderChar();
+}
 function equipFromInv(i) {
   const it = P.inv[i];
   if (!it) return;
@@ -2015,7 +2087,8 @@ function renderChar() {
   for (const s of SLOTS) h += '<div class="csGearRow">' + SLOTPL[s] + ': ' + statLine(P.eq[s]) + '</div>';
   h += '<div class="csSub">Backpack ' + P.inv.length + '/' + INV_CAP + ' — click on item → equip</div>';
   for (let i = 0; i < P.inv.length; i++)
-    h += '<div class="csInvRow" data-inv="' + i + '">' + SLOTPL[P.inv[i].slot] + ': ' + statLine(P.inv[i]) + '</div>';
+    h += '<div class="csInvRow" data-inv="' + i + '">' + SLOTPL[P.inv[i].slot] + ': ' + statLine(P.inv[i]) +
+         ' <span class="csNo" data-discard="' + i + '">✕</span></div>';
   if (!P.inv.length) h += '<div class="csEmptyRow">empty</div>';
   charEl.innerHTML = h;
 }

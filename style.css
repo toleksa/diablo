@@ -217,6 +217,8 @@ body {
 .csPlus:hover { color: #fff; }
 .csGearRow { padding: 2px 12px; }
 .csInvRow { padding: 3px 12px; cursor: pointer; }
+.csNo { color: #b25a4a; font-size: 12px; cursor: pointer; }
+.csNo:hover { color: #e07a5a; }
 .csInvRow:hover { background: rgba(80,64,38,.35); }
 .csEmpty { color: #6d6152; }
 .csEmptyRow { color: #6d6152; padding: 2px 12px; }
