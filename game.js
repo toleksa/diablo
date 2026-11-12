@@ -270,12 +270,15 @@ function moveWithCollide(e, dx, dy) {
 
 // ---------- MONSTERS ----------
 const MTYPES = {
-  fallen:   { name:'Goblin', hp:34, dmg:7, speed:105, r:14, color:'#5d8f3a', xp:9, touchCd:1.0, ai:'melee' },
-  archer:   { name:'Goblin Archer', hp:26, dmg:8, speed:85, r:13, color:'#3f7f4f', xp:11, touchCd:1.4, ai:'ranged', range:340 },
-  zombie:   { name:'Zombie', hp:60, dmg:11, speed:62, r:16, color:'#6b7252', xp:13, touchCd:1.2, ai:'melee' },
-  skeleton: { name:'Skeleton', hp:48, dmg:13, speed:118, r:14, color:'#c8c2ae', xp:15, touchCd:0.9, ai:'melee' },
-  orc:      { name:'Orc Brute', hp:66, dmg:13, speed:76, r:17, color:'#4f6a30', xp:19, touchCd:1.3, ai:'melee' },
-  cultist:  { name:'Orc Shaman', hp:42, dmg:12, speed:80, r:14, color:'#6a5a4a', xp:17, touchCd:1.5, ai:'ranged', range:400 },
+  // distinct archetypes (issue #31): goblins swarm fast but shatter,
+  // zombies shamble in heavily, skeletons are scuttling glass cannons,
+  // orcs hit hard and slow, shamans cast from the back
+  fallen:   { name:'Goblin', hp:22, dmg:6, speed:150, r:13, color:'#5d8f3a', xp:8, touchCd:0.7, ai:'melee' },
+  archer:   { name:'Goblin Archer', hp:20, dmg:8, speed:105, r:13, color:'#3f7f4f', xp:11, touchCd:1.4, ai:'ranged', range:340 },
+  zombie:   { name:'Zombie', hp:95, dmg:10, speed:50, r:17, color:'#6b7252', xp:15, touchCd:1.4, ai:'melee' },
+  skeleton: { name:'Skeleton', hp:34, dmg:12, speed:135, r:14, color:'#c8c2ae', xp:14, touchCd:1.0, ai:'melee' },
+  orc:      { name:'Orc Brute', hp:110, dmg:16, speed:66, r:18, color:'#4f6a30', xp:24, touchCd:1.6, ai:'melee' },
+  cultist:  { name:'Orc Shaman', hp:40, dmg:13, speed:72, r:14, color:'#6a5a4a', xp:17, touchCd:1.5, ai:'ranged', range:420 },
 };
 const BOSS = { name:'Goruk — Goblin Warboss', hp:620, dmg:17, speed:90, r:30, color:'#b03a3a', xp:240, touchCd:0.8, ai:'boss' };
 

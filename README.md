@@ -64,10 +64,12 @@ your last journey instead of starting over.
 - **Mana** (blue) regenerates slowly; combat swings feed it back.
 - **Globes**: slain enemies drop green XP globes, blue Mana globes and,
   with a 30% chance, a **red heal orb** that restores 30% of your life.
-- **Bestiary**: Goblins (plus sneaky Goblin Archers), Zombies, Skeletons,
-  Orc Brutes with iron pauldrons and tusks, and Orc Shaman casting from
-  afar — each checkpoint deepens the mix; a **Goblin Warboss** guards the
-  throne room. Elites wear gold nameplates.
+- **Bestiary**: Goblins are quick and brittle swarmlings (plus sneaky
+  Goblin Archers keeping distance), Zombies shamble in slow but heavy,
+  Skeletons scuttle fast as glass cannons, Orc Brutes hit hard and
+  sluggish, and Orc Shamans cast from afar — each checkpoint deepens
+  the mix; a **Goblin Warboss** guards the throne room. Elites wear
+  gold nameplates.
 - **Items**: common/magic/rare/legendary gear for weapon/helm/armour with
   affixes — common carries only its base stat (damage + attribute scaling
   for weapons, life for armour), magic/rare/legendary add exactly 1/2/3
