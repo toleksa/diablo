@@ -18,7 +18,7 @@ python3 -m http.server 8123   # then open http://localhost:8123/
 
 | Input | Action |
 |---|---|
-| **Right mouse button / click** | move to the clicked point |
+| **Right mouse button / click** | move to the clicked point; **hold it down** and the character keeps following the cursor, stopping the instant you release |
 | **Left mouse button** (hold) | sword attack (auto-aims at nearest foe) |
 | **WASD / arrows** | movement (same as click-to-move) |
 | **1** | healing potion — unlimited uses, one charge per 60 s (fresh at each checkpoint) |

@@ -109,7 +109,7 @@ const game = {
   corpses: [], decals: [],
   walls: [], torches: [], grid: null, startPos: null,
   portal: null, boss: null, visited: null,
-  moveTarget: null, mouseDown: false, deathShown: false,
+  moveTarget: null, mouseDown: false, rmbDown: false, deathShown: false,
   totalKills: 0,
 };
 function resetGame() {
@@ -118,7 +118,7 @@ function resetGame() {
     running: true, checkpoint: 1, time: 0, shake: 0,
     quota: 9, killedForQuota: 0, bossMode: false,
     spawnDelay: 1.2, portal: null, boss: null,
-    moveTarget: null, mouseDown: false, deathShown: false,
+    moveTarget: null, mouseDown: false, rmbDown: false, deathShown: false,
     totalKills: 0,
   });
   game.monsters = []; game.projectiles = []; game.globes = [];
@@ -1584,16 +1584,23 @@ function worldAt(cx, cy) {
 }
 cv.addEventListener('mousemove', (e) => {
   const w2 = worldAt(e.clientX, e.clientY);
-  if (!P.dead && game.running && !P.leap)
+  if (!P.dead && game.running && !P.leap) {
     P.aim = Math.atan2(w2.y - P.y, w2.x - P.x);
+    // RMB held down: the character continuously follows the cursor (issue #14)
+    if (game.rmbDown) game.moveTarget = w2;
+  }
 });
 cv.addEventListener('mousedown', (e) => {
   if (e.button === 0) game.mouseDown = true;
-  else if (e.button === 2) game.moveTarget = worldAt(e.clientX, e.clientY);
+  else if (e.button === 2) { game.rmbDown = true; game.moveTarget = worldAt(e.clientX, e.clientY); }
 });
-cv.addEventListener('mouseup', (e) => { if (e.button === 0) game.mouseDown = false; });
+cv.addEventListener('mouseup', (e) => {
+  if (e.button === 0) game.mouseDown = false;
+  else if (e.button === 2) { game.rmbDown = false; game.moveTarget = null; } // release = stop immediately
+});
 cv.addEventListener('contextmenu', (e) => {
   e.preventDefault();
+  game.rmbDown = true;
   game.moveTarget = worldAt(e.clientX, e.clientY);
 });
 
