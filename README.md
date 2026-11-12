@@ -109,10 +109,15 @@ your last journey instead of starting over.
 - **Items**: common/magic/rare/legendary gear for weapon/helm/armour with
   affixes — common carries only its base stat (damage + attribute scaling
   for weapons, life for armour), magic/rare/legendary add exactly 1/2/3
-  bonuses. Odds fall strictly tier by tier, and every roll gets a **luck
-  bonus from your level, the depth you stand on and the enemy's rank**
-  (normal none, elite small, boss big), so the better tiers become
-  noticeably likelier the further you get; **treasure chests never hold
+  bonuses. The odds fall away **exponentially** — about 100 : 22 : 5.5 : 1.4 —
+  so most drops are plain goods, a magic item a treat, a rare one a rarity and
+  a **legendary a special occasion** you hear the bell for. Every roll is also
+  handed a **luck** ladder: your level, the depth you stand on and the enemy's
+  rank (normal none, elite small, boss big) add to it, and luck bends that
+  curve instead of adding flat odds, so a level-1 novice in the Old Ruins
+  almost never sees a rare while a veteran near the arena drops one in five —
+  the same luck also fattens the bonuses themselves, so a veteran's affixes
+  land in the top of their range far more often. **Treasure chests never hold
   common gear** — they roll magic-or-better. Ground drops glow **white /
   blue / purple / orange** by rarity.
   Names come from the bonuses themselves — Sword/Helm/Armour plus the

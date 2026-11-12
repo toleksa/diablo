@@ -481,20 +481,30 @@ function dropGold(x, y, cp) {
 }
 
 // ---------- ITEMS ----------
+// rarity table (issue #50): the odds fall away EXPONENTIALLY, roughly 100 :
+// 22 : 5.5 : 1.4. Most drops are plain goods, a magic item is a treat, a rare
+// one a rarity and a legendary a special occasion you hear the bell for.
 const RARITY = [
-  { id:'common',  name:'',        w:56, mult:1.0,  afx:0 },
-  { id:'magic',   name:'Magic',    w:28, mult:1.5, afx:1 },
-  { id:'rare',    name:'Rare',     w:13, mult:2.2, afx:2 },
-  { id:'legend',  name:'Legendary',w:3,  mult:3.4, afx:3 },
+  { id:'common',  name:'',        w:78,   mult:1.0,  afx:0 },
+  { id:'magic',   name:'Magic',    w:17,   mult:1.5,  afx:1 },
+  { id:'rare',    name:'Rare',     w:4.4,  mult:2.2,  afx:2 },
+  { id:'legend',  name:'Legendary',w:1.15, mult:3.4,  afx:3 },
 ];
+// luck (issue #50): a higher level, a deeper dungeon and a bigger enemy all
+// hand the roll more of it, and it bends the exponential curve instead of
+// adding flat odds - tier i's share is multiplied by pow(this growth, luck *
+// i), so luck pays far more for the top rungs than for the common bottom one
+const RARI_LUCK_GROWTH = 1.62;
+const RARI_LUCK_MAX = 2.4; // the ceiling a level-40 veteran in level 10 reaches
 // rarity roll (issue #36): odds strictly descend common -> magic -> rare ->
 // legendary, and a `luck` bonus lifts the share of the better tiers. `minTier`
 // skips the weak tiers outright, so a chest is magic-or-better, never common
 function rarityRoll(luck, minTier) {
   const w = [];
   let tot = 0;
+  const lk = clamp(luck || 0, 0, RARI_LUCK_MAX);
   for (let i = minTier; i < RARITY.length; i++) {
-    const boost = i === 0 ? 1 : 1 + luck * (0.5 + i * 0.5);
+    const boost = Math.pow(RARI_LUCK_GROWTH, lk * i);
     w.push(RARITY[i].w * boost);
     tot += w[w.length - 1];
   }
@@ -504,10 +514,25 @@ function rarityRoll(luck, minTier) {
 }
 // bonus values (issue #36): min..max on an exponential curve, so the top of
 // the range is far rarer than the bottom — past half the range gets scarce
-function rollBonus(min, max, curve) {
-  return Math.max(min, Math.round(min + (max - min) * Math.pow(rand(0, 1), curve)));
+function rollBonus(min, max, curve, luck) {
+  // exponential curve first (a sample of rand^curve sits low in the range
+  // most of the time), then luck slides the WHOLE sample up it (issue #50):
+  // the head-room left above the sample is divided by pow(1+luck, 0.75).
+  // luck 0 is the novice's roll, where the top third of an affix is all but
+  // unreachable; a veteran deep down lands in it often.
+  const u = Math.pow(rand(0, 1), curve);
+  const lk = luck > 0 ? Math.min(luck, RARI_LUCK_MAX) : 0;
+  const up = lk > 0 ? 1 - (1 - u) / Math.pow(1 + lk, 0.75) : u;
+  return Math.max(min, Math.round(min + (max - min) * up));
 }
 const SLOTS = ['weapon','helm','armor'];
+// how lucky a roll is (issue #50): ONE ladder feeds both the rarity tier and
+// the size of every bonus. A level-1 novice in the first ruins rolls ~0, a
+// level-30 veteran two levels from the arena rolls ~1.6, and the caller adds
+// the enemy's rank on top (elites nudge, bosses nudge hard).
+function fortune(luck, cp) {
+  return clamp((luck || 0) + P.level * 0.025 + (cp - 1) * 0.08, 0, RARI_LUCK_MAX);
+}
 const INV_CAP = 20; // backpack slots (issue #30)
 const BASES = {
   weapon: { name:'Sword', dmg:[6,10] },
@@ -567,10 +592,13 @@ const BONUSK = ['dmg', 'hp', 'mp', 'crit', 'spd', 'str', 'dex', 'int', 'vit'];
 
 function rollItem(cp, forceGood, forceRar, luck) {
   // forceGood = magic-or-better; `luck` is the caller's bonus (enemy rank) on
-  // top of the player-level and checkpoint bonuses (issue #36)
+  // top of the player-level and checkpoint ladders (issue #36/#50). The same
+  // fortune bends the rarity tier AND every bonus value, so a veteran's drops
+  // are rarer in kind and fatter in size
+  const fl = fortune(luck, cp);
   let rar;
   if (forceRar) { for (const r of RARITY) if (r.id === forceRar) { rar = r; break; } }
-  else rar = rarityRoll((luck || 0) + P.level * 0.006 + (cp - 1) * 0.012, forceGood ? 1 : 0);
+  else rar = rarityRoll(fl, forceGood ? 1 : 0);
   const slot = pick(SLOTS), b = BASES[slot];
   const scale = 1 + (cp-1)*0.3;
   const stats = [];
@@ -579,7 +607,7 @@ function rollItem(cp, forceGood, forceRar, luck) {
     wscale = pick(['str', 'dex', 'int']);
     // scaling %: 1..200 on a steep exponential curve (issue #36) — past 100
     // is quite rare, past 150 a once-in-a-long-run roll
-    const pct = rollBonus(1, 200, 4.2);
+    const pct = rollBonus(1, 200, 4.2, fl);
     const v = Math.round(rand(b.dmg[0], b.dmg[1]) * scale * rar.mult);
     stats.push({k:'dmg', v, scale: wscale, pct,
       txt: 'Damage: +' + v + ' (+' + pct + '% ' + ATTRPL[wscale] + ')'});
@@ -596,7 +624,7 @@ function rollItem(cp, forceGood, forceRar, luck) {
     // every bonus rolls inside its own limit (issue #40), steep curve first
     const L = BONUS_LIM[kind];
     const cap = L.hi + (cp - 1) * L.grow;
-    const v = rollBonus(L.lo, cap, L.curve);
+    const v = rollBonus(L.lo, cap, L.curve, fl);
     let tx;
     if (kind === 'dmg') tx = 'Damage: +' + v;
     else if (kind === 'hp') tx = 'Life: +' + v;
@@ -631,12 +659,14 @@ function rollItem(cp, forceGood, forceRar, luck) {
 }
 // treasure chests roll at-least-magic (issue #36), never common: the minTier
 // floor plus a small luck so a chest sometimes hides a rare or legendary
-function rollChestItem(cp) { return rollItem(cp, true, null, 0.06); }
+function rollChestItem(cp) { return rollItem(cp, true, null, 0.12); }
 
-// enemy drops roll rarity too, with an enemy-rank bonus on top: normal none,
-// elite a small one, boss a big one (issue #36)
+// enemy drops roll rarity with an enemy-rank bonus on top (issue #50): an
+// ordinary corpse rolls at the hero's own odds, an elite nudges the roll
+// slightly and a boss nudges it hard, so a boss is the usual source of rare
+// and legendary gear
 function dropItem(x, y, cp, guarantee, rank) {
-  const luck = rank === 'boss' ? 0.35 : rank === 'elite' ? 0.1 : 0;
+  const luck = rank === 'boss' ? 0.45 : rank === 'elite' ? 0.2 : 0;
   const it = rollItem(cp, guarantee || chance(0.14 + cp * 0.01), null, luck);
   game.drops.push({x, y, r:11, item:it, life:60, bob:rand(0,TAU)});
 }
