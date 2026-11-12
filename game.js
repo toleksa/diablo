@@ -451,15 +451,52 @@ const BASES = {
   armor:  { name:'Armour', hp:[24,36] },
 };
 // bonus-linked naming (issue #26): prefixes/suffixes tied to the bonus kinds
-const NSUF = { dmg:'of Slaying', hp:'of Life', mp:'of the Mana', crit:'of the Lucky Blade',
-  spd:'of the Wind', str:'of the Bear', dex:'of the Cat', int:'of the Owl', vit:'of the Ox' };
-const NPRE = {
-  dmg:['Mighty','Savage','Cruel'], hp:['Sturdy','Ironclad','Vigorous'], mp:['Arcane','Mystic','Ember'],
-  crit:['Keen','Tricky','Deft'], spd:['Swift','Fleet','Nimble'],
-  str:['Strong','Brawny','Muscular'], dex:['Agile','Wiry','Dexterous'],
-  int:['Clever','Enlightened','Wise'], vit:['Hardy','Robust','Tough'],
+// affix flavour words, three tiers per bonus kind sorted weakest -> strongest
+// (issue #40); the tier follows where the rolled value lands inside the kind's
+// limit (see BONUS_LIM below)
+const NSUF = {
+  dmg:  ['of Slaying', 'of the Butcher', 'of Carnage'],
+  hp:   ['of Life', 'of the Lifeward', 'of Vigour'],
+  mp:   ['of the Mana', 'of the Mana Well', 'of Deep Mana'],
+  crit: ['of the Lucky Blade', 'of the Sharp Edge', 'of the Assassin'],
+  spd:  ['of the Wind', 'of the Gale', 'of the Storm'],
+  str:  ['of the Bear', 'of the Gorilla', 'of the Mountain'],
+  dex:  ['of the Cat', 'of the Falcon', 'of the Panther'],
+  int:  ['of the Owl', 'of the Sage', 'of the Arcane Mind'],
+  vit:  ['of the Ox', 'of the Boar', 'of the Mammoth'],
 };
-const NLEG = ['The ','Grand ','Ancient ','Forgotten ','Glorious ',
+const NPRE = {
+  dmg:  ['Sharp', 'Savage', 'Cruel'], hp: ['Sturdy', 'Ironclad', 'Bulwarking'],
+  mp:   ['Arcane', 'Mystic', 'Runed'], crit: ['Keen', 'Tricky', 'Deadly'],
+  spd:  ['Swift', 'Fleet', 'Thunderfoot'],
+  str:  ['Strong', 'Brawny', 'Colossal'], dex: ['Agile', 'Wiry', 'Lithesome'],
+  int:  ['Clever', 'Wise', 'Brilliant'], vit: ['Hardy', 'Robust', 'Vigorous'],
+};
+// per-bonus roll limits (issue #40): lo..hi at the first checkpoint, hi
+// growing by `grow` per checkpoint deeper; every kind rolls on the same steep
+// curve, so the top third of a range is scarce and the word tier is read off
+// where the value lands: <= 33% weakest affix, <= 66% middle, above that the
+// strongest
+const BONUS_LIM = {
+  dmg:  { lo: 1, hi: 9,  grow: 2, curve: 2.4 },
+  hp:   { lo: 1, hi: 26, grow: 6, curve: 2.4 },
+  mp:   { lo: 1, hi: 32, grow: 7, curve: 2.4 },
+  crit: { lo: 1, hi: 10, grow: 1, curve: 2.4 },
+  spd:  { lo: 1, hi: 24, grow: 3, curve: 2.4 },
+  str:  { lo: 1, hi: 8,  grow: 1, curve: 2.4 },
+  dex:  { lo: 1, hi: 8,  grow: 1, curve: 2.4 },
+  int:  { lo: 1, hi: 8,  grow: 1, curve: 2.4 },
+  vit:  { lo: 1, hi: 8,  grow: 1, curve: 2.4 },
+};
+// the bonus-kind word for a value: which third of the kind's limit it hit
+function bonusTier(k, v, cap) {
+  const L = BONUS_LIM[k];
+  const hi = cap || (L ? L.hi : 1);
+  if (v <= hi / 3) return 0;
+  if (v <= (hi * 2) / 3) return 1;
+  return 2;
+}
+const NLEG = ['The ', 'Grand ', 'Ancient ', 'Forgotten ', 'Glorious ',
   'Cursed ',];
 const BONUSK = ['dmg', 'hp', 'mp', 'crit', 'spd', 'str', 'dex', 'int', 'vit'];
 // dmg/life/mana/crit/move-speed + direct attribute bonuses (issue #25)
@@ -492,36 +529,34 @@ function rollItem(cp, forceGood, forceRar, luck) {
     const pool = BONUSK.filter(k => !stats.some(st => st.k === k));
     if (!pool.length) break;
     const kind = pick(pool);
-    // every bonus rolls min..(max scaled by depth) on an exponential curve
-    // (issue #36), so the high end of each range is much harder to hit
-    if (kind === 'dmg') {
-      const v = rollBonus(1, 3 * (1 + Math.floor(cp / 3)), 2.4);
-      stats.push({k:'dmg', v, txt:'Damage: +'+v});
-    } else if (kind === 'hp') {
-      const v = rollBonus(3, 8 * (1 + Math.floor(cp / 2)), 2.4);
-      stats.push({k:'hp', v, txt:'Life: +'+v});
-    } else if (kind === 'mp') {
-      const v = rollBonus(5, 14 * (1 + Math.floor(cp / 3)), 2.4);
-      stats.push({k:'mp', v, txt:'Mana: +'+v});
-    } else if (kind === 'crit') {
-      const v = rollBonus(2, 5 + Math.floor(cp / 5), 2.4);
-      stats.push({k:'crit', v, txt:'Critical Chance: +'+v+'%'});
-    } else if (kind === 'str' || kind === 'dex' || kind === 'int' || kind === 'vit') {
-      const v = rollBonus(1, 3 + Math.floor(cp / 6), 2.4); // +N to an attribute (issue #25)
-      stats.push({k: kind, v, txt: ATTRPL[kind] + ': +' + v});
-    } else {
-      const v = rollBonus(4, 12 + Math.floor(cp / 4), 2.4);
-      stats.push({k:'spd', v, txt:'Movement Speed: +'+v+'%'});
-    }
+    // every bonus rolls inside its own limit (issue #40), steep curve first
+    const L = BONUS_LIM[kind];
+    const cap = L.hi + (cp - 1) * L.grow;
+    const v = rollBonus(L.lo, cap, L.curve);
+    let tx;
+    if (kind === 'dmg') tx = 'Damage: +' + v;
+    else if (kind === 'hp') tx = 'Life: +' + v;
+    else if (kind === 'mp') tx = 'Mana: +' + v;
+    else if (kind === 'crit') tx = 'Critical Chance: +' + v + '%';
+    else if (kind === 'spd') tx = 'Movement Speed: +' + v + '%';
+    else tx = ATTRPL[kind] + ': +' + v;
+    stats.push({k: kind, v, cap, txt: tx});
   }
   // naming (issue #26/#39): the bonuses themselves decide the name, and each
   // bonus contributes ONE affix only — the first bonus lends its prefix, every
   // later bonus lends its 'of X' suffix (never both for the same bonus)
   const bonuses = stats.slice(1);
   let nm = (rar.id === 'legend' ? pick(NLEG) : '');
-  if (bonuses.length) nm += pick(NPRE[bonuses[0].k]) + ' ';
+  // one affix per bonus (issue #39/#40): the first bonus lends only its prefix,
+  // the rest only their 'of X' suffix — and the word itself is picked by where
+  // the value landed inside that kind's limit (issue #40)
+  if (bonuses.length)
+    nm += NPRE[bonuses[0].k][bonusTier(bonuses[0].k, bonuses[0].v, bonuses[0].cap)] + ' ';
   nm += b.name;
-  for (let bi = 1; bi < bonuses.length; bi++) nm += ' ' + NSUF[bonuses[bi].k];
+  for (let bi = 1; bi < bonuses.length; bi++) {
+    const st = bonuses[bi];
+    nm += ' ' + NSUF[st.k][bonusTier(st.k, st.v, st.cap)];
+  }
   // score counts the scaling bonus at an assumed average attribute (~11):
   // bonus dmg ≈ pct × 11 / 100
   // score weights each bonus kind; scaling bonus valued at an assumed attribute (~11)

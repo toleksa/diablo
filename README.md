@@ -125,6 +125,12 @@ your last journey instead of starting over.
   sword arm — with a walk cycle (limbs counter-swing, boots lift).
 - Deterministic dungeon layouts per checkpoint (seeded hash), monster waves
   vary per run.
+- Item affixes name themselves by strength: each bonus kind has three affix
+  words sorted weakest to strongest (`Strong -> Brawny -> Colossal`,
+  `Clever -> Wise -> Brilliant`), and the word an item shows follows where its
+  rolled value landed inside that kind's limit — up to a third gets the weak
+  word, up to two thirds the middle one, above that the strongest. A bonus
+  never lends more than one affix.
 - Demo mode drives the same input surface as the player: the bot only sets
   `game.moveTarget` and `game.mouseDown`, so a spectator run goes through the
   exact same update path a human one does.
