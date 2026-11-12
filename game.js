@@ -71,6 +71,7 @@ const S = {
   impact()   { noise(0.25, 0.35, 1200); tone(90, 0.3, "sine", 0.3, 45); },
   potion()   { tone(440, 0.2, "sine", 0.18, 660); },
   portal()   { tone(300, 0.7, "sine", 0.2, 900); noise(0.5, 0.1, 3000); },
+  treasure() { tone(520, 0.22, "triangle", 0.2, 880); tone(770, 0.3, "sine", 0.22, 1240); noise(0.3, 0.06, 260); },
   item()     { [660, 880, 1100].forEach((f, i) => setTimeout(() => tone(f, 0.15, "triangle", 0.16), i * 90)); },
   shoot()    { tone(900, 0.06, "square", 0.08, 400); },
   elite()    { tone(110, 0.5, "sawtooth", 0.25, 55); noise(0.3, 0.2, 500); },
@@ -109,6 +110,7 @@ const game = {
   corpses: [], decals: [],
   walls: [], torches: [], grid: null, startPos: null,
   portal: null, boss: null, visited: null,
+  chests: [],
   moveTarget: null, mouseDown: false, rmbDown: false, deathShown: false,
   totalKills: 0,
 };
@@ -123,6 +125,7 @@ function resetGame() {
   });
   game.monsters = []; game.projectiles = []; game.globes = [];
   game.goldpiles = []; game.drops = []; game.particles = [];
+  game.chests = [];
   game.texts = []; game.rings = [];
   game.decals = [];
 }
@@ -148,6 +151,7 @@ function generateLevel(checkpoint) {
   _seed = checkpoint * 7717 + 991;
   game.walls = [];
   game.torches = [];
+  game.chests = [];
   game.corpses = []; game.decals = [];
   // tile grid: 1 = floor, 0 = wall; collision O(1), walls drawn per tile
   const grid = game.grid = new Uint8Array(GCOLS * GROWS);
@@ -213,6 +217,24 @@ function generateLevel(checkpoint) {
   if (solidAt(bxs, bys, 30)) { bxs = bx; bys = by; }
   P.x = game.startPos.x; P.y = game.startPos.y;
   spawnBoss(bxs, bys);
+  // treasure chests (issue #19): sparse — a guaranteed one, sometimes a second,
+  // never in the start room, rolled to hold a magic item
+  const tryChest = () => {
+    for (let t2 = 0; t2 < 20; t2++) {
+      const r = rooms[1 + Math.floor(Math.random() * (rooms.length - 1))];
+      if (!r) continue;
+      const tx = r.x + 1 + Math.floor(Math.random() * Math.max(1, r.w - 2));
+      const ty = r.y + 1 + Math.floor(Math.random() * Math.max(1, r.h - 2));
+      const wx = tx * TS + TS / 2, wy = ty * TS + TS / 2;
+      if (solidAt(wx, wy, 20)) continue;
+      if (Math.hypot(wx - game.startPos.x, wy - game.startPos.y) < 260) continue;
+      if (game.portal && Math.hypot(wx - game.portal.x, wy - game.portal.y) < 80) continue;
+      for (const oc of game.chests) if (Math.hypot(wx - oc.x, wy - oc.y) < 120) return;
+      game.chests.push({ x: wx, y: wy, item: rollMagicItem(checkpoint), open: false });
+      return;
+    }
+  };
+  if (rooms.length > 1) { tryChest(); if (chance(0.35)) tryChest(); }
 }
 
 function solidAt(x, y, r) {
@@ -436,6 +458,12 @@ function rollItem(cp, forceGood) {
   const score = stats.reduce((s, st) =>
     s + (st.k === 'dmg' ? (st.v + (st.pct || 0) * 0.11) : st.v) * (W8[st.k] || 1), 0);
   return { slot, name:nm, rarity:rar.id, stats, score, cp };
+}
+// exactly-magic roll for treasure chests (issue #19): reroll until magic
+function rollMagicItem(cp) {
+  let it = rollItem(cp, false);
+  for (let k = 0; k < 40 && it.rarity !== 'magic'; k++) it = rollItem(cp, false);
+  return it;
 }
 
 function dropItem(x, y, cp, guarantee) {
@@ -791,6 +819,16 @@ function update(dt) {
     }
   }
   game.globes = game.globes.filter(g => g.life > 0);
+  // treasure chests: step up to a closed chest to swing it open (issue #19)
+  for (const ch of game.chests) {
+    if (ch.open || P.dead) continue;
+    if (Math.hypot(P.x - ch.x, P.y - ch.y) > 30) continue;
+    ch.open = true;
+    game.drops.push({ x: ch.x + rand(-6, 6), y: ch.y - 16, r: 11, item: ch.item, life: 180, bob: rand(0, TAU) });
+    dropGold(ch.x + rand(-16, 16), ch.y + rand(-8, 8), game.checkpoint);
+    S.treasure();
+    toast('Treasure chest — a magic item inside!', 'item-magic');
+  }
   // gold — magnet pull + walk over to pick up
   for (const gp of game.goldpiles) {
     gp.life -= dt;
@@ -1117,6 +1155,33 @@ function drawGroundFX() {
       ctx.beginPath(); ctx.arc(x + ox, y + oy, 3.4, 0, TAU); ctx.fill();
       ctx.fillStyle = '#fff3bc';
       ctx.beginPath(); ctx.arc(x + ox - 1, y + oy - 1, 1.2, 0, TAU); ctx.fill();
+    }
+  }
+  // treasure chests — closed: proud lid + gold trim + lock; opened: tipped lid
+  // and a blue shimmer where the magic item popped out (issue #19)
+  for (const ch of game.chests) {
+    const x = ch.x - vx, y = ch.y - vy;
+    if (x < -40 || x > VW + 40 || y < -40 || y > VH + 40) continue;
+    shadowAt(x, y + 6, 16, 0.3);
+    if (!ch.open) {
+      ctx.fillStyle = '#5d3f22'; ctx.fillRect(x - 13, y - 10, 26, 12);
+      ctx.fillStyle = '#7a5530'; ctx.fillRect(x - 13, y - 17, 26, 8);
+      ctx.strokeStyle = '#c8a45a'; ctx.lineWidth = 2;
+      ctx.strokeRect(x - 13, y - 17, 26, 19);
+      ctx.beginPath(); ctx.moveTo(x - 13, y - 9); ctx.lineTo(x + 13, y - 9); ctx.stroke();
+      ctx.fillStyle = '#e8c860';
+      ctx.beginPath(); ctx.arc(x, y - 6, 2.6, 0, TAU); ctx.fill();
+    } else {
+      ctx.fillStyle = '#4a3318'; ctx.fillRect(x - 13, y - 9, 26, 11);
+      ctx.save();
+      ctx.translate(x - 13, y - 9); ctx.rotate(-0.85);
+      ctx.fillStyle = '#7a5530'; ctx.fillRect(0, -7, 26, 7);
+      ctx.strokeStyle = '#c8a45a'; ctx.lineWidth = 1.5; ctx.strokeRect(0, -7, 26, 7);
+      ctx.restore();
+      ctx.fillStyle = '#1d150b'; ctx.fillRect(x - 11, y - 7, 22, 6);
+      const pulse = 0.18 + Math.sin(game.time * 3.2 + ch.x) * 0.06;
+      ctx.fillStyle = 'rgba(120,170,255,' + pulse + ')';
+      ctx.beginPath(); ctx.arc(x, y - 3, 11, 0, TAU); ctx.fill();
     }
   }
   for (const it of game.drops) {
