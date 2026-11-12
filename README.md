@@ -21,7 +21,7 @@ python3 -m http.server 8123   # then open http://localhost:8123/
 | **Right mouse button / click** | move to the clicked point |
 | **Left mouse button** (hold) | sword attack (auto-aims at nearest foe) |
 | **WASD / arrows** | movement (same as click-to-move) |
-| **1** | healing potion (limited — merchant restocks at each checkpoint) |
+| **1** | healing potion — unlimited uses, one charge per 60 s (fresh at each checkpoint) |
 | **2** | Whirlwind — AoE spin, spends 30 Mana |
 | **3** | Leap — jump forward, AoE landing + stun, spends 25 Mana |
 | **C** | character sheet: attributes, equipment, inventory |

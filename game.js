@@ -95,7 +95,6 @@ const P = {
   atkT: 0, dead: false, leap: null,
   cd: { potion: 0, whirl: 0, leap: 0 },
   eq: { weapon: null, helm: null, armor: null },
-  potCount: 3,
 };
 
 // ---------- Stan gry ----------
@@ -137,7 +136,6 @@ function resetPlayer() {
     level: 1, gold: 0, atkT: 0, dead: false, leap: null,
     cd: { potion: 0, whirl: 0, leap: 0 },
     eq: { weapon: null, helm: null, armor: null },
-    potCount: 3,
   });
 }
 
@@ -866,11 +864,11 @@ function leapLand(x, y) {
     }
   }
 }
+// potions are unlimited; only a 60 s cooldown gates them (issue: unlimited potions)
 function drinkPotion() {
-  if (P.dead || P.cd.potion > 0 || P.potCount <= 0) return false;
+  if (P.dead || P.cd.potion > 0) return false;
   if (P.hp >= P.hpMax) return false;
-  P.potCount--;
-  P.cd.potion = 8;
+  P.cd.potion = 60;
   const heal = Math.ceil(P.hpMax * 0.5);
   P.hp = Math.min(P.hpMax, P.hp + heal);
   S.potion();
@@ -899,8 +897,7 @@ function nextCheckpoint() {
   generateLevel(game.checkpoint);
   P.x = game.startPos.x; P.y = game.startPos.y;
   game.moveTarget = null;
-  P.potCount = Math.min(6, P.potCount + 3);
-  toast('Merchant from the settlement: potions replenished', '');
+  P.cd.potion = 0; // fresh potion at every checkpoint
   banner('Checkpoint ' + game.checkpoint, '#e8d8a0');
   preplaceMonsters();
 }
@@ -1380,7 +1377,7 @@ function hudUpdate() {
     HUD.bossname.textContent = game.boss.name;
   } else HUD.bossbar.classList.add('hidden');
   const rings = [
-    [HUD.slotPotion, P.cd.potion / 8, P.potCount > 0],
+    [HUD.slotPotion, P.cd.potion / 60, true],
     [HUD.slotSkill2, P.cd.whirl / 6, P.mana >= 30],
     [HUD.slotSkill3, P.cd.leap / 5, P.mana >= 25],
     [HUD.slotLMB, P.atkT / P.atkCd, true],
