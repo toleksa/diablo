@@ -520,6 +520,7 @@ function hurtPlayer(dmg, fromX, fromY) {
 
 function damageMonster(m, dmg, isCrit, knockFrom) {
   m.act = true; // getting hit wakes a sleeping monster
+  if (killMode) dmg = m.hp + 1000; // dev menu insta kill: anything dies in one blow
   m.hp -= dmg; m.hitFlash = 0.12;
   dmgText(m.x + rand(-8,8), m.y - m.r, (isCrit?'CRIT! ':'')+Math.round(dmg), isCrit?'#ffd75e':'#ffffff');
   isCrit ? S.crit() : S.hit();
@@ -1785,12 +1786,14 @@ function toggleChar() {
 
 // ---- hidden developer menu (pressed with L): deliberately undocumented ----
 let godMode = false;
+let killMode = false; // dev menu: one-hit kills everything while on
 const devMenu = document.createElement('div');
 devMenu.id = 'devMenu';
 devMenu.classList.add('hidden');
 devMenu.innerHTML =
   '<div class="devTitle">Developer menu</div>' +
   '<button data-dev="god">Toggle god mode</button>' +
+  '<button data-dev="kill">Toggle insta kill</button>' +
   '<button data-dev="level">Instant level up</button>' +
   '<button data-dev="items">Spawn 5 random items</button>' +
   '<button data-dev="tp">Teleport to next level</button>';
@@ -1803,6 +1806,9 @@ devMenu.addEventListener('click', (e) => {
   if (act === 'god') {
     godMode = !godMode;
     toast('DEV: god mode ' + (godMode ? 'ON' : 'OFF'), '');
+  } else if (act === 'kill') {
+    killMode = !killMode;
+    toast('DEV: insta kill ' + (killMode ? 'ON' : 'OFF'), '');
   } else if (act === 'level') {
     P.xp += P.xpNeed;
     gainXpCheck();
