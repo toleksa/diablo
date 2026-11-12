@@ -479,6 +479,7 @@ function refreshHpMax() {
 }
 
 function hurtPlayer(dmg, fromX, fromY) {
+  if (godMode) return; // developer menu: no damage while god mode is on
   if (P.dead || game.time - P.hurtT < 0.25) return;
   P.hp -= dmg; P.hurtT = game.time;
   dmgText(P.x, P.y, '-'+dmg, '#ff5555');
@@ -1484,6 +1485,7 @@ window.addEventListener('keydown', (e) => {
     case 'Digit2': case 'Numpad2': if (game.running) tryWhirlwind(); break;
     case 'Digit3': case 'Numpad3': if (game.running) tryLeap(); break;
     case 'KeyC': if (game.running) toggleChar(); break;
+    case 'KeyL': toggleDevMenu(); break;
   }
 });
 window.addEventListener('keyup', (e) => {
@@ -1604,6 +1606,55 @@ function toggleChar() {
   if (!charEl || !charEl.classList) return;
   if (charOpen) { charEl.classList.add('hidden'); charOpen = false; }
   else { charEl.classList.remove('hidden'); charOpen = true; renderChar(); }
+}
+
+// ---- hidden developer menu (pressed with L): deliberately undocumented ----
+let godMode = false;
+const devMenu = document.createElement('div');
+devMenu.id = 'devMenu';
+devMenu.classList.add('hidden');
+devMenu.innerHTML =
+  '<div class="devTitle">Developer menu</div>' +
+  '<button data-dev="god">Toggle god mode</button>' +
+  '<button data-dev="level">Instant level up</button>' +
+  '<button data-dev="items">Spawn 5 random items</button>' +
+  '<button data-dev="tp">Teleport to next level</button>';
+document.getElementById('game').appendChild(devMenu);
+devMenu.addEventListener('click', (e) => {
+  let t = e.target;
+  while (t && t !== devMenu) { if (t.dataset && t.dataset.dev) break; t = t.parentNode; }
+  if (!t || t === devMenu) return;
+  const act = t.dataset.dev;
+  if (act === 'god') {
+    godMode = !godMode;
+    toast('DEV: god mode ' + (godMode ? 'ON' : 'OFF'), '');
+  } else if (act === 'level') {
+    P.xp += P.xpNeed;
+    gainXpCheck();
+    toast('DEV: instant level up', '');
+  } else if (act === 'items') {
+    for (let i = 0; i < 5; i++) {
+      let px = P.x, py = P.y;
+      for (let k = 0; k < 8; k++) {
+        const a = rand(0, TAU), dd = rand(36, 140);
+        const tx = P.x + Math.cos(a) * dd, ty = P.y + Math.sin(a) * dd;
+        if (!solidAt(tx, ty, 12)) { px = tx; py = ty; break; }
+      }
+      dropItem(px, py, game.checkpoint, true);
+    }
+    toast('DEV: 5 items spawned around you', '');
+  } else if (act === 'tp') {
+    if (game.running) { toast('DEV: teleporting deeper', ''); nextCheckpoint(); }
+  }
+});
+function toggleDevMenu() {
+  if (devMenu.classList.contains('hidden')) {
+    devMenu.classList.remove('hidden');
+    toast('DEV MENU — click a choice, press L to close', '');
+  } else {
+    devMenu.classList.add('hidden');
+    toast('DEV: menu closed', '');
+  }
 }
 function addAttrPoint(k) {
   if (P.statPoints <= 0 || !(k in P.attr)) return;
