@@ -1617,8 +1617,8 @@ function hudUpdate() {
   HUD.goldText.textContent = String(P.gold);
   HUD.hpFill.style.height = clamp(P.hp / P.hpMax, 0, 1) * 100 + '%';
   HUD.hpText.textContent = Math.max(0, Math.round(P.hp)) + '/' + P.hpMax;
-  HUD.resourceFill.style.height = P.mana / mpMax() * 100 + '%';
-  HUD.resourceText.textContent = Math.round(P.mana) + '/' + mpMax();
+  HUD.resourceFill.style.height = clamp(P.mana / mpMax(), 0, 1) * 100 + '%';
+  HUD.resourceText.textContent = Math.round(clamp(P.mana, 0, mpMax())) + '/' + mpMax();
   HUD.xpfill.style.width = Math.min(100, P.xp / P.xpNeed * 100) + '%';
   HUD.levelText.textContent = 'Level ' + P.level;
   if (game.boss && !game.boss.dead && game.boss.act) {
