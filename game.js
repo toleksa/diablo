@@ -514,14 +514,14 @@ function rollItem(cp, forceGood, forceRar, luck) {
       stats.push({k:'spd', v, txt:'Movement Speed: +'+v+'%'});
     }
   }
-  // naming (issue #26): base name only on common; the bonuses themselves
-  // decide the name — a prefix tied to the first bonus, 'of X' suffix per
-  // bonus kind, and a grand title on legendaries
+  // naming (issue #26/#39): the bonuses themselves decide the name, and each
+  // bonus contributes ONE affix only — the first bonus lends its prefix, every
+  // later bonus lends its 'of X' suffix (never both for the same bonus)
   const bonuses = stats.slice(1);
   let nm = (rar.id === 'legend' ? pick(NLEG) : '');
   if (bonuses.length) nm += pick(NPRE[bonuses[0].k]) + ' ';
   nm += b.name;
-  for (const st of bonuses) nm += ' ' + NSUF[st.k];
+  for (let bi = 1; bi < bonuses.length; bi++) nm += ' ' + NSUF[bonuses[bi].k];
   // score counts the scaling bonus at an assumed average attribute (~11):
   // bonus dmg ≈ pct × 11 / 100
   // score weights each bonus kind; scaling bonus valued at an assumed attribute (~11)

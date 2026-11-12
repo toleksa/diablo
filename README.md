@@ -92,8 +92,9 @@ your last journey instead of starting over.
   noticeably likelier the further you get; **treasure chests never hold
   common gear** — they roll magic-or-better. Ground drops glow **white /
   blue / purple / orange** by rarity.
-  Names come from the bonuses themselves — Sword/Helm/Armour plus an
-  affix-linked prefix and an `of X` suffix per bonus (e.g. `Keen Armour
+  Names come from the bonuses themselves — Sword/Helm/Armour plus the
+  first bonus's affix-linked prefix and an `of X` suffix for each later
+  bonus, so no bonus ever lends two words (e.g. `Keen Armour
   of the Lucky Blade`), legendaries also get a grand title (`Ancient …`).
   Each weapon rolls an attribute-scaling bonus **(+1–200% of one
   attribute, on an exponential curve where past 100 is quite rare and past
