@@ -25,6 +25,7 @@ python3 -m http.server 8123   # then open http://localhost:8123/
 | **2** | Whirlwind — AoE spin, spends 30 Mana |
 | **3** | Leap — jump forward, AoE landing + stun, spends 25 Mana |
 | **C** | character sheet: attributes, equipment, inventory |
+| **M** | area map — fog of war: only parts the player has walked through are revealed (boss/portal/start markers appear once discovered) |
 
 ## The loop
 

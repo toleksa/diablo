@@ -108,7 +108,7 @@ const game = {
   drops: [], particles: [], texts: [], rings: [],
   corpses: [], decals: [],
   walls: [], torches: [], grid: null, startPos: null,
-  portal: null, boss: null,
+  portal: null, boss: null, visited: null,
   moveTarget: null, mouseDown: false, deathShown: false,
   totalKills: 0,
 };
@@ -151,6 +151,7 @@ function generateLevel(checkpoint) {
   game.corpses = []; game.decals = [];
   // tile grid: 1 = floor, 0 = wall; collision O(1), walls drawn per tile
   const grid = game.grid = new Uint8Array(GCOLS * GROWS);
+  game.visited = new Uint8Array(GCOLS * GROWS); // fog of war for the M map
   const set = (tx, ty) => { if (tx >= 0 && tx < GCOLS && ty >= 0 && ty < GROWS) grid[ty * GCOLS + tx] = 1; };
   const G = (a, b) => hash2(a, b * 977 + checkpoint);
   // rooms
@@ -609,6 +610,15 @@ function update(dt) {
     P.hurtFlash = Math.max(0, P.hurtFlash - dt);
     if (K.w || K.a || K.s || K.d || game.moveTarget) P.walkPhase += dt * 11;
     else P.walkPhase *= Math.pow(0.02, dt);
+    // fog of war: stamp the tiles around the player as visited (issue #13)
+    if (game.visited) {
+      const pcx = (P.x / TS) | 0, pcy = (P.y / TS) | 0;
+      for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
+        if (dx * dx + dy * dy > 10) continue;
+        const tx = pcx + dx, ty = pcy + dy;
+        if (tx >= 0 && tx < GCOLS && ty >= 0 && ty < GROWS) game.visited[ty * GCOLS + tx] = 1;
+      }
+    }
     // portal lies behind the boss room — usable only after the boss is slain
     if (game.portal && (game.boss === null || game.boss.dead) &&
         Math.hypot(P.x - game.portal.x, P.y - game.portal.y) < 26) nextCheckpoint();
@@ -1537,6 +1547,7 @@ function hudUpdate() {
     r[0].classList.toggle('ready', r[1] <= 0 && r[2]);
     r[0].classList.toggle('noFury', !r[2]);
   }
+  if (mapOpen) drawMapUI();
 }
 // ---------- input ----------
 window.addEventListener('keydown', (e) => {
@@ -1550,6 +1561,7 @@ window.addEventListener('keydown', (e) => {
     case 'Digit2': case 'Numpad2': if (game.running) tryWhirlwind(); break;
     case 'Digit3': case 'Numpad3': if (game.running) tryLeap(); break;
     case 'KeyC': if (game.running) toggleChar(); break;
+    case 'KeyM': if (game.running) toggleMap(); break;
     case 'KeyL': toggleDevMenu(); break;
   }
 });
@@ -1720,6 +1732,63 @@ function toggleDevMenu() {
     devMenu.classList.add('hidden');
     toast('DEV: menu closed', '');
   }
+}
+
+// ---- area map on M: only tiles the player has walked into are revealed ----
+let mapOpen = false;
+const mapCv = document.createElement('canvas');
+mapCv.id = 'miniMap';
+mapCv.width = GCOLS * 6; mapCv.height = GROWS * 6;
+mapCv.style.width = mapCv.width + 'px';
+mapCv.style.height = mapCv.height + 'px';
+mapCv.classList.add('hidden');
+document.getElementById('game').appendChild(mapCv);
+const mapCx = mapCv.getContext('2d');
+function toggleMap() {
+  mapOpen = !mapOpen;
+  if (mapOpen) { mapCv.classList.remove('hidden'); toast('Area map — explored parts only', ''); }
+  else mapCv.classList.add('hidden');
+}
+function drawMapUI() {
+  const vis = game.visited, g = game.grid;
+  if (!vis || !g) return;
+  const cs = 6;
+  mapCx.fillStyle = '#0a090f';
+  mapCx.fillRect(0, 0, mapCv.width, mapCv.height);
+  for (let ty = 0; ty < GROWS; ty++) {
+    for (let tx = 0; tx < GCOLS; tx++) {
+      const i = ty * GCOLS + tx;
+      if (!vis[i]) continue;
+      mapCx.fillStyle = g[i] ? '#3a4658' : '#20242c';
+      mapCx.fillRect(tx * cs, ty * cs, cs, cs);
+    }
+  }
+  const tileVisited = (wx, wy) => {
+    const tx = (wx / TS) | 0, ty = (wy / TS) | 0;
+    return tx >= 0 && tx < GCOLS && ty >= 0 && ty < GROWS && vis[ty * GCOLS + tx] === 1;
+  };
+  // start (gold notch), portal (cyan) and boss (red) — markers honor fog of war
+  if (game.startPos && tileVisited(game.startPos.x, game.startPos.y)) {
+    mapCx.fillStyle = '#c8a45a';
+    mapCx.fillRect(game.startPos.x / TS * cs + 1, game.startPos.y / TS * cs + 1, 4, 4);
+  }
+  if (game.portal && tileVisited(game.portal.x, game.portal.y)) {
+    mapCx.fillStyle = portalActive() ? '#58c8f0' : '#2a5a6a';
+    mapCx.beginPath();
+    mapCx.arc(game.portal.x / TS * cs + cs / 2, game.portal.y / TS * cs + cs / 2, 3, 0, TAU);
+    mapCx.fill();
+  }
+  if (game.boss && game.boss.hp > 0 && (game.boss.act || tileVisited(game.boss.x, game.boss.y))) {
+    mapCx.fillStyle = '#d04040';
+    mapCx.beginPath();
+    mapCx.arc(game.boss.x / TS * cs + cs / 2, game.boss.y / TS * cs + cs / 2, 3, 0, TAU);
+    mapCx.fill();
+  }
+  // player blip
+  mapCx.fillStyle = '#f0d868';
+  mapCx.beginPath();
+  mapCx.arc(P.x / TS * cs + cs / 2, P.y / TS * cs + cs / 2, 2.4, 0, TAU);
+  mapCx.fill();
 }
 function addAttrPoint(k) {
   if (P.statPoints <= 0 || !(k in P.attr)) return;
