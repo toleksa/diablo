@@ -1105,22 +1105,47 @@ function drawGroundFX() {
   }
 }
 
+// two visual states (issue #9): dim + dashed ring while the boss lives,
+// bright, fast-spinning + pulsing once the boss is slain
+function portalActive() { return game.boss === null || game.boss.dead; }
 function drawPortalG(t) {
   if (!game.portal) return;
   const p = game.portal;
   const x = p.x - vx, y = p.y - vy;
   if (x < -80 || x > VW + 80 || y < -80 || y > VH + 80) return;
+  const on = portalActive();
+  const dim = on ? 1 : 0.34;
   shadowAt(x, y + 6, 24, 0.35);
   ctx.save(); ctx.translate(x, y);
+  if (!on) {
+    // dormant: a slow, dashed containment ring hints that it is inert
+    ctx.setLineDash([5, 7]);
+    ctx.strokeStyle = 'rgba(120,150,165,0.5)';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.arc(0, 0, 27, 0, TAU); ctx.stroke();
+    ctx.setLineDash([]);
+  }
   for (let i = 0; i < 3; i++) {
     const rr = 9 + i * 6.5;
-    const sp = (i % 2 ? -1 : 1) * (t * 1.6 + p.t * 2);
-    ctx.strokeStyle = 'rgba(80,200,245,' + (0.8 - i * 0.22) + ')';
+    const sp = (i % 2 ? -1 : 1) * ((on ? 1 : 0.22) * (t * 1.6 + p.t * 2));
+    ctx.strokeStyle = 'rgba(80,200,245,' + ((0.8 - i * 0.22) * dim) + ')';
     ctx.lineWidth = 3.2 - i * 0.7;
     ctx.beginPath(); ctx.arc(0, 0, rr, sp, sp + Math.PI * 1.55); ctx.stroke();
   }
-  ctx.fillStyle = 'rgba(175,240,255,0.92)';
-  ctx.beginPath(); ctx.arc(0, 0, 6.5 + Math.sin(t * 5) * 2, 0, TAU); ctx.fill();
+  const core = 6.5 + Math.sin(t * 5) * 2;
+  if (on) {
+    ctx.fillStyle = 'rgba(175,240,255,0.92)';
+    ctx.beginPath(); ctx.arc(0, 0, core, 0, TAU); ctx.fill();
+    // outward pulse ring while active
+    const pr = 22 + (t * 26) % 20;
+    ctx.strokeStyle = 'rgba(150,230,255,' + (0.55 * (1 - ((t * 26) % 20) / 20)) + ')';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(0, 0, pr, 0, TAU); ctx.stroke();
+  } else {
+    // dormant core: dull, grey-teal, barely breathing
+    ctx.fillStyle = 'rgba(95,130,145,0.55)';
+    ctx.beginPath(); ctx.arc(0, 0, core * 0.7, 0, TAU); ctx.fill();
+  }
   ctx.restore();
 }
 
@@ -1305,7 +1330,7 @@ function lightPass(t) {
     if (x < -160 * D || x > cv.width + 160 * D || y < -160 * D || y > cv.height + 160 * D) continue;
     hole(x, y, (102 + fl) * D, 1);
   }
-  if (game.portal) hole((game.portal.x - vx) * D, (game.portal.y - vy) * D, 180 * D, 1);
+  if (game.portal) hole((game.portal.x - vx) * D, (game.portal.y - vy) * D, (portalActive() ? 180 : 118) * D, 1);
   for (const pr of game.projectiles) hole((pr.x - vx) * D, (pr.y - vy) * D, 70 * D, 0.65);
   dctx.globalCompositeOperation = 'source-over';
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -1323,11 +1348,13 @@ function lightPass(t) {
     ctx.beginPath(); ctx.arc(x, y, 62, 0, TAU); ctx.fill();
   }
   if (game.portal) {
-    const g = ctx.createRadialGradient(game.portal.x - vx, game.portal.y - vy, 0, game.portal.x - vx, game.portal.y - vy, 90);
-    g.addColorStop(0, 'rgba(70,190,240,0.22)');
+    const on = portalActive();
+    const pr = on ? 90 : 46;
+    const g = ctx.createRadialGradient(game.portal.x - vx, game.portal.y - vy, 0, game.portal.x - vx, game.portal.y - vy, pr);
+    g.addColorStop(0, 'rgba(70,190,240,' + (on ? 0.22 : 0.06) + ')');
     g.addColorStop(1, 'rgba(70,190,240,0)');
     ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(game.portal.x - vx, game.portal.y - vy, 90, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(game.portal.x - vx, game.portal.y - vy, pr, 0, TAU); ctx.fill();
   }
   ctx.globalCompositeOperation = 'source-over';
   // red pulse at low HP

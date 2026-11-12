@@ -33,8 +33,9 @@ corridors, lit by wall torches. Monsters **sleep where they stand** and
 wake up only when you step into their aggro radius (or when you hit them):
 explore room by room like in Diablo, no pulls from across the map. Kill the
 quota of monsters' worth of progress, find the **boss waiting in the
-deepest room**, slay him to unlock the **portal behind his throne** and
-descend one level deeper. Die → stats screen → try again.
+deepest room**, slay him to unlock the **portal behind his throne** (it
+stays dim while he lives, blazing bright once he falls) and descend one
+level deeper. Die → stats screen → try again.
 
 ## Systems
 
