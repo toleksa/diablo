@@ -495,25 +495,18 @@ function gainXpCheck() {
   }
 }
 
+// no autoequip: pickups always go to the backpack; the player equips
+// manually from the character sheet; full backpack -> sold to gold
 function pickUpItem(it) {
-  const cur = P.eq[it.slot];
-  if (!cur || it.score > cur.score) {
-    P.eq[it.slot] = it;
-    if (cur) {
-      if (P.inv.length < 12) P.inv.push(cur);
-      else { const g = 8 + cur.cp*4 + Math.round(cur.score*0.6); P.gold += g; }
-    }
-    toast('Equipped: ' + it.name, 'item-' + it.rarity);
-  } else if (P.inv.length < 12) {
+  if (P.inv.length < 12) {
     P.inv.push(it);
-    toast('Picked up: ' + it.name + ' (backpack) · C = sheet', '');
+    toast('Taken: ' + it.name + ' (backpack) · C = sheet', 'item-' + it.rarity);
   } else {
-    const g = 10 + it.cp*6 + Math.round(it.score);
+    const g = 10 + it.cp * 6 + Math.round(it.score);
     P.gold += g;
     toast(it.name + ' → sold (+' + g + ' gold)', 'item-' + it.rarity);
     S.gold();
   }
-  refreshHpMax();
   S.item();
   if (charOpen) renderChar();
 }

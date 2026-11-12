@@ -45,9 +45,9 @@ descend one level deeper. Die → stats screen → try again.
   regen from level 5.
 - **Mana** (blue) regenerates slowly; combat swings feed it back.
 - **Items**: common/magic/rare/legendary gear for weapon/helm/armour with
-  affixes; weapons scale with an attribute shown on the item. Better drops
-  auto-equip; the rest go to your 12-slot **inventory** — click in the sheet
-  to swap gear mid-fight.
+  affixes; weapons scale with an attribute shown on the item. Every pickup
+  goes to your 12-slot **inventory** — you equip and swap gear manually from
+  the sheet (key C), even mid-fight.
 - **Zoom** scales with your monitor: the visible world stays readable on big
   screens.
 
