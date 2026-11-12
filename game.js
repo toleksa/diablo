@@ -76,6 +76,7 @@ const S = {
   shoot()    { tone(900, 0.06, "square", 0.08, 400); },
   bow()      { noise(0.05, 0.1, 2600); tone(1500, 0.05, "sine", 0.05, 1150); },
   zap()      { tone(760, 0.14, "sine", 0.12, 1500); tone(1180, 0.09, "triangle", 0.1, 640); },
+  deny()     { tone(300, 0.1, "sine", 0.07, 210); },
   elite()    { tone(110, 0.5, "sawtooth", 0.25, 55); noise(0.3, 0.2, 500); },
   bossRoar() { tone(70, 1.1, "sawtooth", 0.35, 40); noise(0.8, 0.3, 420); },
   awaken()   { tone(150, 0.3, "sawtooth", 0.16, 75); noise(0.1, 0.12, 900); },
@@ -513,6 +514,12 @@ function spawnBoss(x, y, big) {
 
 // ---------- FX / ENTITIES ----------
 function ring(x, y, color) { game.rings.push({x,y,r:8,max:90,color,life:0.5}); }
+// a shot landing: a tight, quick ring plus a handful of spittle, so the hit
+// reads on the dark without looking like a full spell burst (issue #62)
+function splash(x, y, color) {
+  game.rings.push({ x, y, r: 2, max: 30, grow: 110, color, life: 0.26 });
+  burst(x, y, color, 7, 150);
+}
 function banner(text, color) {
   const b = document.getElementById('checkpointBanner');
   b.textContent = text; b.style.color = color || '#e8d8a0';
@@ -915,6 +922,7 @@ function update(dt) {
     }
 
     for (const k of ['potion', 'whirl', 'leap']) P.cd[k] = Math.max(0, P.cd[k] - dt);
+    manaWarnT = Math.max(0, manaWarnT - dt); // the too-low grumble is throttled
     P.mana = Math.min(mpMax(), P.mana + 6 * dt); // slow mana regen
     // very slow natural HP regen, unlocked from level 5
     if (P.level >= 5 && P.hp < P.hpMax) {
@@ -1139,21 +1147,27 @@ function update(dt) {
   // --- projectiles ---
   for (const pr of game.projectiles) {
     pr.x += pr.vx * dt; pr.y += pr.vy * dt; pr.life -= dt;
-    if (pr.life <= 0 || !passableAt(pr.x, pr.y)) { pr.life = 0; continue; }
+    if (pr.life <= 0) continue;
+    if (!passableAt(pr.x, pr.y)) { splash(pr.x, pr.y, pr.color); pr.life = 0; continue; } // issue #62
     if (pr.side === 'p') {
-      // the hero's own shots (issue #53): a magic missile bends toward the
-      // nearest foe, an arrow flies straight and true
+      // the hero's own shots: an arrow flies straight and true, a magic
+      // missile steers a little (issue #62) but only toward a foe standing
+      // inside a 90 degree arc down its OWN forward path, so a foe behind
+      // or beside it never drags the shot around and it never U-turns
       if (pr.home) {
-        let ht = null, hd = 250;
+        const ca = Math.atan2(pr.vy, pr.vx);
+        let ht = null, hd = HOME_SENSE;
         for (const m of game.monsters) {
           if (m.hp <= 0) continue;
           const d = Math.hypot(m.x - pr.x, m.y - pr.y);
           if (d >= hd) continue;
+          const a = Math.atan2(m.y - pr.y, m.x - pr.x);
+          const off = Math.abs(Math.atan2(Math.sin(a - ca), Math.cos(a - ca)));
+          if (off > Math.PI / 4) continue; // outside its forward arc - ignored
           hd = d; ht = m;
         }
         if (ht) {
           const sp = Math.hypot(pr.vx, pr.vy) || 1;
-          const ca = Math.atan2(pr.vy, pr.vx);
           const a = Math.atan2(ht.y - pr.y, ht.x - pr.x);
           let da = Math.atan2(Math.sin(a - ca), Math.cos(a - ca));
           da = clamp(da, -4.4 * dt, 4.4 * dt);
@@ -1166,6 +1180,7 @@ function update(dt) {
         if (Math.hypot(pr.x - m.x, pr.y - m.y) < m.r + 6) {
           const crit = chance(critChance());
           damageMonster(m, Math.round(pr.dmg * (crit ? 1.9 : rand(0.9, 1.1))), crit, P);
+          splash(pr.x, pr.y, pr.color); // issue #62: the hit reads on the board
           pr.life = 0;
           break;
         }
@@ -1174,6 +1189,7 @@ function update(dt) {
     }
     if (!P.dead && Math.hypot(pr.x - P.x, pr.y - P.y) < P.r + 5) {
       hurtPlayer(pr.dmg, pr.x, pr.y);
+      splash(pr.x, pr.y, pr.color); // issue #62: the hit reads on the board
       pr.life = 0;
     }
   }
@@ -1255,7 +1271,7 @@ function update(dt) {
   game.particles = game.particles.filter(p => p.life > 0);
   for (const t of game.texts) { t.y += t.vy * dt; t.life -= dt; }
   game.texts = game.texts.filter(t => t.life > 0);
-  for (const r of game.rings) { r.r += 420 * dt; r.life -= dt; }
+  for (const r of game.rings) { r.r += (r.grow || 420) * dt; r.life -= dt; }
   game.rings = game.rings.filter(r => r.life > 0);
   if (game.portal) game.portal.t += dt;
 }
@@ -1273,31 +1289,45 @@ function rangedWeapon() {
   const w = P.eq.weapon;
   return !!w && (w.wk === 'bow' || w.wk === 'staff');
 }
+// ---------- the hero's ranged shot (issues #61 + #62) ----------
+// the hero's own torchlight, in world px: lightPass punches a hole this wide
+const PLAYER_LIGHT = 255;
+// how far a shot carries before it fades out: deliberately its OWN number,
+// NOT PLAYER_LIGHT, so that changing what the hero can see never quietly
+// changes what a shot can reach (issue #62)
+const PROJ_RANGE = 520;
+const HOME_SENSE = 260; // how far down its own lane a magic missile notices a foe
+const STAFF_MANA = 5;   // mana a staff shot drinks
+let manaWarnT = 0;      // throttle for the 'mana too low' warning
+
 function shootRanged() {
   const w = P.eq.weapon;
   const bowly = w.wk === 'bow';
-  const rng = bowly ? 520 : 460;
-  P.atkT = P.atkCd;
-  // a staff missile still finds the nearest foe you can see (it homes
-  // anyway); the BOW does not (issue #61): an arrow takes exactly the line
-  // the cursor drew, so P.aim stays where the mouse left it and no foe,
-  // however politely standing in reach, can steal the shot
   if (!bowly) {
-    let best = null, bd = rng;
-    for (const m of game.monsters) {
-      if (m.hp <= 0) continue;
-      const d = Math.hypot(m.x - P.x, m.y - P.y);
-      if (d >= bd || !losClear(P.x, P.y, m.x, m.y)) continue;
-      bd = d; best = m;
+    // the staff drinks the arcane: STAFF_MANA mana a shot. With less than
+    // that left in the pool there is no shot at all, and the toast says so
+    // (issue #62)
+    if (P.mana < STAFF_MANA) {
+      P.atkT = P.atkCd; // one grumble per swing, never one per frame
+      if (manaWarnT <= 0) {
+        manaWarnT = 1.5;
+        toast('Not enough mana - the staff needs ' + STAFF_MANA + ' and you hold only ' + Math.round(P.mana), '');
+        S.deny();
+      }
+      return;
     }
-    if (best) P.aim = Math.atan2(best.y - P.y, best.x - P.x);
-    else if (game.moveTarget) P.aim = Math.atan2(game.moveTarget.y - P.y, game.moveTarget.x - P.x);
+    P.mana -= STAFF_MANA;
   }
+  P.atkT = P.atkCd;
+  // BOTH ranged weapons leave down the cursor line: an arrow flies exactly
+  // where the mouse left P.aim (issue #61), and a staff missile now does the
+  // same (issue #62) - no foe standing politely in reach may steal the shot.
+  // The missile makes its own course corrections later, inside a forward arc.
   const spd = bowly ? 660 : 450; // an arrow is quick and flat, a missile drifts and homes
   const hx = P.x + Math.cos(P.aim) * (P.r + 6), hy = P.y + Math.sin(P.aim) * (P.r + 6) - 4;
   if (bowly) S.bow(); else S.zap();
   game.projectiles.push({ x: hx, y: hy, vx: Math.cos(P.aim) * spd, vy: Math.sin(P.aim) * spd,
-    dmg: playerDmg(), life: rng / spd + 0.25, color: bowly ? '#e0d2ae' : '#8ac7e8',
+    dmg: playerDmg(), life: (PROJ_RANGE + 12) / spd, color: bowly ? '#e0d2ae' : '#8ac7e8',
     side: 'p', arrow: bowly, home: !bowly });
   if (!bowly) ring(hx, hy, '#8ac7e8');
 }
@@ -2544,7 +2574,7 @@ function lightPass(t) {
     dctx.fillStyle = g;
     dctx.beginPath(); dctx.arc(x, y, r, 0, TAU); dctx.fill();
   };
-  if (!P.dead) hole((P.x - vx) * D, (P.y - vy) * D, 255 * D, 1);
+  if (!P.dead) hole((P.x - vx) * D, (P.y - vy) * D, PLAYER_LIGHT * D, 1);
   for (const tc of game.torches) {
     const fl = Math.sin(t * 7 + tc.ph) * 6;
     const x = (tc.x - vx) * D, y = (tc.y - vy) * D;

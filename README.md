@@ -41,7 +41,7 @@ still holds, the pack turned back into gold.
 | Input | Action |
 |---|---|
 | **Right mouse button / click** | move to the clicked point; **hold it down** and the character keeps following the cursor, stopping the instant you release |
-| **Left mouse button** (hold) | attack with whatever is in your hand — an axe or a sword swings, a bow fires an arrow straight at the cursor, a staff looses a homing magic missile |
+| **Left mouse button** (hold) | attack with whatever is in your hand — an axe or a sword swings, a bow fires an arrow straight at the cursor, a staff looses a magic missile that curves only toward foes in front of it |
 | **WASD / arrows** | movement (same as click-to-move) |
 | **1** | healing potion — unlimited uses, one charge per 60 s (fresh at each checkpoint) |
 | **2** | Whirlwind — AoE spin, spends 30 Mana |
@@ -120,7 +120,9 @@ hero and lets the Roost be run again, as many times deep as you care to go.
   damage (an axe wants Strength, a sword Dexterity, a staff Intelligence —
   see **Weapon types** below), dexterity feeds crits, intelligence feeds max
   Mana, vitality feeds HP and very slow natural HP regen from level 5.
-- **Mana** (blue) regenerates slowly; combat swings feed it back.
+- **Mana** (blue) regenerates slowly; combat swings feed it back. A **staff** shot
+  drinks 5 mana: with less than that left the staff stays silent and the toast
+  says your mana is too low, so the pool is a real budget, not an endless drum.
 - **Inventory**: 20-slot backpack. A full backpack **refuses new loot** —
   the item waits on the floor and you are told so,
   but you keep control too: each sheet row has a **discard ✕** (destroys the
@@ -176,8 +178,16 @@ hero and lets the Roost be run again, as many times deep as you care to go.
 - **Weapon types** decide both the attribute a weapon scales with and how the
   hero uses it, and you can **see** what you are holding: an **Axe** (Strength,
   swings), a **Sword** (Dexterity, swings), a **Bow** (Dexterity, fires arrows
-  and never swings) and a **Staff** (Intelligence, fires arcane homing missiles
-  and never swings). A bow or a staff also cannot be whirled — the Whirlwind
+  and never swings) and a **Staff** (Intelligence, fires arcane missiles
+  straight at the cursor and never swings). Neither weapon auto-aims: an arrow and a
+  missile both leave down the line the mouse drew, so a foe standing politely
+  in reach cannot steal either shot. A magic missile may still bend, but only
+  toward a foe inside a 90 degree arc straight ahead of it and only a little
+  at a time, never a U-turn onto whatever happens to be behind. Shots fade out
+  at their own reach (520 world px), deliberately a number of their own and not
+  the hero's torchlight radius, so changing what you can see never changes how
+  far a shot carries. Whatever a shot lands on spits a small splash, so the hit
+  reads on the board. A bow or a staff also cannot be whirled — the Whirlwind
   needs something to spin. Bare fists still punch, and Whirlwind works with them.
 - **Zoom** scales with your monitor: the visible world stays readable on big
   screens.
