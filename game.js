@@ -122,6 +122,7 @@ const game = {
   merchant: null, // wandering trader (issue #34)
   moveTarget: null, mouseDown: false, rmbDown: false, deathShown: false,
   totalKills: 0,
+  demo: false, // spectator demo mode (issue #35)
 };
 function resetGame() {
   mcp = 1;
@@ -653,6 +654,7 @@ function update(dt) {
   game.shake *= Math.pow(0.001, dt);
 
   if (!P.dead) {
+    if (game.demo) botTick(dt); else bot = null; // spectator mode: AI drives the hero
     // --- player ---
     if (P.leap) {
       const L = P.leap;
@@ -1849,9 +1851,80 @@ function beginContinue() {
 }
 
 const contBtn = document.getElementById('continueBtn');
+// ---- demo mode (issue #35): a small internal AI drives the hero ----
+let bot = null;
+function botEquip() {
+  for (let i = 0; i < P.inv.length; i++) {
+    const it = P.inv[i];
+    const cur = P.eq[it.slot];
+    if (!cur || it.score > cur.score) { equipFromInv(i); return; }
+  }
+}
+function botTick(dt) {
+  if (!bot) bot = { tx: P.x, ty: P.y, stuckT: 0, lx: P.x, ly: P.y, wanderT: 0 };
+  const B = bot;
+  const moved = Math.hypot(P.x - B.lx, P.y - B.ly);
+  B.stuckT = (moved < 2 && B.wasAlive !== undefined) ? B.stuckT + dt : 0;
+  B.wasAlive = true;
+  B.lx = P.x; B.ly = P.y;
+  let gx = null, gy = null;
+  // 1) fight: nearest monster in sight
+  let tgt = null, bd = 460;
+  for (const m of game.monsters) {
+    const d = Math.hypot(m.x - P.x, m.y - P.y);
+    if (d < bd) { bd = d; tgt = m; }
+  }
+  if (tgt) {
+    if (bd > P.atkRange + 20) { gx = tgt.x; gy = tgt.y; }
+    game.mouseDown = bd < P.atkRange + 26;
+    if (P.hp < P.hpMax * 0.4 && P.cd.potion <= 0) drinkPotion();
+    let near = 0;
+    for (const m of game.monsters) if (Math.hypot(m.x - P.x, m.y - P.y) < 100) near++;
+    if (near >= 2 && P.mana >= 30) tryWhirlwind();
+  } else {
+    game.mouseDown = false;
+    botEquip();
+    // 2) loot / orbs / gold, 3) chests, 4) portal (when boss down) or boss
+    let best = null, bd2 = 520;
+    for (const it of game.drops) { const d = Math.hypot(it.x - P.x, it.y - P.y); if (d < bd2) { bd2 = d; best = it; } }
+    for (const gp of game.goldpiles) { const d = Math.hypot(gp.x - P.x, gp.y - P.y); if (d < bd2) { bd2 = d; best = gp; } }
+    for (const g of game.globes) { const d = Math.hypot(g.x - P.x, g.y - P.y); if (d < bd2) { bd2 = d; best = g; } }
+    for (const ch of game.chests) {
+      if (ch.open) continue;
+      const d = Math.hypot(ch.x - P.x, ch.y - P.y);
+      if (d < 760 && (bd2 > 520 || d < bd2)) { bd2 = d; best = ch; }
+    }
+    const bossDown = game.boss === null || game.boss.dead;
+    if (game.portal && bossDown) {
+      const d = Math.hypot(game.portal.x - P.x, game.portal.y - P.y);
+      if (d < 1100) best = game.portal;
+    } else if (game.boss && !game.boss.dead) {
+      const d = Math.hypot(game.boss.x - P.x, game.boss.y - P.y);
+      if (d < 950) { best = game.boss; bd2 = 0; }
+    }
+    if (best) { gx = best.x; gy = best.y; }
+    else {
+      // wander with a persistent goal; reroll when reached or stuck
+      B.wanderT -= dt;
+      const nearGoal = Math.hypot(B.tx - P.x, B.ty - P.y) < 60;
+      if (B.wanderT <= 0 || nearGoal || B.stuckT > 0.9) {
+        B.wanderT = 3.2;
+        B.stuckT = 0;
+        for (let t2 = 0; t2 < 12; t2++) {
+          const a = rand(0, TAU), dd = rand(240, 620);
+          const wx = P.x + Math.cos(a) * dd, wy = P.y + Math.sin(a) * dd;
+          if (!solidAt(wx, wy, 14)) { B.tx = wx; B.ty = wy; break; }
+        }
+      }
+      gx = B.tx; gy = B.ty;
+    }
+  }
+  game.moveTarget = (gx === null) ? null : { x: gx, y: gy };
+}
 if (loadSnapshot()) contBtn.classList.remove('hidden'); // a saved journey exists: offer it
 document.getElementById('startBtn').addEventListener('click', () => {
   document.getElementById('startScreen').classList.add('hidden');
+  game.demo = false;
   beginRun();
 });
 contBtn.addEventListener('click', () => {
@@ -1864,9 +1937,19 @@ for (const ck in CLASSES) {
   if (cb && cb.addEventListener)
     cb.addEventListener('click', () => {
       document.getElementById('startScreen').classList.add('hidden');
+      game.demo = false;
       beginRun(ck);
     });
 }
+const demoBtn = document.getElementById('demoBtn');
+if (demoBtn && demoBtn.addEventListener)
+  demoBtn.addEventListener('click', () => {
+    document.getElementById('startScreen').classList.add('hidden');
+    const keys = Object.keys(CLASSES);
+    beginRun(keys[Math.floor(Math.random() * keys.length)]);
+    game.demo = true;
+    toast('DEMO MODE — the AI plays; sit back and watch', '');
+  });
 document.getElementById('restartBtn').addEventListener('click', () => {
   document.getElementById('deathScreen').classList.add('hidden');
   beginContinue(); // retry at the last saved portal; fresh start when there is no save
