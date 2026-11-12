@@ -16,9 +16,12 @@ python3 -m http.server 8123   # then open http://localhost:8123/
 
 Prefer to watch first? The title screen's **Watch the Demo (AI plays)** button
 hands the hero to a small internal AI and lets the run play itself: the bot
-duels what it can see, picks up and equips loot, springs chests, drinks when
-low, heads for the boss and steps through the portal once it opens — a
-spectator run you can follow from the title screen to its death screen.
+duels whatever it can actually **see** (a foe behind a wall is ignored, not
+walked into), rounds corners instead of pressing into geometry, picks up and
+equips any drop better than what it wears, springs chests, drinks when low,
+heads for the boss and steps through the portal once it opens, and it spends
+level-up attribute points in its class' proportions — a spectator
+run you can follow from the title screen to its death screen.
 
 ## Controls
 
@@ -133,6 +136,10 @@ your last journey instead of starting over.
   never lends more than one affix.
 - Demo mode drives the same input surface as the player: the bot only sets
   `game.moveTarget` and `game.mouseDown`, so a spectator run goes through the
-  exact same update path a human one does.
+  exact same update path a human one does. Its targets are sight-limited
+  (`losClear` samples the tile grid), its wander goals stay in sight, and a
+  blocked straight step is re-aimed at the nearest passable detour, so it walks
+  around walls rather than into them. On level up it spends the free points
+  across Strength/Dexterity/Intelligence/Vitality in its class' proportions.
 - Work in progress: it is a *reimagining of the moods*, not a clone — no
   loot pipetry, no skills trees, four starting classes.

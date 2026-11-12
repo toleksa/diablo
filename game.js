@@ -675,8 +675,10 @@ function gainXpCheck() {
     P.xpNeed = Math.round(60 * Math.pow(P.level, 1.32));
     refreshHpMax(); P.hp = P.hpMax; P.mana = mpMax();
     P.statPoints += 3;
+    if (game.demo && bot) botSpendPoints(); // the spectator AI spends them itself
     S.levelUp(); ring(P.x, P.y, '#ffd75e'); ring(P.x, P.y, '#ffffff');
-    banner('Level ' + P.level + '! · +3 attribute points (C)', '#ffd75e');
+    banner('Level ' + P.level + '! · +3 attribute points' +
+      (game.demo && bot ? ' (spent by the AI)' : ' (C)'), '#ffd75e');
     if (charOpen) renderChar();
   }
 }
@@ -1926,6 +1928,33 @@ function botEquip() {
     if (!cur || it.score > cur.score) { equipFromInv(i); return; }
   }
 }
+// line of sight over the tile grid: sampled every ~14 px, blocked when a
+// sample hits solid geometry (issue #41: the spectator bot ignores anything
+// it cannot see, so it never walks into a wall toward a walled-off foe)
+function losClear(x0, y0, x1, y1) {
+  const dx = x1 - x0, dy = y1 - y0;
+  const n = Math.max(1, Math.ceil(Math.hypot(dx, dy) / 14));
+  for (let i = 1; i < n; i++) {
+    const t = i / n;
+    if (solidAt(x0 + dx * t, y0 + dy * t, 5)) return false;
+  }
+  return true;
+}
+// the bot spends free attribute points in its class' proportions (issue #41)
+function botSpendPoints() {
+  const c = CLASSES[P.cls || 'barbar'].attr;
+  const keys = ['str', 'dex', 'int', 'vit'];
+  let tot = 0;
+  for (const k of keys) tot += c[k];
+  const raw = keys.map((k) => (c[k] / tot) * P.statPoints);
+  const base = raw.map(Math.floor);
+  let left = P.statPoints - base.reduce((s, x) => s + x, 0);
+  const order = [0, 1, 2, 3].sort(
+    (a, b) => (raw[b] - base[b]) - (raw[a] - base[a]));
+  for (let i = 0; left > 0; i++, left--) base[order[i % 4]]++;
+  for (let i = 0; i < keys.length; i++)
+    for (let j = 0; j < base[i]; j++) addAttrPoint(keys[i]);
+}
 function botTick(dt) {
   if (!bot) bot = { tx: P.x, ty: P.y, stuckT: 0, lx: P.x, ly: P.y, wanderT: 0 };
   const B = bot;
@@ -1935,12 +1964,14 @@ function botTick(dt) {
   B.lx = P.x; B.ly = P.y;
   botEquip(); // keep the best gear on, even mid-fight (issue #35)
   let gx = null, gy = null;
-  // 1) fight: nearest monster in sight
+  // 1) fight: nearest monster in sight (issue #41: a foe behind a wall is
+  // ignored, not walked into)
   let tgt = null, bd = 460;
   for (const m of game.monsters) {
     if (m.hp <= 0) continue; // corpses are not targets
     const d = Math.hypot(m.x - P.x, m.y - P.y);
-    if (d < bd) { bd = d; tgt = m; }
+    if (d >= bd || !losClear(P.x, P.y, m.x, m.y)) continue;
+    bd = d; tgt = m;
   }
   if (tgt) {
     if (bd > P.atkRange + 20) { gx = tgt.x; gy = tgt.y; }
@@ -1951,15 +1982,25 @@ function botTick(dt) {
     if (near >= 2 && P.mana >= 30) tryWhirlwind();
   } else {
     game.mouseDown = false;
-    // 2) loot / orbs / gold, 3) chests, 4) portal (when boss down) or boss
+    // 2) loot / orbs / gold, 3) chests, 4) portal (when boss down) or boss —
+    // all sight-limited too, so the bot never presses into a wall for loot
     let best = null, bd2 = 520;
-    for (const it of game.drops) { const d = Math.hypot(it.x - P.x, it.y - P.y); if (d < bd2) { bd2 = d; best = it; } }
-    for (const gp of game.goldpiles) { const d = Math.hypot(gp.x - P.x, gp.y - P.y); if (d < bd2) { bd2 = d; best = gp; } }
-    for (const g of game.globes) { const d = Math.hypot(g.x - P.x, g.y - P.y); if (d < bd2) { bd2 = d; best = g; } }
+    for (const it of game.drops) {
+      const d = Math.hypot(it.x - P.x, it.y - P.y);
+      if (d < bd2 && losClear(P.x, P.y, it.x, it.y)) { bd2 = d; best = it; }
+    }
+    for (const gp of game.goldpiles) {
+      const d = Math.hypot(gp.x - P.x, gp.y - P.y);
+      if (d < bd2 && losClear(P.x, P.y, gp.x, gp.y)) { bd2 = d; best = gp; }
+    }
+    for (const g of game.globes) {
+      const d = Math.hypot(g.x - P.x, g.y - P.y);
+      if (d < bd2 && losClear(P.x, P.y, g.x, g.y)) { bd2 = d; best = g; }
+    }
     for (const ch of game.chests) {
       if (ch.open) continue;
       const d = Math.hypot(ch.x - P.x, ch.y - P.y);
-      if (d < 760 && (bd2 > 520 || d < bd2)) { bd2 = d; best = ch; }
+      if (d < 760 && (bd2 > 520 || d < bd2) && losClear(P.x, P.y, ch.x, ch.y)) { bd2 = d; best = ch; }
     }
     const bossDown = game.boss === null || game.boss.dead;
     if (game.portal && bossDown) {
@@ -1977,13 +2018,38 @@ function botTick(dt) {
       if (B.wanderT <= 0 || nearGoal || B.stuckT > 0.9) {
         B.wanderT = 3.2;
         B.stuckT = 0;
+        let found = false;
         for (let t2 = 0; t2 < 12; t2++) {
           const a = rand(0, TAU), dd = rand(240, 620);
+          const wx = P.x + Math.cos(a) * dd, wy = P.y + Math.sin(a) * dd;
+          if (!solidAt(wx, wy, 14) && losClear(P.x, P.y, wx, wy)) { B.tx = wx; B.ty = wy; found = true; break; }
+        }
+        if (!found) for (let t2 = 0; t2 < 12; t2++) {
+          const a = rand(0, TAU), dd = rand(200, 520);
           const wx = P.x + Math.cos(a) * dd, wy = P.y + Math.sin(a) * dd;
           if (!solidAt(wx, wy, 14)) { B.tx = wx; B.ty = wy; break; }
         }
       }
       gx = B.tx; gy = B.ty;
+    }
+  }
+  // steering (issue #41): when the straight line to the goal is walled, aim at
+  // the nearest passable detour that still makes progress toward the goal, so
+  // the bot rounds corners instead of pressing its face into the wall
+  if (gx !== null && !passableAt(gx, gy)) {
+    const dir = Math.atan2(gy - P.y, gx - P.x);
+    if (!passableAt(P.x + Math.cos(dir) * 34, P.y + Math.sin(dir) * 34)) {
+      let bx = null, by = null, bestPen = 1e9;
+      for (const turn of [-0.4, 0.4, -0.85, 0.85, -1.3, 1.3, -1.9, 1.9]) {
+        const a2 = dir + turn;
+        for (const reach of [34, 60, 92]) {
+          const px = P.x + Math.cos(a2) * reach, py = P.y + Math.sin(a2) * reach;
+          if (!passableAt(px, py)) continue;
+          const pen = Math.abs(turn) * 90 - reach + Math.hypot(gx - px, gy - py);
+          if (pen < bestPen) { bestPen = pen; bx = px; by = py; }
+        }
+      }
+      if (bx !== null) { gx = bx; gy = by; }
     }
   }
   game.moveTarget = (gx === null) ? null : { x: gx, y: gy };
