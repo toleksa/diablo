@@ -93,8 +93,11 @@ hero and lets the Roost be run again, as many times deep as you care to go.
 - **Classes** (chosen at the start screen): **Barbarian** (strong, hardy,
   poor intellect), **Warrior** (hardiest, strong, poor intellect),
   **Rogue** (quick, clever, frail) and **Mage** (mighty-minded, nimble,
-  fragile) — each starts with a different attribute spread and kit colours,
-  and the class is shown on the character sheet and saved with your journey.
+  fragile) — each starts with a different attribute spread and its own look: the
+  **Barbarian** is bare-chested under a bear pelt, bare-headed, braided and
+  painted in war red; the **Warrior** rides in grey steel; the **Rogue** in
+  mossy green leather; the **Mage** in blue over light blue. The class is shown
+  on the character sheet and saved with your journey.
 - **Attributes**: Strength, Dexterity, Intelligence, Vitality — +3 points per
   level, spent from the character sheet: press anywhere on a stat's row and the
   plus spends one free point. Main attribute scales your weapon's

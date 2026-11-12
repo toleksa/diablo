@@ -86,10 +86,13 @@ const WALL_H = 26;
 
 // ---------- Player classes (issue #22) ----------
 const CLASSES = {
-  barbar: { name:'Barbarian', attr:{ str:14, dex:9,  int:6,  vit:11 }, arm:'#3e4a5c', paul:'#7e8ea4', trim:'#c8a45a', crest:'#a03a3a' },
-  war:    { name:'Warrior',   attr:{ str:11, dex:9,  int:6,  vit:14 }, arm:'#59413a', paul:'#8a6a5a', trim:'#b08548', crest:'#d8d0c0' },
-  rog:    { name:'Rogue',     attr:{ str:6,  dex:14, int:11, vit:9  }, arm:'#2e4636', paul:'#5f7a63', trim:'#9a8a55', crest:'#3f6a4a' },
-  mage:   { name:'Mage',      attr:{ str:9,  dex:11, int:14, vit:6  }, arm:'#46346e', paul:'#8a7ab8', trim:'#c9a6e8', crest:'#d8c8f0' },
+  // class colours (issue #22), repainted for issue #52: the barbarian is bare-
+  // chested so he carries `skin` and `topless`, the warrior wears the grey steel
+  // that used to belong to the barbarian, and the mage is blue over light blue
+  barbar: { name:'Barbarian', attr:{ str:14, dex:9,  int:6,  vit:11 }, arm:'#5f4328', paul:'#8d6b40', trim:'#c9a24a', crest:'#b03a3a', skin:'#c98f66', topless:true },
+  war:    { name:'Warrior',   attr:{ str:11, dex:9,  int:6,  vit:14 }, arm:'#3e4a5c', paul:'#7e8ea4', trim:'#c8a45a', crest:'#a03a3a', skin:'#b8a27c' },
+  rog:    { name:'Rogue',     attr:{ str:6,  dex:14, int:11, vit:9  }, arm:'#2e4636', paul:'#5f7a63', trim:'#9a8a55', crest:'#3f6a4a', skin:'#c2a98a' },
+  mage:   { name:'Mage',      attr:{ str:9,  dex:11, int:14, vit:6  }, arm:'#3a6fbd', paul:'#85c7d9', trim:'#cfe8f5', crest:'#e6f2fb', skin:'#d8bb96' },
 };
 
 // ---------- Player ----------
@@ -1853,6 +1856,7 @@ function drawPlayer() {
   const bob = Math.sin(P.walkPhase) * (Math.abs(Math.cos(P.walkPhase)) > 0.2 ? 2 : 1) + ip * 1.8;
   const r = P.r;
   const cl = CLASSES[P.cls || 'barbar']; // class colors (issue #22)
+  const bare = !!cl.topless; // the barbarian wears furs, not a cuirass (issue #52)
   // sword + slash
   if (P.atkT > P.atkCd - 0.3) {
     const pr = Math.max(0, Math.min(1, (P.atkCd - P.atkT) / 0.3));
@@ -1879,13 +1883,13 @@ function drawPlayer() {
   const f1x = x - r * 0.2 + s * faceX * r * 0.4 + ip * faceX * r * 0.16, f1y = y - r * 0.34 + legLen + Math.abs(s) * 1.8;
   const f2x = x + r * 0.2 - s * faceX * r * 0.4 - ip * faceX * r * 0.16, f2y = y - r * 0.34 + legLen + Math.abs(s) * 1.8;
   ctx.lineCap = 'round';
-  ctx.strokeStyle = '#2c3442'; ctx.lineWidth = r * 0.27;
+  ctx.strokeStyle = bare ? cl.skin : '#2c3442'; ctx.lineWidth = r * 0.27;
   ctx.beginPath();
   ctx.moveTo(x - r * 0.19, hipY + 1); ctx.lineTo(f1x, f1y);
   ctx.moveTo(x + r * 0.19, hipY + 1); ctx.lineTo(f2x, f2y);
   ctx.stroke();
   // boots
-  ctx.fillStyle = '#1f242e';
+  ctx.fillStyle = bare ? cl.paul : '#1f242e'; // fur wraps instead of steel boots
   ctx.beginPath(); ctx.arc(f1x, f1y + 1, r * 0.15, 0, TAU); ctx.arc(f2x, f2y + 1, r * 0.15, 0, TAU); ctx.fill();
   // tassets/skirt over the hips
   ctx.fillStyle = cl.arm;
@@ -1893,17 +1897,36 @@ function drawPlayer() {
   ctx.moveTo(x - r * 0.42, hipY - 2); ctx.lineTo(x + r * 0.42, hipY - 2);
   ctx.lineTo(x + r * 0.34, hipY + r * 0.3); ctx.lineTo(x - r * 0.34, hipY + r * 0.3);
   ctx.closePath(); ctx.fill();
-  // armored cuirass (trapezoid torso)
+  // armored cuirass (trapezoid torso) - or a bare chest under a pelt (issue #52)
   ctx.lineJoin = 'round';
-  ctx.fillStyle = cl.arm;
+  ctx.fillStyle = bare ? cl.skin : cl.arm;
   ctx.beginPath();
   ctx.moveTo(x - r * 0.44, shY); ctx.lineTo(x + r * 0.44, shY);
   ctx.lineTo(x + r * 0.36, hipY + 1); ctx.lineTo(x - r * 0.36, hipY + 1);
   ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = cl.arm; ctx.lineWidth = 3; ctx.stroke(); // round the corners
-  // gold central ridge + belt
-  ctx.strokeStyle = cl.trim; ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.moveTo(x, shY + 1.5); ctx.lineTo(x, hipY); ctx.stroke();
+  if (bare) {
+    // a bear hide hung off the near shoulder, so one side of the chest is bare
+    // and the other is furred - the barbarian is topless, not under-armoured
+    ctx.fillStyle = cl.paul;
+    ctx.beginPath();
+    ctx.moveTo(x - r * 0.46, shY - 1); ctx.lineTo(x + r * 0.08, shY + 1);
+    ctx.lineTo(x + r * 0.26, hipY - r * 0.06); ctx.lineTo(x - r * 0.3, hipY - r * 0.02);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#5d4326'; ctx.lineWidth = 1.4; // the torn hem of the hide
+    ctx.beginPath();
+    ctx.moveTo(x - r * 0.3, hipY - r * 0.02); ctx.lineTo(x + r * 0.26, hipY - r * 0.06);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(96,58,40,0.5)'; ctx.lineWidth = 1.2; // the bare shoulder
+    ctx.beginPath();
+    ctx.moveTo(x + r * 0.16, shY + r * 0.16); ctx.lineTo(x + r * 0.4, shY + r * 0.2);
+    ctx.moveTo(x + r * 0.18, shY + r * 0.32); ctx.lineTo(x + r * 0.4, shY + r * 0.36);
+    ctx.stroke();
+  } else {
+    ctx.strokeStyle = cl.arm; ctx.lineWidth = 3; ctx.stroke(); // round the corners
+    // gold central ridge
+    ctx.strokeStyle = cl.trim; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(x, shY + 1.5); ctx.lineTo(x, hipY); ctx.stroke();
+  }
   ctx.strokeStyle = '#8a6a34'; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(x - r * 0.38, hipY - 1); ctx.lineTo(x + r * 0.38, hipY - 1); ctx.stroke();
   // pauldrons
@@ -1915,12 +1938,12 @@ function drawPlayer() {
   const hRy = shY + r * 0.42 - (P.atkT > P.atkCd - 0.3 ? 2 : Math.abs(armS) * 1.2 + ip * 3.4);
   const hLx = x - r * 0.52 + armS * faceX * r * 0.3 - ip * faceX * r * 0.1;
   const hLy = shY + r * 0.44 - ip * 1.4;
-  ctx.strokeStyle = cl.paul; ctx.lineWidth = r * 0.19;
+  ctx.strokeStyle = bare ? cl.skin : cl.paul; ctx.lineWidth = r * 0.19;
   ctx.beginPath();
   ctx.moveTo(x + r * 0.4, shY + 2); ctx.lineTo(hRx, hRy);
   ctx.moveTo(x - r * 0.4, shY + 2); ctx.lineTo(hLx, hLy);
   ctx.stroke();
-  ctx.fillStyle = '#b8a27c'; // gauntlet/hands
+  ctx.fillStyle = bare ? cl.skin : '#b8a27c'; // gauntlet/hands (bare fists for the barbarian)
   ctx.beginPath(); ctx.arc(hRx, hRy, r * 0.12, 0, TAU); ctx.arc(hLx, hLy, r * 0.12, 0, TAU); ctx.fill();
   // sheathed sword at rest in the right hand — it does NOT track the cursor
   // while idle (issue #27): fixed diagonal down in facing direction, only
@@ -1940,12 +1963,25 @@ function drawPlayer() {
   }
   // head + helmet - during the idle stretch the neck turns to scan the halls
   const hx2 = x + ip * faceX * 2.6, hy2 = y - r * 1.15 + bob * 0.6 - ip * 1.2;
-  ctx.fillStyle = '#b8a27c';
+  ctx.fillStyle = cl.skin; // the face: every class shows its own skin
   ctx.beginPath(); ctx.arc(hx2, hy2, r * 0.36, 0, TAU); ctx.fill();
-  ctx.fillStyle = cl.paul;
-  ctx.beginPath(); ctx.arc(hx2, hy2, r * 0.4, Math.PI * 1.02, Math.PI * 1.98); ctx.fill();
-  ctx.fillStyle = '#5c6a7e';
-  ctx.beginPath(); ctx.arc(hx2, hy2, r * 0.4, Math.PI * 0.05, Math.PI * 0.45); ctx.fill(); // visor brim
+  if (bare) {
+    // no helm: bare head, braided beard and warpaint (issue #52)
+    ctx.fillStyle = '#3e2b1c';
+    ctx.beginPath(); ctx.arc(hx2, hy2 + r * 0.1, r * 0.31, 0.2, Math.PI - 0.2); ctx.fill();
+    ctx.strokeStyle = cl.crest; ctx.lineWidth = 1.7;
+    ctx.beginPath();
+    ctx.moveTo(hx2 - r * 0.26, hy2 - r * 0.08); ctx.lineTo(hx2 + r * 0.26, hy2 - r * 0.08);
+    ctx.moveTo(hx2 - r * 0.2, hy2 + r * 0.02); ctx.lineTo(hx2 + r * 0.08, hy2 + r * 0.02);
+    ctx.stroke();
+    ctx.strokeStyle = '#3e2b1c'; ctx.lineWidth = 2.2; // the topknot behind it
+    ctx.beginPath(); ctx.moveTo(hx2, hy2 - r * 0.3); ctx.lineTo(hx2 - faceX * (2 + ip * 2), hy2 - r * 0.52); ctx.stroke();
+  } else {
+    ctx.fillStyle = cl.paul;
+    ctx.beginPath(); ctx.arc(hx2, hy2, r * 0.4, Math.PI * 1.02, Math.PI * 1.98); ctx.fill();
+    ctx.fillStyle = '#5c6a7e';
+    ctx.beginPath(); ctx.arc(hx2, hy2, r * 0.4, Math.PI * 0.05, Math.PI * 0.45); ctx.fill(); // visor brim
+  }
   // helmet crest
   ctx.strokeStyle = cl.crest; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(hx2, hy2 - r * 0.4); ctx.lineTo(hx2 - faceX * (3 + ip * 3), hy2 - r * 0.6); ctx.stroke();
