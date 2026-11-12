@@ -109,7 +109,7 @@ const P = {
   xp: 0, xpNeed: 80, level: 1, gold: 0,
   atkT: 0, dead: false, leap: null,
   idleT: 0, idleP: 0, // fifteen idle seconds start a short stretch (issue #47)
-  cd: { potion: 0, whirl: 0, leap: 0 },
+  cd: { potion: 0, sk2: 0, sk3: 0 },
   eq: { weapon: null, helm: null, armor: null },
 };
 
@@ -164,7 +164,7 @@ function resetPlayer(cls) {
     xp: 0, xpNeed: 60,
     level: 1, gold: 0, atkT: 0, dead: false, leap: null,
     idleT: 0, idleP: 0,
-    cd: { potion: 0, whirl: 0, leap: 0 },
+    cd: { potion: 0, sk2: 0, sk3: 0 },
     eq: { weapon: null, helm: null, armor: null },
   });
 }
@@ -898,7 +898,7 @@ function update(dt) {
     if (P.leap) {
       const L = P.leap;
       L.t += dt / L.dur;
-      if (L.t >= 1) { leapLand(L.tx, L.ty); P.leap = null; }
+      if (L.t >= 1) { leapLand(L.tx, L.ty, L.mul, L.stun); P.leap = null; }
       else { P.x = L.sx + (L.tx - L.sx) * L.t; P.y = L.sy + (L.ty - L.sy) * L.t; }
     } else {
       let mx = 0, my = 0;
@@ -921,7 +921,7 @@ function update(dt) {
       }
     }
 
-    for (const k of ['potion', 'whirl', 'leap']) P.cd[k] = Math.max(0, P.cd[k] - dt);
+    for (const k of ['potion', 'sk2', 'sk3']) P.cd[k] = Math.max(0, P.cd[k] - dt);
     manaWarnT = Math.max(0, manaWarnT - dt); // the too-low grumble is throttled
     P.mana = Math.min(mpMax(), P.mana + 6 * dt); // slow mana regen
     // very slow natural HP regen, unlocked from level 5
@@ -1178,6 +1178,7 @@ function update(dt) {
       for (const m of game.monsters) {
         if (m.hp <= 0) continue;
         if (Math.hypot(pr.x - m.x, pr.y - m.y) < m.r + 6) {
+          if (pr.slow) m.slow = Math.max(m.slow, pr.slow); // issue #63: venom and frost
           const crit = chance(critChance());
           damageMonster(m, Math.round(pr.dmg * (crit ? 1.9 : rand(0.9, 1.1))), crit, P);
           splash(pr.x, pr.y, pr.color); // issue #62: the hit reads on the board
@@ -1360,52 +1361,269 @@ function tryAttack() {
   if (hit) screenShake(2.5);
 }
 
-function tryWhirlwind() {
-  if (P.dead || P.leap || P.cd.whirl > 0) return false;
-  if (rangedWeapon()) { toast('A bow or a staff cannot whirl', ''); return false; }
-  if (P.mana < 30) { toast('Not enough mana', ''); return false; }
-  P.cd.whirl = 6; P.mana -= 30;
-  S.whirl();
-  ring(P.x, P.y, '#d8c060'); ring(P.x, P.y, '#f2e6b0');
-  screenShake(5);
-  for (const m of game.monsters) {
-    if (Math.hypot(m.x - P.x, m.y - P.y) < 112 + m.r)
-      damageMonster(m, Math.round(playerDmg() * rand(0.8, 1.0)), chance(critChance()+0.05), P);
-  }
+// ---------- class skills (issue #63) ----------
+// Slot 1 stays the same tonic for everyone. Slots 2 and 3 now belong to the
+// CLASS rather than to the game: each pair answers for the weapon that class
+// actually fights with, so a Barbarian cannot spin with a staff and a Mage
+// cannot lob lightning through a bowstring - pressing the wrong one says so
+// instead of silently doing nothing.
+// Every class shares the same shape (issue #63): skill 2 is a solid single
+// blow, a good deal stronger than a plain attack, cheap on mana and ready
+// again in seconds; skill 3 is the finisher, way stronger, way more mana,
+// a long cooldown. The yardstick:
+//   skill 2: 1.7-2.1x a plain hit, 12-14 mana, 4 s
+//   skill 3: 2.2-2.6x a plain hit over an area, 40-45 mana, 11-13 s
+const SKILLS = {
+  cleave: {
+    name: 'Cleave', mana: 12, cd: 4, weapon: 'melee', run: castCleave,
+    blurb: 'a wide two-handed swing that catches every foe in the arc',
+  },
+  earthquake: {
+    name: 'Earthquake', mana: 40, cd: 12, weapon: 'melee', run: castEarthquake,
+    blurb: 'hurl yourself at the crowd and let the ground answer, stunning it',
+  },
+  herostrike: {
+    name: 'Hero Strike', mana: 14, cd: 4, weapon: 'melee', run: castHeroStrike,
+    precheck: precheckHeroStrike,
+    blurb: 'one planted blow, twice a plain attack, that shoves the foe back',
+  },
+  whirlwind: {
+    name: 'Whirlwind', mana: 40, cd: 11, weapon: 'melee', run: castWhirlwind,
+    blurb: 'a spin that answers for every foe within reach',
+  },
+  venshot: {
+    name: 'Venom Shot', mana: 12, cd: 4, weapon: 'ranged', run: castVenomShot,
+    blurb: 'a quick shot that slows whatever it bites',
+  },
+  bladefan: {
+    name: 'Blade Fan', mana: 42, cd: 12, weapon: 'ranged', run: castBladeFan,
+    blurb: 'six arrows fanned out around the hero',
+  },
+  frostlance: {
+    name: 'Frost Lance', mana: 14, cd: 4, weapon: 'ranged', run: castFrostLance,
+    blurb: 'a cold bolt that slows whatever it bites',
+  },
+  chainbolt: {
+    name: 'Chain Bolt', mana: 45, cd: 13, weapon: 'ranged', run: castChainBolt,
+    blurb: 'lightning through the four nearest foes you can see',
+  },
+};
+const CLASS_SKILLS = {
+  barbar: ['cleave', 'earthquake'],   // two hands of iron: swing, then the ground
+  war:    ['herostrike', 'whirlwind'], // plated and steady: plant, then spin
+  rog:    ['venshot', 'bladefan'],    // the rogue fights at arm's length
+  mage:   ['frostlance', 'chainbolt'],
+};
+// the skill a slot holds for whoever is playing: the HUD, the keys, the bot and
+// the character sheet all ask the same question
+function skillOf(n) {
+  const row = CLASS_SKILLS[P.cls || 'barbar'];
+  return SKILLS[row[n - 2]];
+}
+function skillWeaponOk(sk) {
+  const ranged = rangedWeapon();
+  if (sk.weapon === 'melee') return !ranged;
+  if (sk.weapon === 'ranged') return ranged;
   return true;
 }
 
-function tryLeap() {
-  if (P.dead || P.leap || P.cd.leap > 0) return false;
-  if (P.mana < 25) { toast('Not enough mana', ''); return false; }
-  P.cd.leap = 5; P.mana -= 25;
-  let tx = P.x + Math.cos(P.aim) * 240, ty = P.y + Math.sin(P.aim) * 240;
+// the shared melee arc: the plain attack sweeps reach 1 / arc 1, a class'
+// opener reaches further or wider
+function meleeSweep(reachMul, dmgMul, arcMul, critBonus) {
+  const wr = P.atkRange * reachMul;
+  let hit = false;
+  for (const m of game.monsters) {
+    if (m.hp <= 0) continue;
+    const d = Math.hypot(m.x - P.x, m.y - P.y);
+    if (d > wr + m.r) continue;
+    let da = Math.atan2(m.y - P.y, m.x - P.x) - P.aim;
+    da = Math.atan2(Math.sin(da), Math.cos(da));
+    if (Math.abs(da) > (P.atkArc / 2) * arcMul) continue;
+    const crit = chance(critChance() + critBonus);
+    damageMonster(m, Math.round(playerDmg() * dmgMul * rand(0.92, 1.08)), crit, P);
+    hit = true;
+  }
+  return hit;
+}
+
+// BARBARIAN skill 2: he fights with something two hands swing, so his opener
+// is a Cleave that reaches past one foe - wider and further than a plain blow,
+// 1.7x each, for 12 mana and four seconds
+function castCleave() {
+  S.swing(); S.hit();
+  ring(P.x + Math.cos(P.aim) * 40, P.y + Math.sin(P.aim) * 40, '#e8ddc0');
+  if (meleeSweep(1.35, 1.7, 1.3, 0)) screenShake(4);
+}
+
+// BARBARIAN skill 3: he hurls himself at the crowd and the ground answers.
+// Kept on the hero's own travel + landing machinery, tuned as a finisher:
+// 2.4x over the crater and a stun that actually holds
+function castEarthquake() {
+  let tx = P.x + Math.cos(P.aim) * 250, ty = P.y + Math.sin(P.aim) * 250;
   if (game.moveTarget) {
     const a = Math.atan2(game.moveTarget.y - P.y, game.moveTarget.x - P.x);
-    const dd = Math.min(240, Math.hypot(game.moveTarget.x - P.x, game.moveTarget.y - P.y));
+    const dd = Math.min(250, Math.hypot(game.moveTarget.x - P.x, game.moveTarget.y - P.y));
     tx = P.x + Math.cos(a) * dd; ty = P.y + Math.sin(a) * dd;
   }
-  // if landing on a wall — bring closer
+  // a wall in the way: bring the landing closer instead
   for (let i = 3; i > 0; i--) {
     const cx = P.x + (tx - P.x) * (i / 3), cy = P.y + (ty - P.y) * (i / 3);
     if (!solidAt(cx, cy, P.r)) { tx = cx; ty = cy; break; }
   }
   tx = clamp(tx, 30, WORLD.w - 30); ty = clamp(ty, 30, WORLD.h - 30);
-  P.leap = { sx: P.x, sy: P.y, tx, ty, t: 0, dur: 0.36 };
+  P.leap = { sx: P.x, sy: P.y, tx, ty, t: 0, dur: 0.4, mul: 2.4, stun: 1.0 };
   game.moveTarget = null;
   S.leap();
-  return true;
 }
 
-function leapLand(x, y) {
+// WARRIOR skill 2: the warrior is the plated one who plants his feet before
+// he swings, so his opener is a single planted blow - twice a plain attack on
+// one foe, with a shove. There has to be a foe to plant against: with nothing
+// in reach the skill refuses and spends nothing, which keeps it honest
+let heroTarget = null;
+function precheckHeroStrike() {
+  heroTarget = null;
+  let bd = P.atkRange + 14;
+  for (const m of game.monsters) {
+    if (m.hp <= 0) continue;
+    const d = Math.hypot(m.x - P.x, m.y - P.y);
+    if (d < bd) { bd = d; heroTarget = m; }
+  }
+  if (!heroTarget) { toast('Hero Strike needs a foe in reach', ''); return false; }
+  return true;
+}
+function castHeroStrike() {
+  const best = heroTarget;
+  if (!best) return;
+  P.aim = Math.atan2(best.y - P.y, best.x - P.x);
+  S.swing(); S.crit();
+  ring(best.x, best.y, '#f2e6b0');
+  screenShake(3);
+  const crit = chance(critChance() + 0.05);
+  damageMonster(best, Math.round(playerDmg() * 2.1 * rand(0.94, 1.06)), crit, P);
+  // and the shield goes in behind the blow: a shove twice as heavy as a hit
+  const a = Math.atan2(best.y - P.y, best.x - P.x);
+  best.kx = Math.cos(a) * 210; best.ky = Math.sin(a) * 210;
+}
+
+// WARRIOR skill 3: the spin, kept from the old shared skill and rebalanced as
+// a finisher - 2.2x for every foe inside it, 40 mana, eleven seconds
+function castWhirlwind() {
+  S.whirl();
+  ring(P.x, P.y, '#d8c060'); ring(P.x, P.y, '#f2e6b0');
+  screenShake(6);
+  let n = 0;
+  for (const m of game.monsters) {
+    if (m.hp <= 0) continue;
+    if (Math.hypot(m.x - P.x, m.y - P.y) > 118 + m.r) continue;
+    damageMonster(m, Math.round(playerDmg() * 2.2 * rand(0.92, 1.08)),
+      chance(critChance() + 0.05), P);
+    n++;
+  }
+  if (n > 0) burst(P.x, P.y, '#d8c060', 6 + n, 200);
+}
+
+// ROGUE skill 2: the rogue fights at arm's length, so his opener is a shot -
+// it leaves down the cursor line like every other arrow (issues #61/#62) but
+// it is heavier and it leaves the foe crawling: 1.8x and a two second slow
+function castVenomShot() {
+  S.bow();
+  const hx = P.x + Math.cos(P.aim) * (P.r + 6), hy = P.y + Math.sin(P.aim) * (P.r + 6) - 4;
+  game.projectiles.push({ x: hx, y: hy, vx: Math.cos(P.aim) * 760, vy: Math.sin(P.aim) * 760,
+    dmg: Math.round(playerDmg() * 1.8), life: (PROJ_RANGE + 12) / 760, color: '#9ed05a',
+    side: 'p', arrow: true, home: false, slow: 2.2 });
+}
+
+// ROGUE skill 3: six arrows thrown down a fan around the cursor line. No
+// single one is strong (1.25x) - what makes it a finisher is that it can
+// answer for the whole room at once
+function castBladeFan() {
+  S.bow(); S.bow();
+  const spd = 700;
+  for (let k = 0; k < 6; k++) {
+    const a = P.aim + (k - 2.5) * 0.24;
+    const hx = P.x + Math.cos(a) * (P.r + 6), hy = P.y + Math.sin(a) * (P.r + 6) - 4;
+    game.projectiles.push({ x: hx, y: hy, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd,
+      dmg: Math.round(playerDmg() * 1.25), life: (PROJ_RANGE + 12) / spd, color: '#e8e0c0',
+      side: 'p', arrow: true, home: false });
+  }
+  ring(P.x, P.y, '#e8e0c0');
+}
+
+// MAGE skill 2: a cold bolt down the cursor line. It does not auto-aim either
+// (issue #62 took the aim off every ranged weapon); what it brings is the
+// chill - 1.9x and a two and a half second slow on whatever it bites
+function castFrostLance() {
+  S.zap();
+  const hx = P.x + Math.cos(P.aim) * (P.r + 6), hy = P.y + Math.sin(P.aim) * (P.r + 6) - 4;
+  game.projectiles.push({ x: hx, y: hy, vx: Math.cos(P.aim) * 560, vy: Math.sin(P.aim) * 560,
+    dmg: Math.round(playerDmg() * 1.9), life: (PROJ_RANGE + 12) / 560, color: '#8fd6f0',
+    side: 'p', arrow: false, home: true, slow: 2.5 });
+  ring(hx, hy, '#8fd6f0');
+}
+
+// MAGE skill 3: lightning that walks the room. It answers for up to four
+// foes you can see, 2.3x each, at the price of 45 mana and thirteen seconds
+function castChainBolt() {
+  S.zap(); S.crit();
+  screenShake(7);
+  ring(P.x, P.y, '#9fd8ff');
+  const cand = [];
+  for (const m of game.monsters) {
+    if (m.hp <= 0) continue;
+    const d = Math.hypot(m.x - P.x, m.y - P.y);
+    if (d > 430 || !losClear(P.x, P.y, m.x, m.y)) continue;
+    cand.push({ m: m, d: d });
+  }
+  cand.sort((a, b) => a.d - b.d);
+  let n = 0;
+  for (let k = 0; k < 4 && k < cand.length; k++) {
+    const m = cand[k].m;
+    damageMonster(m, Math.round(playerDmg() * 2.3 * rand(0.9, 1.1)),
+      chance(critChance() + 0.15), P);
+    ring(m.x, m.y, '#9fd8ff');
+    burst(m.x, m.y, '#9fd8ff', 9, 230);
+    n++;
+  }
+  if (n === 0) burst(P.x, P.y, '#9fd8ff', 6, 160);
+}
+
+// the one gate every class' skill walks through: cooldown, then the weapon
+// the skill was written for, then mana. A skill that is not ready or that
+// belongs to another kind of weapon spends nothing and says why.
+function castSkill(n) {
+  const sk = skillOf(n);
+  if (!sk || P.dead || P.leap || P.cd['sk' + n] > 0) return false;
+  if (!skillWeaponOk(sk)) {
+    toast(sk.name + ' wants ' + (rangedWeapon() ?
+      'something to swing - a bow or a staff will not do'
+      : 'a bow or a staff in hand'), '');
+    return false;
+  }
+  // some skills need something to aim at before they are worth spending
+  if (sk.precheck && !sk.precheck()) return false;
+  if (P.mana < sk.mana) {
+    toast('Not enough mana - ' + sk.name + ' spends ' + sk.mana, '');
+    return false;
+  }
+  P.cd['sk' + n] = sk.cd;
+  P.mana -= sk.mana;
+  sk.run();
+  return true;
+}
+// the two keys and the two skillbar icons: what they hold follows the class
+function trySkill2() { return castSkill(2); }
+function trySkill3() { return castSkill(3); }
+
+function leapLand(x, y, mul, stunT) {
   S.impact();
   screenShake(8);
   ring(x, y, '#ffd75e');
   burst(x, y, '#c8b070', 16, 240);
   for (const m of game.monsters) {
     if (Math.hypot(m.x - x, m.y - y) < 130 + m.r) {
-      damageMonster(m, Math.round(playerDmg() * 1.3), chance(critChance()+0.1), { x, y });
-      m.stun = Math.max(m.stun, 0.35);
+      damageMonster(m, Math.round(playerDmg() * (mul === undefined ? 1.3 : mul)), chance(critChance() + 0.1), { x, y });
+      m.stun = Math.max(m.stun, stunT === undefined ? 0.35 : stunT);
     }
   }
 }
@@ -2685,14 +2903,16 @@ const HUD = {
   slotPotion: document.getElementById('slotPotion'),
   slotSkill2: document.getElementById('slotSkill2'),
   slotSkill3: document.getElementById('slotSkill3'),
+  skName2: document.getElementById('skName2'),
+  skName3: document.getElementById('skName3'),
   slotLMB: document.getElementById('slotLMB'),
 };
 
 // LMB-clicking a skill icon uses that skill directly (issue #15)
 for (const sc of [
   [HUD.slotPotion, drinkPotion],
-  [HUD.slotSkill2, tryWhirlwind],
-  [HUD.slotSkill3, tryLeap],
+  [HUD.slotSkill2, trySkill2],
+  [HUD.slotSkill3, trySkill3],
   [HUD.slotLMB, tryAttack],
 ]) {
   if (sc[0] && sc[0].addEventListener)
@@ -2724,14 +2944,21 @@ function hudUpdate() {
   } else HUD.bossbar.classList.add('hidden');
   const rings = [
     [HUD.slotPotion, P.cd.potion / 60, true],
-    [HUD.slotSkill2, P.cd.whirl / 6, P.mana >= 30],
-    [HUD.slotSkill3, P.cd.leap / 5, P.mana >= 25],
+    [HUD.slotSkill2, P.cd.sk2 / skillOf(2).cd, P.mana >= skillOf(2).mana],
+    [HUD.slotSkill3, P.cd.sk3 / skillOf(3).cd, P.mana >= skillOf(3).mana],
     [HUD.slotLMB, P.atkT / P.atkCd, true],
   ];
   for (const r of rings) {
     r[0].style.setProperty('--cd', clamp(r[1], 0, 1) + 'turn');
     r[0].classList.toggle('ready', r[1] <= 0 && r[2]);
     r[0].classList.toggle('noFury', !r[2]);
+  }
+  for (const k of [2, 3]) {
+    const sk = skillOf(k);
+    HUD['skName' + k].textContent = sk ? sk.name : '';
+    HUD['slotSkill' + k].setAttribute('title', sk ? sk.name + ' - ' + sk.mana +
+      ' Mana, ' + sk.cd + ' s cooldown (' + (sk.weapon === 'melee' ?
+        'a swung weapon' : 'a bow or a staff') + ') - ' + sk.blurb : '');
   }
   if (mapOpen) drawMapUI();
   sheetLive = (sheetLive + 1) % 5;
@@ -2755,8 +2982,8 @@ window.addEventListener('keydown', (e) => {
     case 'KeyA': case 'ArrowLeft': K.a = true; break;
     case 'KeyD': case 'ArrowRight': K.d = true; break;
     case 'Digit1': case 'Numpad1': if (game.running && !game.paused) drinkPotion(); break;
-    case 'Digit2': case 'Numpad2': if (game.running && !game.paused) tryWhirlwind(); break;
-    case 'Digit3': case 'Numpad3': if (game.running && !game.paused) tryLeap(); break;
+    case 'Digit2': case 'Numpad2': if (game.running && !game.paused) trySkill2(); break;
+    case 'Digit3': case 'Numpad3': if (game.running && !game.paused) trySkill3(); break;
     case 'KeyP': togglePause(); break;
     case 'KeyC': if (game.running) toggleChar(); break;
     case 'KeyM': if (game.running) toggleMap(); break;
@@ -2811,6 +3038,9 @@ function beginRun(cls) {
   generateLevel(1);
   preplaceMonsters();
   cam.x = P.x - VW / 2; cam.y = P.y - VH / 2;
+  // the run should say what the class brought, not leave the player to find
+  // the skillbar by accident (issue #63)
+  toast('Skills: ' + skillOf(2).name + ' (2) and ' + skillOf(3).name + ' (3)', '');
   toast('Checkpoint 1 — Old Ruins', '');
   toast('Class: ' + CLASSES[P.cls].name + ' · C — character and equipment', '');
 }
@@ -2914,7 +3144,12 @@ function botTick(dt) {
     if (P.hp < P.hpMax * 0.4 && P.cd.potion <= 0) drinkPotion();
     let near = 0;
     for (const m of game.monsters) if (Math.hypot(m.x - P.x, m.y - P.y) < 100) near++;
-    if (near >= 2 && P.mana >= 30 && !rangedWeapon()) tryWhirlwind();
+    // a crowd is what the class' finisher is for, its opener is for anything
+    // worth spending mana on at all (issue #63: both follow the class)
+    const sk3 = skillOf(3);
+    if (near >= 2 && sk3 && P.cd.sk3 <= 0 && P.mana >= sk3.mana && skillWeaponOk(sk3)) trySkill3();
+    const sk2 = skillOf(2);
+    if (sk2 && tgt && P.cd.sk2 <= 0 && P.mana >= sk2.mana && skillWeaponOk(sk2)) trySkill2();
   } else {
     game.mouseDown = false;
     // 2) loot / orbs / gold, 3) chests, 4) portal (when boss down) or boss —

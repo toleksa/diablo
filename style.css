@@ -134,6 +134,15 @@ body {
   position: absolute; right: 3px; bottom: 2px; font-size: 10px; color: #b7a271;
   text-shadow: 0 1px 1px #000;
 }
+// each class brings its own pair of skills, so the skillbar has to say what
+// it holds: the name rides along the bottom of the slot, the tooltip on the
+// slot itself spells out what it spends and what weapon it wants (issue #63)
+.skillName {
+  position: absolute; left: 3px; bottom: 2px; max-width: 46px; font-size: 9px;
+  line-height: 1.1; color: #d8c69a; text-shadow: 0 1px 1px #000; pointer-events: none;
+  background: rgba(8, 6, 4, 0.62); border-radius: 2px; padding: 0 2px;
+  overflow: hidden; white-space: nowrap;
+}
 .skillSlot.ready { border-color: #9c7d3f; box-shadow: inset 0 0 10px #000, 0 0 8px rgba(220,180,90,.25); }
 .skillSlot.noFury .skillIcon { color: #6d6152; }
 

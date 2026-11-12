@@ -44,15 +44,15 @@ still holds, the pack turned back into gold.
 | **Left mouse button** (hold) | attack with whatever is in your hand — an axe or a sword swings, a bow fires an arrow straight at the cursor, a staff looses a magic missile that curves only toward foes in front of it |
 | **WASD / arrows** | movement (same as click-to-move) |
 | **1** | healing potion — unlimited uses, one charge per 60 s (fresh at each checkpoint) |
-| **2** | Whirlwind — AoE spin, spends 30 Mana |
-| **3** | Leap — jump forward, AoE landing + stun, spends 25 Mana |
+| **2** | your class' **opener** — the skillbar names it; cheap on Mana, ready again in seconds |
+| **3** | your class' **finisher** — the skillbar names it; way stronger, way more Mana, a long cooldown |
 | **C** | character sheet: attributes, equipment, inventory |
 | **M** | area map — fog of war: only parts the player has walked through are revealed (boss/portal/start markers appear once discovered) |
 | **P** | pause: the frame goes dark, nothing regenerates and no enemy stirs, until you press P again |
 | **T** | trade with the wandering merchant when you stand near him: the world stops and a two-tab stall opens (Sell / Buy) — the **X** in the stall's top right corner closes it too |
 
 Clicking an **icon of a skill with the left mouse button** casts it directly —
-potion, Whirlwind, Leap or the attack of whatever you are holding — handy when you
+potion, your class' opener, its finisher or the attack of whatever you are holding — handy when you
 don't want to reach the keyboard.
 
 ## The loop
@@ -114,6 +114,20 @@ hero and lets the Roost be run again, as many times deep as you care to go.
   painted in war red; the **Warrior** rides in grey steel; the **Rogue** in
   mossy green leather; the **Mage** in blue over light blue. The class is shown
   on the character sheet and saved with your journey.
+- **Class skills**: the first slot is the same tonic for everyone, the other two
+  belong to the class and answer for the weapon that class actually fights with,
+  so a Barbarian cannot spin with a staff and a Mage cannot lob lightning through
+  a bowstring — pressing the wrong one spends nothing and says so. Same shape
+  every time: the opener is a solid single blow well past a plain attack (12-14
+  Mana, 4 s), the finisher is way stronger over an area (40-45 Mana, 11-13 s).
+  **Barbarian** — **Cleave** (a wider, longer swing, 1.7x) and **Earthquake** (hurl
+  yourself at the crowd, 2.4x and a stun that holds). **Warrior** — **Hero Strike**
+  (one planted blow, 2.1x, that shoves the foe back; with nothing in reach it
+  refuses) and **Whirlwind** (2.2x for every foe inside it). **Rogue** — **Venom
+  Shot** (1.8x, and the foe it bites crawls) and **Blade Fan** (six arrows down a
+  fan). **Mage** — **Frost Lance** (1.9x, chilled) and **Chain Bolt** (lightning
+  through the four nearest foes you can see). The skillbar shows which pair you
+  carry, and its tooltip spells out the Mana, the cooldown and the weapon it wants.
 - **Attributes**: Strength, Dexterity, Intelligence, Vitality — +3 points per
   level, spent from the character sheet: press anywhere on a stat's row and the
   plus spends one free point. Main attribute scales your weapon's
@@ -187,8 +201,10 @@ hero and lets the Roost be run again, as many times deep as you care to go.
   at their own reach (520 world px), deliberately a number of their own and not
   the hero's torchlight radius, so changing what you can see never changes how
   far a shot carries. Whatever a shot lands on spits a small splash, so the hit
-  reads on the board. A bow or a staff also cannot be whirled — the Whirlwind
-  needs something to spin. Bare fists still punch, and Whirlwind works with them.
+  reads on the board. The same gate runs on **every class skill**: a swung weapon
+  wants a swung skill, a bow or a staff wants a shot, and bare fists count as
+  swung, so the Warrior's Whirlwind works with them while his Hero Strike just
+  needs a foe to plant against.
 - **Zoom** scales with your monitor: the visible world stays readable on big
   screens.
 
@@ -229,6 +245,8 @@ hero and lets the Roost be run again, as many times deep as you care to go.
   swing that ends without the foe losing a single hit point sends the bot stepping
   in to meet it; a trader in sight draws the bot to his stall, where the whole
   spare backpack is sold to him - his shelf grows, your gold comes back - so the
-  demo run pays its leftovers down instead of hoarding them.
+  demo run pays its leftovers down instead of hoarding them. And since issue #63 the
+  bot reaches for the class' own pair when its weapon and its Mana allow it, so the
+  spectator run swings and shoots the way a real player of that class would.
 - Work in progress: it is a *reimagining of the moods*, not a clone — no
   loot pipetry, no skills trees, four starting classes.
