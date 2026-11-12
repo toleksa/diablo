@@ -1141,7 +1141,7 @@ function drawTorches(t) {
   }
 }
 // ============ PART 6b — entities ============
-const RCOLOR = { common: '#c8c8c8', magic: '#7aa8ff', rare: '#ffcf4a', legend: '#ff8a3a' };
+const RCOLOR = { common: '#e8e4d8', magic: '#4f8ef0', rare: '#a34fd8', legend: '#ff8a3a' };
 
 function drawGroundFX() {
   for (const d of game.decals) {

@@ -150,10 +150,10 @@ body {
 }
 @keyframes toastIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
 
-.item-common { color: #d8d0c0; }
-.item-magic { color: #6f9fd8; }
-.item-rare { color: #ffd76a; }
-.item-legend { color: #ff8b2a; }
+.item-common { color: #e8e0d0; }
+.item-magic { color: #4f9df5; }
+.item-rare { color: #b06af0; }
+.item-legend { color: #ff8a3a; }
 
 /* ---------- start/death ---------- */
 .screen {
