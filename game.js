@@ -2145,7 +2145,7 @@ devMenu.innerHTML =
   '<button data-dev="god">Toggle god mode</button>' +
   '<button data-dev="kill">Toggle insta kill</button>' +
   '<button data-dev="level">Instant level up</button>' +
-  '<button data-dev="items">Spawn 5 random items</button>' +
+  '<button data-dev="items">Spawn items (one per tier)</button>' +
   '<button data-dev="merchant">Spawn merchant nearby</button>' +
   '<button data-dev="tp">Teleport to next level</button>';
 document.getElementById('game').appendChild(devMenu);
@@ -2165,16 +2165,7 @@ devMenu.addEventListener('click', (e) => {
     gainXpCheck();
     toast('DEV: instant level up', '');
   } else if (act === 'items') {
-    for (let i = 0; i < 5; i++) {
-      let px = P.x, py = P.y;
-      for (let k = 0; k < 8; k++) {
-        const a = rand(0, TAU), dd = rand(36, 140);
-        const tx = P.x + Math.cos(a) * dd, ty = P.y + Math.sin(a) * dd;
-        if (!solidAt(tx, ty, 12)) { px = tx; py = ty; break; }
-      }
-      game.drops.push({ x: px, y: py, r: 11, item: rollItem(game.checkpoint, false, 'legend'), life: 60, bob: rand(0, TAU) });
-    }
-    toast('DEV: 5 legendary items spawned around you', 'item-legend');
+    devSpawnItems();
   } else if (act === 'merchant') {
     devSpawnMerchant();
   } else if (act === 'tp') {
@@ -2210,6 +2201,21 @@ function devSpawnMerchant() {
   game.merchant = { x: spot.x, y: spot.y, hintCd: 0, bob: rand(0, TAU) };
   toast('DEV: merchant spawned near you (press T to trade)', '');
   S.gold();
+}
+// dev menu (issue #43): exactly one item of every rarity tier, dropped on
+// clear ground around the hero instead of the old five legendaries
+function devSpawnItems() {
+  for (const r of RARITY) {
+    let px = P.x, py = P.y;
+    for (let k = 0; k < 8; k++) {
+      const a = rand(0, TAU), dd = rand(36, 140);
+      const tx = P.x + Math.cos(a) * dd, ty = P.y + Math.sin(a) * dd;
+      if (!solidAt(tx, ty, 12)) { px = tx; py = ty; break; }
+    }
+    game.drops.push({ x: px, y: py, r: 11, item: rollItem(game.checkpoint, false, r.id), life: 60, bob: rand(0, TAU) });
+  }
+  toast('DEV: 4 items spawned, one per tier (common / magic / rare / legendary)', '');
+  S.item();
 }
 
 // ---- area map on M: only tiles the player has walked into are revealed ----
