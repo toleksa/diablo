@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Piekielna Krucjata — Diablo-like</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="game">
+  <canvas id="canvas"></canvas>
+
+  <!-- GÓRNY PASEK -->
+  <div id="topbar">
+    <div id="objectiveBox">
+      <div id="objTitle">Akt I — Stare Ruiny</div>
+      <div id="objText">Zabij potwory: 0/0</div>
+    </div>
+    <div id="bossbar" class="hidden">
+      <div id="bossfill"></div>
+      <span id="bossname">Elita</span>
+    </div>
+    <div id="goldBox"><span id="goldIcon">◈</span> <span id="goldText">0</span></div>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div id="hpOrb" class="orb" title="Życie">
+      <div id="hpFill"></div>
+      <span class="orbText" id="hpText"></span>
+    </div>
+
+    <div id="skillColumn">
+      <div class="skillSlot" id="slotPotion" data-key="1">
+        <div class="skillIcon">✚</div><div class="cdRing"></div><span class="keyHint">1</span>
+      </div>
+      <div class="skillSlot" id="slotSkill2" data-key="2">
+        <div class="skillIcon">🌀</div><div class="cdRing"></div><span class="keyHint">2</span>
+      </div>
+      <div class="skillSlot" id="slotSkill3" data-key="3">
+        <div class="skillIcon">⬤</div><div class="cdRing"></div><span class="keyHint">3</span>
+      </div>
+    </div>
+
+    <div id="centerHud">
+      <div id="xpbar">
+        <div id="xpfill"></div>
+        <span id="levelText">Poziom 1</span>
+      </div>
+      <div id="skillbar">
+        <div class="skillSlot big" id="slotLMB">
+          <div class="skillIcon">⚔</div><div class="cdRing"></div><span class="keyHint">LPM</span>
+        </div>
+        <div class="skillSlot big" id="slotRMB">
+          <div class="skillIcon">👣</div><span class="keyHint">PPM</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="resourceOrb" class="orb" title="Furia">
+      <div id="resourceFill"></div>
+      <span class="orbText" id="resourceText"></span>
+    </div>
+  </div>
+
+  <!-- CARD OF THE CHARACTER (toggled with C) -->
+  <div id="charSheet" class="hidden"></div>
+
+  <div id="toast"></div>
+
+  <!-- EKRANY -->
+  <div id="startScreen" class="screen">
+    <div class="panelBox">
+      <h1>Piekielna Krucjata</h1>
+      <p class="sub">Diablo-like w przeglądarce — reimplementacja mechanik Diablo III</p>
+      <div class="controls">
+        <b>Sterowanie:</b><br>
+        <b>PPM</b> — ruch do kursora &nbsp;•&nbsp; <b>LPM</b> — cios mieczem<br>
+        <b>1</b> — mikstura życia &nbsp;•&nbsp; <b>2</b> — Tornado (Furia) &nbsp;•&nbsp; <b>3</b> — Skok (Furia)<br>
+        Zbieraj <span class="red">sferki życia</span>, złoto i przedmioty. Po oczyszczeniu obszaru
+        wejdź w <span class="cyan">portal</span>, by przejść dalej.
+      </div>
+      <button id="startBtn">Rozpocznij krucjatę</button>
+    </div>
+  </div>
+
+  <div id="deathScreen" class="screen hidden">
+    <div class="panelBox">
+      <h1 class="red">Zginąłeś</h1>
+      <p id="deathStats"></p>
+      <button id="restartBtn">Powstań z popiołów</button>
+    </div>
+  </div>
+
+  <div id="checkpointBanner" class="hidden"></div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>

@@ -1,0 +1,219 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --gold: #c8a45a;
+  --gold-dark: #6b5426;
+  --blood: #a11a1a;
+  --panel: rgba(12, 9, 7, 0.88);
+  --edge: #4a3b26;
+}
+
+html, body { height: 100%; overflow: hidden; background: #000; }
+
+body {
+  font-family: Georgia, 'Times New Roman', serif;
+  color: #d8cfc0;
+  user-select: none;
+  cursor: default;
+}
+
+#game { position: fixed; inset: 0; }
+#canvas { position: absolute; inset: 0; display: block; }
+
+.hidden { display: none !important; }
+
+/* ---------- topbar ---------- */
+#topbar {
+  position: absolute; top: 0; left: 0; right: 0;
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 10px 16px; pointer-events: none;
+}
+#objectiveBox {
+  background: var(--panel); border: 1px solid var(--edge);
+  padding: 8px 14px; min-width: 230px; border-radius: 3px;
+}
+#objTitle { color: var(--gold); font-size: 15px; letter-spacing: 1px; }
+#objText { color: #b9ae9b; font-size: 12.5px; margin-top: 3px; }
+
+#bossbar {
+  position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+  width: min(560px, 60vw); height: 26px;
+  background: #150a0a; border: 2px solid #7a1010; border-radius: 4px;
+  overflow: hidden;
+}
+#bossfill {
+  height: 100%; width: 100%;
+  background: linear-gradient(#e04a3a, #8c1010);
+  transition: width 0.15s linear;
+}
+#bossname {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 13px; color: #fff; text-shadow: 0 1px 3px #000; letter-spacing: 2px;
+}
+
+#goldBox {
+  background: var(--panel); border: 1px solid var(--edge);
+  padding: 8px 14px; border-radius: 3px; font-size: 15px; color: var(--gold);
+}
+#goldIcon { color: #ffd76a; }
+
+/* ---------- HUD ---------- */
+#hud {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  display: flex; justify-content: space-between; align-items: flex-end;
+  padding: 0 26px 14px; pointer-events: none;
+}
+
+.orb {
+  width: 108px; height: 108px; border-radius: 50%;
+  border: 3px solid #3a2f1e;
+  background: radial-gradient(circle at 35% 30%, #26201a, #0c0a08 70%);
+  box-shadow: inset 0 0 18px #000, 0 0 14px rgba(0,0,0,.8);
+  position: relative; overflow: hidden;
+}
+.orb .orbText {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 16px; color: #fff; text-shadow: 0 1px 2px #000; z-index: 3; letter-spacing: 1px;
+}
+#hpFill, #resourceFill {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  transition: height 0.12s linear;
+}
+#hpFill {
+  background: radial-gradient(circle at 40% 20%, #ff6a5a, #a11212 55%, #560a0a);
+  box-shadow: inset 0 6px 10px rgba(255,150,130,.35);
+}
+#resourceFill {
+  background: radial-gradient(circle at 40% 20%, #bfe6ff, #2f6ad8 55%, #12306e);
+  box-shadow: inset 0 6px 10px rgba(150,205,255,.35);
+}
+.orb::after {
+  content: ''; position: absolute; inset: 0; border-radius: 50%; z-index: 2; pointer-events: none;
+  background: radial-gradient(circle at 32% 26%, rgba(255,255,255,.18), rgba(255,255,255,0) 45%);
+}
+
+#centerHud { display: flex; flex-direction: column; align-items: center; gap: 8px; padding-bottom: 2px; }
+
+#xpbar {
+  width: min(520px, 56vw); height: 17px;
+  background: #100c08; border: 1px solid var(--edge); border-radius: 3px;
+  position: relative; overflow: hidden;
+}
+#xpfill {
+  height: 100%; width: 0%;
+  background: linear-gradient(#9a8648, #5f4d20);
+  transition: width 0.25s ease-out;
+}
+#levelText {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 11.5px; color: #e9dcb8; text-shadow: 0 1px 2px #000; letter-spacing: 1px;
+}
+
+#skillbar, #skillColumn { display: flex; gap: 10px; }
+#skillColumn { flex-direction: column; }
+
+.skillSlot {
+  width: 56px; height: 56px; position: relative;
+  background: linear-gradient(#241c12, #100c08);
+  border: 2px solid #57452a; border-radius: 6px;
+  box-shadow: inset 0 0 10px #000;
+}
+.skillSlot.big { width: 66px; height: 66px; }
+.skillIcon {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 26px; color: #e6d5a8; text-shadow: 0 0 8px rgba(255,200,90,.35);
+}
+.skillSlot.big .skillIcon { font-size: 30px; }
+.cdRing {
+  position: absolute; inset: 0; border-radius: 4px; pointer-events: none;
+  background: conic-gradient(rgba(0,0,0,0) var(--cd, 0turn), rgba(0,0,5,.78) var(--cd, 0turn));
+}
+.keyHint {
+  position: absolute; right: 3px; bottom: 2px; font-size: 10px; color: #b7a271;
+  text-shadow: 0 1px 1px #000;
+}
+.skillSlot.ready { border-color: #9c7d3f; box-shadow: inset 0 0 10px #000, 0 0 8px rgba(220,180,90,.25); }
+.skillSlot.noFury .skillIcon { color: #6d6152; }
+
+/* ---------- toast ---------- */
+#toast {
+  position: absolute; top: 84px; left: 50%; transform: translateX(-50%);
+  display: flex; flex-direction: column; gap: 5px; align-items: center;
+  pointer-events: none;
+}
+.toastItem {
+  background: var(--panel); border: 1px solid var(--edge);
+  padding: 6px 16px; border-radius: 3px; font-size: 14px;
+  color: #e6d9b8; animation: toastIn 0.25s ease-out;
+}
+@keyframes toastIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+
+.item-common { color: #d8d0c0; }
+.item-magic { color: #6f9fd8; }
+.item-rare { color: #ffd76a; }
+.item-legend { color: #ff8b2a; }
+
+/* ---------- start/death ---------- */
+.screen {
+  position: absolute; inset: 0; z-index: 40;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(ellipse at center, rgba(20,8,4,.82), rgba(0,0,0,.96));
+}
+.panelBox {
+  background: linear-gradient(#181210, #0b0806);
+  border: 2px solid #5c451f; box-shadow: 0 0 40px rgba(0,0,0,.9), inset 0 0 30px rgba(0,0,0,.6);
+  padding: 36px 46px; max-width: 620px; text-align: center; border-radius: 4px;
+}
+.panelBox h1 {
+  font-size: 42px; color: #d8b25a; letter-spacing: 4px;
+  text-shadow: 0 0 22px rgba(220,150,40,.4), 0 2px 4px #000; margin-bottom: 8px;
+}
+.panelBox .sub { color: #a89a80; margin-bottom: 18px; font-style: italic; }
+.controls { font-size: 14px; line-height: 1.9; color: #c9bda2; margin-bottom: 24px; }
+.panelBox button {
+  font-family: inherit; font-size: 18px; letter-spacing: 2px;
+  color: #f3e6c0; background: linear-gradient(#5c3f14, #2c1d08);
+  border: 2px solid #96702c; padding: 12px 34px; border-radius: 4px; cursor: pointer;
+  text-shadow: 0 1px 2px #000;
+}
+.panelBox button:hover { background: linear-gradient(#7a551c, #3c280c); box-shadow: 0 0 18px rgba(230,170,60,.35); }
+
+.red { color: #e05a4a; }
+.cyan { color: #58c8e0; }
+
+/* ---------- checkpoint banner ---------- */
+#checkpointBanner {
+  position: absolute; top: 22%; left: 50%; transform: translateX(-50%);
+  font-size: 30px; letter-spacing: 5px; color: #d8b25a;
+  text-shadow: 0 0 24px rgba(230,170,60,.55), 0 2px 5px #000;
+  pointer-events: none; z-index: 30;
+  animation: banner 2.6s ease-in forwards;
+}
+@keyframes banner {
+  0% { opacity: 0; transform: translateX(-50%) scale(.92); }
+  15% { opacity: 1; transform: translateX(-50%) scale(1); }
+  75% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ---------- card of the character ---------- */
+#charSheet {
+  position: absolute; left: 18px; top: 112px; width: 300px; bottom: 150px;
+  background: var(--panel); border: 1px solid var(--edge); border-radius: 4px;
+  z-index: 40; overflow: hidden; font-size: 13px;
+}
+.csTitle { color: var(--gold); font-size: 15px; padding: 8px 12px 4px; }
+.csGold { color: #ffd76a; }
+.csVitals { padding: 2px 12px; }
+.csHp { color: #e08a7a; } .csMp { color: #7ab0e8; }
+.csSub { color: var(--gold); text-transform: uppercase; letter-spacing: 1px; padding: 6px 12px 1px; border-top: 1px solid var(--edge); }
+.csPts { color: #ffd76a; }
+.csAttrRow { display: flex; justify-content: space-between; padding: 2px 12px; }
+.csPlus { color: #ffd76a; cursor: pointer; padding: 4px 10px; font-size: 15px; }
+.csPlus:hover { color: #fff; }
+.csGearRow { padding: 2px 12px; }
+.csInvRow { padding: 3px 12px; cursor: pointer; }
+.csInvRow:hover { background: rgba(80,64,38,.35); }
+.csEmpty { color: #6d6152; }
+.csEmptyRow { color: #6d6152; padding: 2px 12px; }
+.csStatV { color: #9db5c8; font-size: 11.5px; }
