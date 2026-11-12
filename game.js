@@ -2146,6 +2146,7 @@ devMenu.innerHTML =
   '<button data-dev="kill">Toggle insta kill</button>' +
   '<button data-dev="level">Instant level up</button>' +
   '<button data-dev="items">Spawn 5 random items</button>' +
+  '<button data-dev="merchant">Spawn merchant nearby</button>' +
   '<button data-dev="tp">Teleport to next level</button>';
 document.getElementById('game').appendChild(devMenu);
 devMenu.addEventListener('click', (e) => {
@@ -2174,6 +2175,8 @@ devMenu.addEventListener('click', (e) => {
       game.drops.push({ x: px, y: py, r: 11, item: rollItem(game.checkpoint, false, 'legend'), life: 60, bob: rand(0, TAU) });
     }
     toast('DEV: 5 legendary items spawned around you', 'item-legend');
+  } else if (act === 'merchant') {
+    devSpawnMerchant();
   } else if (act === 'tp') {
     if (game.running) { toast('DEV: teleporting deeper', ''); nextCheckpoint(); }
   }
@@ -2186,6 +2189,27 @@ function toggleDevMenu() {
     devMenu.classList.add('hidden');
     toast('DEV: menu closed', '');
   }
+}
+// spot for the dev-menu merchant: walkable ground, wide enough for the cart,
+// and in sight of the hero so he lands in the same room instead of inside
+// geometry or behind a wall (issue #42)
+function findMerchantSpot(cx, cy, minR, maxR) {
+  for (let k = 0; k < 90; k++) {
+    const a = rand(0, TAU), dd = rand(minR, maxR);
+    const tx = cx + Math.cos(a) * dd, ty = cy + Math.sin(a) * dd;
+    if (!passableAt(tx, ty)) continue;
+    if (solidAt(tx, ty, 24)) continue;
+    if (!losClear(cx, cy, tx, ty)) continue;
+    return { x: tx, y: ty };
+  }
+  return null;
+}
+function devSpawnMerchant() {
+  const spot = findMerchantSpot(P.x, P.y, 80, 280) || findMerchantSpot(P.x, P.y, 280, 560);
+  if (!spot) { toast('DEV: no clear ground near the hero for a merchant', ''); return; }
+  game.merchant = { x: spot.x, y: spot.y, hintCd: 0, bob: rand(0, TAU) };
+  toast('DEV: merchant spawned near you (press T to trade)', '');
+  S.gold();
 }
 
 // ---- area map on M: only tiles the player has walked into are revealed ----
