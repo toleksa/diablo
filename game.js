@@ -412,7 +412,8 @@ const BASES = {
   armor:  { name:'Zbroja', hp:[24,36] },
 };
 const AFFIX = ['Might','Storm','Dragon','Shadow','Angel','Demon','Tempest','Wolf','Bone Claw','Blazing Fury'];
-const BONUSK = ['dmg', 'hp', 'mp', 'crit', 'spd']; // damage/life/mana/crit/move-speed
+const BONUSK = ['dmg', 'hp', 'mp', 'crit', 'spd', 'str', 'dex', 'int', 'vit'];
+// dmg/life/mana/crit/move-speed + direct attribute bonuses (issue #25)
 
 function rollItem(cp, forceGood, forceRar) {
   let total = RARITY.reduce((s,r)=>s+r.w,0);
@@ -458,6 +459,9 @@ function rollItem(cp, forceGood, forceRar) {
     } else if (kind === 'crit') {
       const v = randInt(2, 5) + Math.floor(cp / 5);
       stats.push({k:'crit', v, txt:'Critical Chance: +'+v+'%'});
+    } else if (kind === 'str' || kind === 'dex' || kind === 'int' || kind === 'vit') {
+      const v = randInt(1, 3) + Math.floor(cp / 6); // +N to an attribute (issue #25)
+      stats.push({k: kind, v, txt: ATTRPL[kind] + ': +' + v});
     } else {
       const v = randInt(4, 12) + Math.floor(cp / 4);
       stats.push({k:'spd', v, txt:'Movement Speed: +'+v+'%'});
@@ -468,7 +472,7 @@ function rollItem(cp, forceGood, forceRar) {
   // score counts the scaling bonus at an assumed average attribute (~11):
   // bonus dmg ≈ pct × 11 / 100
   // score weights each bonus kind; scaling bonus valued at an assumed attribute (~11)
-  const W8 = { dmg: 2.2, hp: 1, mp: 0.45, crit: 2.4, spd: 1.4 };
+  const W8 = { dmg: 2.2, hp: 1, mp: 0.45, crit: 2.4, spd: 1.4, str: 1.8, dex: 1.8, int: 1.8, vit: 1.8 };
   const score = stats.reduce((s, st) =>
     s + (st.k === 'dmg' ? (st.v + (st.pct || 0) * 0.11) : st.v) * (W8[st.k] || 1), 0);
   return { slot, name:nm, rarity:rar.id, stats, score, cp };
@@ -492,7 +496,7 @@ function playerDmg() {
       if (st.k !== 'dmg') continue;
       d += st.v; // flat base damage
       // scaling bonus: attribute value × weapon pct (rolled 1-200 on spawn)
-      if (st.scale && st.pct) d += P.attr[st.scale] * st.pct / 100;
+      if (st.scale && st.pct) d += curAttr(st.scale) * st.pct / 100;
     }
   }
   return d;
@@ -503,12 +507,14 @@ function equipBonus(k) {
   for (const s of SLOTS) { const e = P.eq[s]; if (e) for (const st of e.stats) if (st.k === k) b += st.v; }
   return b;
 }
-function mpMax() { return 100 + (P.attr.int - 8) * 4 + equipBonus('mp'); }
-function critChance() { return 0.05 + (P.attr.dex - 8) * 0.006 + equipBonus('crit') / 100; }
+// current attribute = base (points assigned) + affix bonuses from equipped gear (issue #25)
+function curAttr(k) { return P.attr[k] + equipBonus(k); }
+function mpMax() { return 100 + (curAttr('int') - 8) * 4 + equipBonus('mp'); }
+function critChance() { return 0.05 + (curAttr('dex') - 8) * 0.006 + equipBonus('crit') / 100; }
 // movement speed: base × (1 + rolled % bonus from items)
 function moveSpd() { return P.speed * (1 + equipBonus('spd') / 100); }
 function playerHpMax() {
-  let h = P.baseHp + (P.level-1)*14 + (P.attr.vit - 10) * 6;
+  let h = P.baseHp + (P.level-1)*14 + (curAttr('vit') - 10) * 6;
   for (const s of SLOTS) { const e = P.eq[s]; if (e) for (const st of e.stats) if (st.k==='hp') h += st.v; }
   return h;
 }
@@ -644,7 +650,7 @@ function update(dt) {
     P.mana = Math.min(mpMax(), P.mana + 6 * dt); // slow mana regen
     // very slow natural HP regen, unlocked from level 5
     if (P.level >= 5 && P.hp < P.hpMax) {
-      const rg = 0.08 + (P.level - 5) * 0.015 + P.attr.vit * 0.008;
+      const rg = 0.08 + (P.level - 5) * 0.015 + curAttr('vit') * 0.008;
       P.hp = Math.min(P.hpMax, P.hp + rg * dt);
     }
     P.atkT = Math.max(0, P.atkT - dt);
@@ -1949,7 +1955,8 @@ function renderChar() {
        Math.floor(P.xp) + '/' + P.xpNeed + '</div>';
   h += '<div class="csSub">Attributes — free: <span class="csPts">' + P.statPoints + '</span></div>';
   for (const row of ATTRS4) {
-    h += '<div class="csAttrRow"><span>' + row[1] + ' <b>' + P.attr[row[0]] + '</b></span>' +
+    const base = P.attr[row[0]], cur = curAttr(row[0]);
+    h += '<div class="csAttrRow"><span>' + row[1] + ' <b>' + base + (cur !== base ? ' (' + cur + ')' : '') + '</b></span>' +
          (P.statPoints > 0 ? '<span class="csPlus" data-attr="' + row[0] + '">+</span>' : '') + '</div>';
   }
   h += '<div class="csSub">Equipment</div>';
