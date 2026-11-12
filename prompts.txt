@@ -1,0 +1,180 @@
+# prompts.txt - image generation requests for Infernal Crucible
+# These prompts are sent to an image generation model one at a time to produce
+# high-quality replacement art. Each block below is SELF-CONTAINED: the shared
+# style anchor and the palette are already written into every prompt, so you can
+# copy a PROMPT paragraph and paste it into the generator as it stands.
+#
+# How to use a block:
+#   PROMPT   -> paste into the generator as the positive prompt, verbatim
+#   NEGATIVE -> paste into the "negative prompt" field when the tool has one;
+#               otherwise append " - avoid: ..." to the end of the PROMPT
+#   FORMAT   -> width x height and aspect the generator must output
+#   USE      -> which part of the game this asset replaces once it lands
+#
+# The wording follows ART_BIBLE.md: the same palette (names AND hex codes), the
+# same material and silhouette language, the same "painterly detail +
+# believable materials" rule. Keep every image inside that vocabulary so the
+# five pieces read as one art set when shown together.
+#
+# Shared STYLE ANCHOR (already expanded inside each PROMPT):
+#   "Dark Gothic Fantasy, realistic stylization, painterly detail combined with
+#   physically believable materials, weathered stone, aged metal, leather, wood
+#   and bone, dramatic intentional lighting with deep obsidian shadows, muted
+#   environmental colors, saturated color reserved for magic and important
+#   objects, high-production PC action RPG quality, readable silhouette"
+# Shared palette: obsidian #171719, charcoal #29282B, ash grey #68666A, bone
+# #C6BDAA, antique gold #A98A50, blood burgundy #642A32, muted brown #594536;
+# accents: arcane blue #478CCB, infernal orange #D85C27, spectral violet #9567BB.
+
+================================================================================
+1. LOCATION FRAGMENT - "Old Ruins" dungeon interior
+================================================================================
+PROMPT:
+A single environment concept tile for a dark fantasy action RPG: an isolated
+fragment of an ancient ruined dungeon interior seen from a high three-quarter
+isometric game angle. Broken flagstone floor, cracked and tilted slabs with
+moss in the seams and scattered gravel. One side keeps a collapsed Gothic
+arch, its crumbling stone wall faded with remnants of a carved frieze. An old
+iron torch bracket with a burning torch casts warm infernal orange #D85C27
+light, and a narrow crack of cold arcane blue #478CCB moonlight slips in from
+a distant broken gate, so the fragment carries two light temperatures.
+Lootable ambience: a toppled oak chest with aged iron bands, a few bone picks,
+thin dust drifting through the light beams. Dark Gothic Fantasy, realistic
+stylization, painterly detail combined with physically believable materials:
+weathered stone, aged iron, rotted wood. Palette strictly muted: charcoal
+#29282B stone, ash grey #68666A worn edges, muted brown #594536 wood, obsidian
+#171719 deep shadows. No characters, no creatures, no user interface, no text.
+NEGATIVE:
+photoreal modern material, sci-fi metal, neon, cartoon, chibi, oversaturated
+colors, fog that hides composition, cropped architecture, characters, text,
+watermarks
+FORMAT:
+2048x1152 (16:9)
+USE:
+background art for the first three levels, the Old Ruins band (the first
+theme row of THEMES in game.js: warm stone, orange torch flame).
+
+================================================================================
+2. WARRIOR CHARACTER - the Knight class hero
+================================================================================
+PROMPT:
+A full body game character render of one human warrior standing in a neutral
+ready pose, facing camera-left, from a slightly elevated three-quarter
+angle, single figure centered on a plain dark obsidian #171719 background with
+soft rim light so the asset can be cut out cleanly. Muscular, square-built
+warrior in scratched grey steel plate armor: dark blue-grey base plates
+#3e4a5c with lighter steel highlights #7e8ea4, articulated greaves and
+vambraces, a plumed iron helm pushed up to show a scarred face and a short
+braided beard, war paint on the temples. A broad, notched sword held point
+down in the right hand, a battered steel shield with a faded antique gold
+#A98A50 rim on the left arm, a muted brown #594536 leather baldric and boots.
+Dark Gothic Fantasy, realistic stylization, readable heavy silhouette: armor
+and equipment readable at normal gameplay zoom, no excessive visual clutter.
+Materials believable and distinguishable: steel has appropriate specular
+highlights, leather is matte, cloth shows folds. No text, no watermark.
+NEGATIVE:
+female proportions, cloth robe mage, bare torso, power armor, fantasy
+overspill, extra fingers, deformed hands, duplicate weapons, text, watermark
+FORMAT:
+1024x1536 (2:3 vertical)
+USE:
+the warrior class figure: CLASSES.war in game.js paints this same man in
+grey steel #3e4a5c / #7e8ea4 (issue #52); replaces the painted hero sprite on
+the canvas once the art swap is switched on.
+
+================================================================================
+3. GOBLIN - fast swarmling enemy
+================================================================================
+PROMPT:
+A single enemy character render for a dark fantasy action RPG: a small hunched
+goblin seen from a slightly elevated three-quarter angle, full body, centered
+on a plain dark obsidian #171719 background with a soft rim light so it can be
+cut out cleanly. Sickly green skin (about #5d8f3a), oversized pointed ears, a
+wide flat face with sharp teeth and bright curious eyes, long ape-like arms,
+wiry fast silhouette, dynamic crouched posture with one foot on a broken
+flagstone. It wears ragged leather scraps and stolen bits of rusted mail tied
+with cord, and clutches a crude jagged cleaver. Dark Gothic Fantasy, realistic
+stylization, painterly detail and believable organic and material surfaces:
+matte leather, dull pitted mail. Muted palette only: green skin against
+muted brown #594536 rags, ash grey #68666A stolen mail, obsidian #171719
+shadow. The goblin must read as a small, quick, fragile swarmling, smaller and
+lower than an armored hero. No text, no watermark.
+NEGATIVE:
+armored brute, orc, tall humanoid goblin knight, photoreal horror gore,
+cartoon, chibi, oversized weapon, duplicate limbs, deformed hands, text
+FORMAT:
+1024x1024 (1:1)
+USE:
+the Goblin foe (the "fallen" row of MTYPES in game.js: name Goblin, green
+#5d8f3a, fast 150 speed, small fragile body), the first swarm enemy of every
+new level.
+
+================================================================================
+4. ZOMBIE - shambling undead enemy
+================================================================================
+PROMPT:
+A single enemy character render for a dark fantasy action RPG: a shambling
+undead human, the classic zombie of a haunted ruin, seen from a slightly
+elevated three-quarter angle, full body, centered on a plain dark obsidian
+#171719 background with a soft rim light so it can be cut out cleanly.
+Slumped heavy posture, belly forward, arms hanging and reaching loose, one
+leg dragging: a slow, heavy silhouette, not an athletic one. Rotten grey-green
+ashy flesh with sunken hollow cheeks and open dark wounds and visible pale
+bone showing through torn skin (bone #C6BDAA), milky blind eyes, clumps of
+grey hair. Tattered rotted burial clothes and a few rusted iron plates still
+buckled on the ribs, muted brown #594536 cloth rags, dark blood burgundy
+#642A32 stains, dull aged iron. Dark Gothic Fantasy, realistic stylization,
+painterly detail, believable decayed materials and subtle cold rim lighting.
+No text, no watermark.
+NEGATIVE:
+living warrior, fresh armor, fast runner pose, sprinting zombie, photoreal
+gore splatter, neon, cartoon, chibi, text
+FORMAT:
+1024x1024 (1:1)
+USE:
+the Zombie foe of MTYPES in game.js ("zombie" row: heavy shamblers, hp
+forward), one of the mid-level pool from checkpoint 2 on.
+
+================================================================================
+5. BOSS OF THE FIRST LEVEL - Goruk, the Goblin Warboss
+================================================================================
+PROMPT:
+A single boss character render for a dark fantasy action RPG: Goruk, the
+Goblin Warboss, the first dungeon level's overlord, seen from a slightly
+elevated three-quarter angle, full body, centered on a plain dark obsidian
+#171719 background with a soft rim light so the asset can be cut out cleanly.
+A huge goblinoid warlord, twice the size of an armored hero, with massive
+shoulders, thick hide, heavy hands and a hulking imposing boss silhouette
+that must stay readable against dungeon floor. War-painted deep red skin
+(blood burgundy #642A32 shading with warmer #b03a3a highlights), snarling
+flat goblin face with small bright eyes, heavy underbite. He wears heavy
+lamellar plates banded with antique gold #A98A50 edge trim, mismatched
+pauldrons, a broken spiked iron crown wedged on his head as a war trophy,
+muted brown #594536 hide breeches and a trophy belt of stolen signet rings
+and dog tags. Both hands drag a notched black-iron war cleaver whose edge
+glows a faint infernal orange #D85C27. Dark Gothic Fantasy, realistic
+stylization, painterly detail, physically believable materials: aged iron,
+leather, hide, tarnished gold. Bosses must be visually impressive without
+sacrificing readability, so keep the silhouette strong, uncluttered and
+distinct from ordinary goblins. No text, no watermark.
+NEGATIVE:
+cute goblin, small goblin, cartoon, photoreal horror, glowing eyes beams,
+spellcaster robe, duplicate arms, tiny weapon, extra fingers, text, watermark
+FORMAT:
+1024x1536 (2:3 vertical)
+USE:
+the first level's overlord: BOSSES[0] "Goruk - Goblin Warboss" in game.js,
+which since issue #57 waits by the level-one portal and steps out when the
+hero gets within half sight of it; its big r:27 body and red #b03a3a are the
+silhouette and palette this asset must keep.
+
+================================================================================
+NOTE - keeping the set coherent
+================================================================================
+All five prompts share the ART_BIBLE.md anchor on purpose. When the set is
+generated, compare them side by side before anything enters the game: same
+light temperature, same material language, same degree of wear, same palette.
+If one asset drifts, regenerate only that one with its approved references
+(ART_BIBLE.md section 4.4: never redesign an established character
+unintentionally). Nothing here may be committed to the game until the whole
+set passes that side-by-side check.

@@ -183,6 +183,8 @@ hero and lets the Roost be run again, as many times deep as you care to go.
 | `index.html` | DOM contract: HUD, screens, character sheet, cooldown slots |
 | `style.css` | gothic UI: panels, cooldown conic rings, rarity colors, English labels |
 | `game.js` | the whole engine: dungeon gen, lighting, AI, combat, progression, SFX |
+| `ART_BIBLE.md` | visual direction: palette, material and silhouette rules every asset must follow |
+| `prompts.txt` | the five image-generator prompts that will paint the art swap (location, warrior, goblin, zombie, first-level boss) |
 
 ## Notes
 
