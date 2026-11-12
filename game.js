@@ -238,13 +238,14 @@ function moveWithCollide(e, dx, dy) {
 
 // ---------- MONSTERS ----------
 const MTYPES = {
-  fallen: { name:'Fallen', hp:34, dmg:7, speed:105, r:14, color:'#7a8a4a', xp:9, touchCd:1.0, ai:'melee' },
-  archer: { name:'Fallen Archer', hp:26, dmg:8, speed:85, r:13, color:'#5a7a5a', xp:11, touchCd:1.4, ai:'ranged', range:340 },
-  zombie: { name:'Ghoul', hp:60, dmg:11, speed:62, r:16, color:'#6b6b52', xp:13, touchCd:1.2, ai:'melee' },
+  fallen:   { name:'Goblin', hp:34, dmg:7, speed:105, r:14, color:'#5d8f3a', xp:9, touchCd:1.0, ai:'melee' },
+  archer:   { name:'Goblin Archer', hp:26, dmg:8, speed:85, r:13, color:'#3f7f4f', xp:11, touchCd:1.4, ai:'ranged', range:340 },
+  zombie:   { name:'Zombie', hp:60, dmg:11, speed:62, r:16, color:'#6b7252', xp:13, touchCd:1.2, ai:'melee' },
   skeleton: { name:'Skeleton', hp:48, dmg:13, speed:118, r:14, color:'#c8c2ae', xp:15, touchCd:0.9, ai:'melee' },
-  cultist: { name:'Cultist', hp:42, dmg:12, speed:80, r:14, color:'#8a4a4a', xp:17, touchCd:1.5, ai:'ranged', range:400 },
+  orc:      { name:'Orc Brute', hp:66, dmg:13, speed:76, r:17, color:'#4f6a30', xp:19, touchCd:1.3, ai:'melee' },
+  cultist:  { name:'Orc Shaman', hp:42, dmg:12, speed:80, r:14, color:'#6a5a4a', xp:17, touchCd:1.5, ai:'ranged', range:400 },
 };
-const BOSS = { name:'Lech – King of the Fallen', hp:620, dmg:17, speed:90, r:30, color:'#b03a3a', xp:240, touchCd:0.8, ai:'boss' };
+const BOSS = { name:'Goruk — Goblin Warboss', hp:620, dmg:17, speed:90, r:30, color:'#b03a3a', xp:240, touchCd:0.8, ai:'boss' };
 
 function mtier(base, cp) {
   const s = 1 + (cp-1)*0.16;
@@ -285,9 +286,9 @@ function findSpawnPoint() {
 
 function pickTypeFor(cp) {
   const pool = ['fallen','fallen','zombie','skeleton'];
-  if (cp>=2) pool.push('archer','zombie');
-  if (cp>=3) pool.push('skeleton','cultist');
-  if (cp>=4) pool.push('cultist','archer','skeleton');
+  if (cp>=2) pool.push('archer','zombie','orc');
+  if (cp>=3) pool.push('skeleton','cultist','orc');
+  if (cp>=4) pool.push('cultist','archer','skeleton','orc');
   return pick(pool);
 }
 
@@ -679,7 +680,7 @@ function update(dt) {
       if (m.summonCd <= 0) {
         m.summonCd = 8;
         S.elite();
-        banner('Lech summons minions!', '#ff5060');
+        banner(game.boss.name + ' summons minions!', '#ff5060');
         for (let i = 0; i < 2; i++) {
           const a = Math.random() * Math.PI * 2;
           const sx = m.x + Math.cos(a) * 110, sy = m.y + Math.sin(a) * 110;
@@ -1221,6 +1222,18 @@ function drawMonster(m, t) {
     ctx.fillStyle = 'rgba(20,20,20,0.9)';
     ctx.fillRect(x - r * 0.3, y - r * 0.55 + bob, r * 0.6, 2);
     ctx.fillRect(x - r * 0.3, y - r * 0.2 + bob, r * 0.6, 2);
+  } else if (m.type === 'orc') {
+    // iron pauldrons + tusks for the brute
+    ctx.fillStyle = '#3c424c';
+    ctx.beginPath();
+    ctx.arc(x - r * 0.58, y - r * 0.52 + bob, r * 0.3, 0, TAU);
+    ctx.arc(x + r * 0.58, y - r * 0.52 + bob, r * 0.3, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = '#e6dcbe';
+    ctx.beginPath();
+    ctx.moveTo(x - r * 0.2, y - r * 1.05 + bob); ctx.lineTo(x - r * 0.34, y - r * 1.34 + bob); ctx.lineTo(x - r * 0.06, y - r * 1.16 + bob); ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(x + r * 0.2, y - r * 1.05 + bob); ctx.lineTo(x + r * 0.34, y - r * 1.34 + bob); ctx.lineTo(x + r * 0.06, y - r * 1.16 + bob); ctx.closePath(); ctx.fill();
   } else if (m.type === 'boss') {
     ctx.fillStyle = '#3a2222';
     ctx.beginPath();
