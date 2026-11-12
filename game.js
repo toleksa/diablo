@@ -401,9 +401,17 @@ function rollItem(cp, forceGood) {
   }
   const names = [];
   for (let i=0;i<rar.afx;i++){
+    // a bonus kind (dmg/hp) may appear on an item at most once
+    const pool = ['dmg', 'hp'].filter(k => !stats.some(st => st.k === k));
+    if (!pool.length) break;
     const a = pick(AFFIX);
-    if (chance(0.5)) { const v = randInt(1,3)*(1+Math.floor(cp/3)); stats.push({k:'dmg', v, txt:'Damage: +'+v}); }
-    else { const v = randInt(3,8)*(1+Math.floor(cp/2)); stats.push({k:'hp',v,txt:'Life: +'+v}); }
+    if (pick(pool) === 'dmg') {
+      const v = randInt(1, 3) * (1 + Math.floor(cp / 3));
+      stats.push({k:'dmg', v, txt:'Damage: +'+v});
+    } else {
+      const v = randInt(3, 8) * (1 + Math.floor(cp / 2));
+      stats.push({k:'hp', v, txt:'Life: +'+v});
+    }
     names.push(a);
   }
   const nm = (rar.name ? rar.name+' ' : '') + b.name + (names.length ? ' '+names.join(' i ') : '');
