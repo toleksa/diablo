@@ -28,7 +28,13 @@ equips any drop better than what it wears, springs chests, drinks when low,
 heads for the gate, stirs the overlord waiting there and duels him before
 stepping through, and it spends
 level-up attribute points in its class' proportions — a spectator
-run you can follow from the title screen to its death screen.
+run you can follow from the title screen to its death screen. It never flails at
+out-of-reach foes: a swing only lands within the weapon's true tip distance, and a
+swing that ends on thin air sends the bot walking in before it swings again; it
+answers only to things inside its sight with a clear line - foe, loot, chest, trader,
+gate - never through a wall, free-exploring when nothing interesting stands around;
+and when it spies a trader it walks over and lets him buy every spare the backpack
+still holds, the pack turned back into gold.
 
 ## Controls
 
@@ -207,5 +213,12 @@ hero and lets the Roost be run again, as many times deep as you care to go.
   blocked straight step is re-aimed at the nearest passable detour, so it walks
   around walls rather than into them. On level up it spends the free points
   across Strength/Dexterity/Intelligence/Vitality in its class' proportions.
+  Since issue #59 every thing the bot answers to (foes, loot, globes, chests, the
+  trader, the gate and its keeper) must sit inside its visual range AND down a clear
+  line; a melee swing is asked for only within the blade's true tip distance, and a
+  swing that ends without the foe losing a single hit point sends the bot stepping
+  in to meet it; a trader in sight draws the bot to his stall, where the whole
+  spare backpack is sold to him - his shelf grows, your gold comes back - so the
+  demo run pays its leftovers down instead of hoarding them.
 - Work in progress: it is a *reimagining of the moods*, not a clone — no
   loot pipetry, no skills trees, four starting classes.

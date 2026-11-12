@@ -2847,7 +2847,12 @@ function botTick(dt) {
   let gx = null, gy = null;
   // 1) fight: nearest monster in sight (issue #41: a foe behind a wall is
   // ignored, not walked into)
-  let tgt = null, bd = 460;
+  const sight = Math.min(VW, VH); // what the hero can actually see (issue #59)
+  const mer = game.merchant;
+  // the bot answers only to things inside its sight AND down a clear line -
+  // never through a wall - and when nothing interesting stands around it
+  // simply free-explores (issue #59)
+  let tgt = null, bd = sight;
   for (const m of game.monsters) {
     if (m.hp <= 0) continue; // corpses are not targets
     const d = Math.hypot(m.x - P.x, m.y - P.y);
@@ -2855,9 +2860,19 @@ function botTick(dt) {
     bd = d; tgt = m;
   }
   if (tgt) {
-    const wr = rangedWeapon() ? 500 : P.atkRange; // a bow fights at arm's length (issue #53)
-    if (bd > wr + 20) { gx = tgt.x; gy = tgt.y; }
-    game.mouseDown = bd < wr + 26;
+    const ranged = rangedWeapon();
+    // the real distance the blade's tip can actually bite at (issue #59 -
+    // it used to flail at foes a hand's width past reach)
+    const wr = ranged ? 500 : P.atkRange + tgt.r - 4;
+    if (bd > wr) { gx = tgt.x; gy = tgt.y; }
+    game.mouseDown = bd <= wr;
+    // a swing that ended without the foe losing a single hit point was thin
+    // air: the bot comes closer and swings again instead of pawing the
+    // empty space (issue #59)
+    if (B.swingTgt === tgt && B.swingHp !== undefined && P.atkT <= 0) {
+      if (tgt.hp >= B.swingHp) { gx = tgt.x; gy = tgt.y; }
+      B.swingTgt = null; B.swingHp = undefined;
+    } else if (P.atkT > 0 && B.swingTgt !== tgt) { B.swingTgt = tgt; B.swingHp = tgt.hp; }
     if (P.hp < P.hpMax * 0.4 && P.cd.potion <= 0) drinkPotion();
     let near = 0;
     for (const m of game.monsters) if (Math.hypot(m.x - P.x, m.y - P.y) < 100) near++;
@@ -2866,7 +2881,7 @@ function botTick(dt) {
     game.mouseDown = false;
     // 2) loot / orbs / gold, 3) chests, 4) portal (when boss down) or boss —
     // all sight-limited too, so the bot never presses into a wall for loot
-    let best = null, bd2 = 520;
+    let best = null, bd2 = sight;
     for (const it of game.drops) {
       const d = Math.hypot(it.x - P.x, it.y - P.y);
       if (d < bd2 && losClear(P.x, P.y, it.x, it.y)) { bd2 = d; best = it; }
@@ -2882,21 +2897,34 @@ function botTick(dt) {
     for (const ch of game.chests) {
       if (ch.open) continue;
       const d = Math.hypot(ch.x - P.x, ch.y - P.y);
-      if (d < 760 && (bd2 > 520 || d < bd2) && losClear(P.x, P.y, ch.x, ch.y)) { bd2 = d; best = ch; }
+      if (d < sight && d < bd2 && losClear(P.x, P.y, ch.x, ch.y)) { bd2 = d; best = ch; }
+    }
+    // 5) a trader in sight: he takes what you do not use (issue #59)
+    if (P.inv.length > 0 && mer) {
+      const md = Math.hypot(mer.x - P.x, mer.y - P.y);
+      if (md < sight && losClear(P.x, P.y, mer.x, mer.y)) {
+        if (md <= 110) {
+          // everything that survived in the backpack is spare by definition:
+          // botEquip keeps the best of every slot on the sheets, so the rest
+          // of it goes into the trader's purse and back as gold
+          for (let q = P.inv.length - 1; q >= 0; q--)
+            if (P.inv[q]) tradeSell(q);
+        } else if (md < bd2) { bd2 = md; best = mer; }
+      }
     }
     // an overlord that has not been woken yet is not down: the bot goes to
     // the gate and stirs him there (issue #57)
     const bossDown = !game.bossPending && (game.boss === null || game.boss.dead);
     if (game.portal && bossDown) {
       const d = Math.hypot(game.portal.x - P.x, game.portal.y - P.y);
-      if (d < 1100) best = game.portal;
+      if (d < sight * 1.5 && losClear(P.x, P.y, game.portal.x, game.portal.y)) { best = game.portal; bd2 = 0; }
     } else if (game.boss && !game.boss.dead) {
       const d = Math.hypot(game.boss.x - P.x, game.boss.y - P.y);
-      if (d < 950) { best = game.boss; bd2 = 0; }
+      if (d < sight && losClear(P.x, P.y, game.boss.x, game.boss.y)) { best = game.boss; bd2 = 0; }
     } else if (game.bossPending && game.portal) {
       // nothing to fight yet: make for the gate, he will come out
       const d = Math.hypot(game.portal.x - P.x, game.portal.y - P.y);
-      if (d < 1300) { best = game.portal; bd2 = 0; }
+      if (d < sight && losClear(P.x, P.y, game.portal.x, game.portal.y)) { best = game.portal; bd2 = 0; }
     }
     if (best) { gx = best.x; gy = best.y; }
     else {
