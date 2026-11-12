@@ -62,8 +62,10 @@ your last journey instead of starting over.
   intelligence feeds max Mana, vitality feeds HP and very slow natural HP
   regen from level 5.
 - **Mana** (blue) regenerates slowly; combat swings feed it back.
-- **Globes**: slain enemies drop green XP globes, blue Mana globes and,
-  with a 30% chance, a **red heal orb** that restores 30% of your life.
+- **Globes**: slain enemies drop blue Mana globes and, with a 30% chance,
+  a **red heal orb** that restores 30% of your life. XP is **not** a pickup
+  — it lands on your player card the instant a kill lands, so nothing is
+  ever lost or interruptible.
 - **Bestiary**: Goblins are quick and brittle swarmlings (plus sneaky
   Goblin Archers keeping distance), Zombies shamble in slow but heavy,
   Skeletons scuttle fast as glass cannons, Orc Brutes hit hard and

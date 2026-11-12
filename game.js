@@ -386,12 +386,10 @@ function burst(x, y, color, n, spd) {
 function blood(x,y){ burst(x,y,'#8a1f1f',10,150); }
 
 // globes: xp (green), heal (red), mana (blue)
-function dropGlobes(x, y, xp) {
-  const n = clamp(Math.round(xp/6), 2, 6);
-  const val = Math.max(2, Math.round(xp/n));
-  for (let i=0;i<n;i++)
-    game.globes.push({type:'xp', val, life:13, x:x+rand(-18,18), y:y+rand(-18,18), vx:rand(-60,60), vy:rand(-60,60), r:5, color:'#3ad15a'});
-  if (chance(0.3)) // red heal orb: restores 30% of the player's life
+// globes dropped on kill: red heal + blue mana only (issue #33: XP is no
+// longer a pickup — it lands on the player card the moment the kill lands)
+function dropGlobes(x, y) {
+  if (chance(0.3))
     game.globes.push({type:'heal', val:0, life:13, x:x+rand(-14,14), y:y+rand(-14,14), vx:rand(-40,40), vy:rand(-40,40), r:7, color:'#e03535'});
   if (chance(0.35))
     game.globes.push({type:'mana', val:0, life:13, x:x+rand(-14,14), y:y+rand(-14,14), vx:rand(-40,40), vy:rand(-40,40), r:6, color:'#3a7ae0'});
@@ -576,7 +574,9 @@ function killMonster(m) {
   game.corpses.push({x:m.x, y:m.y, r:m.r, color:m.color, angle:m.angle, life:14, type:m.type});
   if (game.decals.length > 140) game.decals.splice(0, 40);
   game.decals.push({x:m.x+rand(-6,6), y:m.y+rand(-6,6), r:m.r*1.5, life:20});
-  dropGlobes(m.x, m.y, m.xp);
+  P.xp += m.xp; // XP goes straight to the player card (issue #33)
+  dmgText(m.x, m.y - m.r - 14, '+' + m.xp + ' XP', '#7ad67a');
+  dropGlobes(m.x, m.y);
   dropGold(m.x, m.y, game.checkpoint);
   if (chance(m.elite ? 0.9 : (m.type==='boss' ? 1 : 0.16)))
     dropItem(m.x + rand(-20,20), m.y + rand(-20,20), game.checkpoint, m.elite || m.type==='boss');
@@ -880,8 +880,7 @@ function update(dt) {
     if (d < P.r + 10 && !P.dead && g.life > 0) {
       g.life = 0;
       S.globe();
-      if (g.type === 'xp') { P.xp += g.val; gainXpCheck(); }
-      else if (g.type === 'heal') { P.hp = Math.min(P.hpMax, P.hp + Math.ceil(P.hpMax * 0.3)); S.healGlobe(); }
+      if (g.type === 'heal') { P.hp = Math.min(P.hpMax, P.hp + Math.ceil(P.hpMax * 0.3)); S.healGlobe(); }
       else if (g.type === 'mana') { P.mana = Math.min(mpMax(), P.mana + 14); }
       else { P.gold += g.val; }
     }
