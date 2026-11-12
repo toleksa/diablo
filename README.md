@@ -35,6 +35,7 @@ run you can follow from the title screen to its death screen.
 | **3** | Leap — jump forward, AoE landing + stun, spends 25 Mana |
 | **C** | character sheet: attributes, equipment, inventory |
 | **M** | area map — fog of war: only parts the player has walked through are revealed (boss/portal/start markers appear once discovered) |
+| **P** | pause: the frame goes dark, nothing regenerates and no enemy stirs, until you press P again |
 
 Clicking an **icon of a skill with the left mouse button** casts it directly —
 potion, Whirlwind, Leap or the sword swing — handy when you don't want to

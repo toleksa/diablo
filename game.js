@@ -123,6 +123,7 @@ const game = {
   moveTarget: null, mouseDown: false, rmbDown: false, deathShown: false,
   totalKills: 0,
   demo: false, // spectator demo mode (issue #35)
+  paused: false, // P freezes the whole simulation (issue #44)
 };
 function resetGame() {
   mcp = 1;
@@ -132,6 +133,7 @@ function resetGame() {
     spawnDelay: 1.2, portal: null, boss: null,
     moveTarget: null, mouseDown: false, rmbDown: false, deathShown: false,
     totalKills: 0,
+    paused: false,
   });
   game.monsters = []; game.projectiles = []; game.globes = [];
   game.goldpiles = []; game.drops = []; game.particles = [];
@@ -1733,6 +1735,24 @@ function lightPass(t) {
   }
 }
 
+// the pause card (issue #44): a transparent shadow over the whole frame and a
+// plain statement in the middle, so the player knows the world just froze
+function pauseVeil() {
+  ctx.setTransform(SC, 0, 0, SC, 0, 0);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = 'rgba(6, 4, 10, 0.58)';
+  ctx.fillRect(0, 0, VW, VH);
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 30px Georgia';
+  ctx.fillStyle = '#0b0705';
+  ctx.fillText('Paused', VW / 2 + 2, VH / 2 + 2);
+  ctx.fillStyle = '#d8b25a';
+  ctx.fillText('Paused', VW / 2, VH / 2);
+  ctx.font = '12px Georgia';
+  ctx.fillStyle = '#b2a278';
+  ctx.fillText('the world holds still · press P to resume', VW / 2, VH / 2 + 26);
+  ctx.textAlign = 'left';
+}
 function render(dt) {
   const t = game.time;
   const tx = clamp(P.x - VW / 2, 0, Math.max(0, WORLD.w - VW));
@@ -1757,6 +1777,7 @@ function render(dt) {
   drawProjectiles();
   drawFX();
   lightPass(t);
+  if (game.paused) pauseVeil();
 }
 // ============ PART 7 — INPUT, HUD, MAIN LOOP ============
 const K = { w: false, a: false, s: false, d: false };
@@ -1830,6 +1851,13 @@ function hudUpdate() {
     // we pressed vanish mid-press, so stat clicks did nothing (issue #37)
 }
 // ---------- input ----------
+// pause (issue #44): P freezes the whole simulation — no hp/mana regen, no
+// monster movement or attacks, no torch flicker — and veils the frame
+function togglePause() {
+  if (!game.running) return;
+  game.paused = !game.paused;
+  toast(game.paused ? 'Paused — the world holds still (P to resume)' : 'Resumed', '');
+}
 window.addEventListener('keydown', (e) => {
   if (e.repeat) return;
   switch (e.code) {
@@ -1837,9 +1865,10 @@ window.addEventListener('keydown', (e) => {
     case 'KeyS': case 'ArrowDown': K.s = true; break;
     case 'KeyA': case 'ArrowLeft': K.a = true; break;
     case 'KeyD': case 'ArrowRight': K.d = true; break;
-    case 'Digit1': case 'Numpad1': if (game.running) drinkPotion(); break;
-    case 'Digit2': case 'Numpad2': if (game.running) tryWhirlwind(); break;
-    case 'Digit3': case 'Numpad3': if (game.running) tryLeap(); break;
+    case 'Digit1': case 'Numpad1': if (game.running && !game.paused) drinkPotion(); break;
+    case 'Digit2': case 'Numpad2': if (game.running && !game.paused) tryWhirlwind(); break;
+    case 'Digit3': case 'Numpad3': if (game.running && !game.paused) tryLeap(); break;
+    case 'KeyP': togglePause(); break;
     case 'KeyC': if (game.running) toggleChar(); break;
     case 'KeyM': if (game.running) toggleMap(); break;
     case 'KeyT': if (game.running && game.merchant &&
@@ -2093,11 +2122,11 @@ let lastT = 0;
 function frame(ts) {
   const dt = Math.min(0.05, (ts - lastT) / 1000);
   lastT = ts;
-  if (game.running && dt > 0) {
+  if (game.running && dt > 0 && !game.paused) {
     update(dt);
     hudUpdate();
-    render(dt);
   }
+  if (game.running) render(dt);
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
