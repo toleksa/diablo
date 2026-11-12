@@ -506,6 +506,7 @@ function refreshHpMax() {
   const nm = playerHpMax();
   if (nm !== P.hpMax) { const diff = nm - P.hpMax; P.hpMax = nm; if (diff>0) P.hp += diff; }
   if (P.hp > P.hpMax) P.hp = P.hpMax;
+  if (P.mana > mpMax()) P.mana = mpMax(); // equip swap may shrink the pool (issue #20)
 }
 
 function hurtPlayer(dmg, fromX, fromY) {
@@ -1637,6 +1638,7 @@ function hudUpdate() {
     r[0].classList.toggle('noFury', !r[2]);
   }
   if (mapOpen) drawMapUI();
+  if (charOpen) renderChar(); // keep vitals (mana/hp/crit) live, like the orbs (issue #20)
 }
 // ---------- input ----------
 window.addEventListener('keydown', (e) => {
@@ -1914,8 +1916,9 @@ function renderChar() {
   const dmg = Math.round(playerDmg());
   const crit = Math.round(critChance() * 100);
   let h = '<div class="csTitle">Barbar — Level ' + P.level + ' <span class="csGold">◈ ' + P.gold + '</span></div>';
+  const manaNow = Math.round(clamp(P.mana, 0, mpMax()));
   h += '<div class="csVitals"><span class="csHp">' + Math.ceil(Math.max(0, P.hp)) + '/' + P.hpMax + '</span> · ' +
-       '<span class="csMp">' + Math.round(P.mana) + '/' + mpMax() + '</span> · dmg ' + dmg + '±15% · crit ' + crit + '% · exp ' +
+       '<span class="csMp">' + manaNow + '/' + mpMax() + '</span> · dmg ' + dmg + '±15% · crit ' + crit + '% · exp ' +
        Math.floor(P.xp) + '/' + P.xpNeed + '</div>';
   h += '<div class="csSub">Attributes — free: <span class="csPts">' + P.statPoints + '</span></div>';
   for (const row of ATTRS4) {
