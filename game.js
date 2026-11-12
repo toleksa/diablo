@@ -299,6 +299,7 @@ function spawnMonster(type, x, y, elite, cp) {
     ai: d.ai, range: d.range || (d.r + 27), elite: !!elite, angle: rand(0,TAU),
     hitFlash: 0, slow: 0, wob: rand(0,TAU), stun: 0, kx: 0, ky: 0,
     act: true, aggro: (d.ai === 'ranged' ? 380 : 310) + (elite ? 70 : 0),
+    homeX: x, homeY: y, leash: 0, leashT: 0, // chase leash (issue #29)
   };
   game.monsters.push(m);
   if (elite) { S.elite(); ring(x,y,'#d8a23c'); }
@@ -734,6 +735,37 @@ function update(dt) {
       } else continue;
     }
     if (!P.dead) m.angle = Math.atan2(dy, dx);
+
+    // chase leash (issue #29): too far from where it stood, the enemy stops
+    // chasing — first it pauses to look around, and if the player is still
+    // out of sight it walks (never teleports) back home and sleeps there
+    if (m.kind !== 'boss') {
+      const hdx = m.x - m.homeX, hdy = m.y - m.homeY;
+      if (!m.leash && hdx * hdx + hdy * hdy > 560 * 560) m.leash = 1; // looking around
+      if (m.leash) {
+        if (d < m.aggro) m.leash = 0; // player spotted again: resume the chase
+        else if (m.leash === 1) {
+          m.leashT = (m.leashT || 0) + dt;
+          m.angle += dt * 3.1; // scanning around, not moving
+          if (m.leashT > 1.4) { m.leash = 2; m.leashT = 0; } // still blind: head home
+          continue;
+        } else { // leash 2: walking back to its spot
+          const hx = m.homeX - m.x, hy = m.homeY - m.y;
+          const hd = Math.hypot(hx, hy);
+          if (hd < 12) {
+            m.leash = 0;
+            m.act = false; // asleep again on its mark
+            continue;
+          }
+          const sp = m.speed * 0.8;
+          const nx = m.x + hx / hd * sp * dt, ny = m.y + hy / hd * sp * dt;
+          if (passableAt(nx, m.y)) m.x = nx;
+          if (passableAt(m.x, ny)) m.y = ny;
+          m.angle = Math.atan2(hy, hx);
+          continue;
+        }
+      }
+    }
 
     if (m.kind === 'boss') {
       m.dashCd -= dt; m.summonCd -= dt;

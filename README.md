@@ -42,7 +42,9 @@ deepest room**, slay him to unlock the **portal behind his throne** (it
 stays dim while he lives, blazing bright once he falls) and descend one
 level deeper. **Treasure chests** hide among the rooms — walk up to one
 and it springs open: a guaranteed magic item plus gold. Die → stats
-screen → try again. Every portal you enter
+screen → try again. Foes give chase only up to a **leash** — far from
+their spot they stop, glance around, and walk back to sleep where they
+started. Every portal you enter
 **saves your journey in the browser** (checkpoint, level, attributes,
 gear, gold) — close the tab and the title screen will offer to continue
 your last journey instead of starting over.
