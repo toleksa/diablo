@@ -36,6 +36,7 @@ run you can follow from the title screen to its death screen.
 | **C** | character sheet: attributes, equipment, inventory |
 | **M** | area map — fog of war: only parts the player has walked through are revealed (boss/portal/start markers appear once discovered) |
 | **P** | pause: the frame goes dark, nothing regenerates and no enemy stirs, until you press P again |
+| **T** | trade with the wandering merchant when you stand near him: the world stops and a two-tab stall opens (Sell / Buy) |
 
 Clicking an **icon of a skill with the left mouse button** casts it directly —
 potion, Whirlwind, Leap or the sword swing — handy when you don't want to
@@ -76,7 +77,12 @@ your last journey instead of starting over.
 - **Inventory**: 20-slot backpack. Full-capacity overflow still auto-sells,
   but you keep control too: each sheet row has a **discard ✕** (destroys the
   item), and every level hides a **wandering merchant** — stand near him and
-  press T and he'll buy your weakest backpack item for gold.
+  press T and the world stops at his trade post: a panel with two tabs. **Sell**
+  lists your backpack and one click hands that item to him for gold (it lands on
+  his shelf, so you can buy it back, pricier); **Buy** lists the pack he rolled
+  when this level was generated - goods made by the same roll as any monster drop,
+  so strong affixes stay rare. Every trader is a different man with a different
+  pack, and moving to the next level discards the old one. T again closes the stall.
 - **Globes**: slain enemies drop blue Mana globes and, with a 30% chance,
   a **red heal orb** that restores 30% of your life. XP is **not** a pickup
   — it lands on your player card the instant a kill lands, so nothing is

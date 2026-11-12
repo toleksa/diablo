@@ -260,7 +260,7 @@ function generateLevel(checkpoint) {
     if (solidAt(wx, wy, 26)) continue;
     if (Math.hypot(wx - game.startPos.x, wy - game.startPos.y) < 320) continue;
     if (game.portal && Math.hypot(wx - game.portal.x, wy - game.portal.y) < 80) continue;
-    game.merchant = { x: wx, y: wy, hintCd: 0, bob: rand(0, TAU) };
+    game.merchant = mkMerchant(wx, wy);
     break;
   }
 }
@@ -1745,12 +1745,14 @@ function pauseVeil() {
   ctx.textAlign = 'center';
   ctx.font = 'bold 30px Georgia';
   ctx.fillStyle = '#0b0705';
-  ctx.fillText('Paused', VW / 2 + 2, VH / 2 + 2);
+  const word = tradeOpen ? 'Trading' : 'Paused';
+  ctx.fillText(word, VW / 2 + 2, VH / 2 + 2);
   ctx.fillStyle = '#d8b25a';
-  ctx.fillText('Paused', VW / 2, VH / 2);
+  ctx.fillText(word, VW / 2, VH / 2);
   ctx.font = '12px Georgia';
   ctx.fillStyle = '#b2a278';
-  ctx.fillText('the world holds still · press P to resume', VW / 2, VH / 2 + 26);
+  ctx.fillText(tradeOpen ? 'the world holds still · click a tab, T closes the stall'
+    : 'the world holds still · press P to resume', VW / 2, VH / 2 + 26);
   ctx.textAlign = 'left';
 }
 function render(dt) {
@@ -1872,7 +1874,7 @@ window.addEventListener('keydown', (e) => {
     case 'KeyC': if (game.running) toggleChar(); break;
     case 'KeyM': if (game.running) toggleMap(); break;
     case 'KeyT': if (game.running && game.merchant &&
-        Math.hypot(P.x - game.merchant.x, P.y - game.merchant.y) < 95) invSellWorst(); break;
+        Math.hypot(P.x - game.merchant.x, P.y - game.merchant.y) < 130) toggleTrade(); break;
     case 'KeyL': toggleDevMenu(); break;
   }
 });
@@ -2227,7 +2229,7 @@ function findMerchantSpot(cx, cy, minR, maxR) {
 function devSpawnMerchant() {
   const spot = findMerchantSpot(P.x, P.y, 80, 280) || findMerchantSpot(P.x, P.y, 280, 560);
   if (!spot) { toast('DEV: no clear ground near the hero for a merchant', ''); return; }
-  game.merchant = { x: spot.x, y: spot.y, hintCd: 0, bob: rand(0, TAU) };
+  game.merchant = mkMerchant(spot.x, spot.y);
   toast('DEV: merchant spawned near you (press T to trade)', '');
   S.gold();
 }
@@ -2318,17 +2320,123 @@ function invDiscard(i) {
   S.item();
   if (charOpen) renderChar();
 }
-// merchant trade: sells one backpack item (the weakest) for gold (issue #34)
-function invSellWorst() {
-  if (P.inv.length === 0) { toast('Merchant: "nothing to buy"', ''); return; }
-  let wi = 0;
-  for (let i = 1; i < P.inv.length; i++) if (P.inv[i].score < P.inv[wi].score) wi = i;
-  const it = P.inv.splice(wi, 1)[0];
-  const g = 10 + it.cp * 6 + Math.round(it.score);
-  P.gold += g;
-  toast('Merchant bought ' + it.name + ' (+' + g + ' gold)', 'item-' + it.rarity);
+// ============ THE TRADE POST (issue #45) ============
+// pressing T next to a trader stops the world and opens his stall as a panel
+// with two tabs: Sell (click any backpack item - the merchant buys it and puts
+// it on his shelf) and Buy (the pack he generated when he was spawned, rolled
+// exactly like a monster drop so strong rolls stay rare). New level, new trader
+// with a new pack: the old one is simply discarded by the level generator.
+const tradeEl = document.createElement('div');
+tradeEl.id = 'tradeMenu';
+tradeEl.classList.add('hidden');
+document.getElementById('game').appendChild(tradeEl);
+let tradeOpen = false, tradeTab = 'sell', tradeFreeze = false;
+const GEM = '\u25c8'; // the little coin mark the panels print gold with
+const MERCHANTS = ['Bonrik the Hooded', 'Old Harker', 'Cask & Coin', 'Fenrik Halfpouch',
+  'Grett the Barrow-Man', 'Madam Meret', 'Quiet Willa', 'One-Eyed Tanner'];
+function sellPrice(it) { return 10 + it.cp * 6 + Math.round(it.score); }
+function buyPrice(it) { return Math.round(sellPrice(it) * 2.2) + 8; }
+function mkMerchantStock(cp) {
+  // his pack: a handful of goods rolled like the drops he never swept up, so
+  // rarity and bonuses follow the same exponential curve the heroes see in play
+  const st = [];
+  const n = 4 + Math.floor(Math.random() * 3);
+  for (let i = 0; i < n; i++) {
+    const it = rollItem(clamp(cp, 1, 4), false, null, 1);
+    st.push({ item: it, price: buyPrice(it) });
+  }
+  return st;
+}
+function mkMerchant(x, y) {
+  return { x: x, y: y, hintCd: 0, bob: rand(0, TAU),
+    name: pick(MERCHANTS), stock: mkMerchantStock(game.checkpoint) };
+}
+function toggleTrade() {
+  if (!game.running) return;
+  if (!game.merchant) { toast('No trader in sight', ''); return; }
+  if (Math.hypot(P.x - game.merchant.x, P.y - game.merchant.y) > 130) { toast('Walk closer to the trader', ''); return; }
+  if (tradeOpen) { closeTrade(); return; }
+  tradeOpen = true; tradeTab = 'sell';
+  // browsing the stall is a moment of peace, unless the player already paused
+  // with P - then their pause stands and we do not steal it back
+  if (!game.paused) { game.paused = true; tradeFreeze = true; }
+  if (tradeEl) tradeEl.classList.remove('hidden');
+  renderTrade();
+  toast('Trade post - click a tab, press T to close', '');
   S.gold();
-  if (charOpen) renderChar();
+}
+function closeTrade() {
+  tradeOpen = false;
+  if (tradeEl) tradeEl.classList.add('hidden');
+  if (tradeFreeze) { game.paused = false; tradeFreeze = false; }
+  toast('Trade closed', '');
+}
+function renderTrade() {
+  if (!tradeEl || !tradeOpen || !game.merchant) return;
+  const m = game.merchant;
+  let h = '<div class="trTitle">' + m.name + ' <span class="csGold">' + GEM + ' ' + P.gold + '</span></div>';
+  h += '<div class="trTabs">' +
+    '<button class="trTab' + (tradeTab === 'buy' ? ' trOn' : '') + '" data-tab="buy">Buy</button>' +
+    '<button class="trTab' + (tradeTab === 'sell' ? ' trOn' : '') + '" data-tab="sell">Sell</button></div>';
+  if (tradeTab === 'sell') {
+    h += '<div class="trSub">Backpack ' + P.inv.length + '/' + INV_CAP +
+      ' - click an item and he buys it for you</div>';
+    for (let i = 0; i < P.inv.length; i++) {
+      const it = P.inv[i];
+      h += '<div class="trRow" data-sell="' + i + '">' + SLOTPL[it.slot] + ': ' + statLine(it) +
+        ' <span class="trAsk">' + GEM + ' ' + sellPrice(it) + '</span></div>';
+    }
+    if (!P.inv.length) h += '<div class="csEmptyRow">nothing to sell</div>';
+  } else {
+    h += '<div class="trSub">His pack - click an item and pay ' + GEM + ' ' +
+      'to buy it</div>';
+    for (let i = 0; i < m.stock.length; i++) {
+      const s = m.stock[i];
+      h += '<div class="trRow" data-buy="' + i + '">' + SLOTPL[s.item.slot] + ': ' + statLine(s.item) +
+        ' <span class="trAsk">' + GEM + ' ' + s.price + '</span></div>';
+    }
+    if (!m.stock.length) h += '<div class="csEmptyRow">his shelves are empty</div>';
+  }
+  tradeEl.innerHTML = h;
+}
+function tradeSell(i) {
+  const it = P.inv[i];
+  if (!it || !game.merchant) return;
+  const g = sellPrice(it);
+  P.inv.splice(i, 1);
+  P.gold += g;
+  // the consignment goes on his shelf: sold goods appear on the buy list
+  game.merchant.stock.push({ item: it, price: buyPrice(it) });
+  toast('Sold ' + it.name + ' (+' + g + ' gold) - now on his shelf', 'item-' + it.rarity);
+  S.gold();
+  renderTrade();
+}
+function tradeBuy(j) {
+  const m = game.merchant;
+  if (!m) return;
+  const s = m.stock[j];
+  if (!s) return;
+  if (P.inv.length >= INV_CAP) { toast('Backpack is full - no room for ' + s.item.name, ''); return; }
+  if (P.gold < s.price) { toast('Merchant: "that will be ' + s.price + ' gold, good friend"', ''); return; }
+  P.gold -= s.price;
+  m.stock.splice(j, 1);
+  P.inv.push(s.item);
+  toast('Bought ' + s.item.name, 'item-' + s.item.rarity);
+  S.gold();
+  renderTrade();
+}
+if (tradeEl && tradeEl.addEventListener) {
+  tradeEl.addEventListener('mousedown', (e) => {
+    let t = e.target;
+    while (t && t !== tradeEl) {
+      if (t.dataset && (t.dataset.tab || t.dataset.sell !== undefined || t.dataset.buy !== undefined)) break;
+      t = t.parentNode;
+    }
+    if (!t || t === tradeEl) return;
+    if (t.dataset.tab) { tradeTab = t.dataset.tab; renderTrade(); return; }
+    if (t.dataset.sell !== undefined) tradeSell(parseInt(t.dataset.sell, 10));
+    else if (t.dataset.buy !== undefined) tradeBuy(parseInt(t.dataset.buy, 10));
+  });
 }
 function equipFromInv(i) {
   const it = P.inv[i];

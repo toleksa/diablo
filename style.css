@@ -240,8 +240,27 @@ body {
 }
 #devMenu button:hover { background: #2a2140; box-shadow: 0 0 14px rgba(140,110,220,.35); }
 
-/* area map panel (M) */
-#miniMap {
+/* the trade post panel (T, near a merchant) */
+#tradeMenu {
+  position: absolute; right: 22px; bottom: 132px; width: 320px;
+  background: var(--panel); border: 1px solid var(--edge); border-radius: 4px;
+  z-index: 42; overflow: hidden; font-size: 13px;
+}
+.trTitle { color: var(--gold); font-size: 15px; padding: 8px 12px 2px; }
+.trTabs { padding: 6px 10px 2px; }
+.trTabs button {
+  display: inline-block; padding: 3px 11px; font-size: 12px; letter-spacing: 1px;
+  background: rgba(40, 32, 22, .8); border: 1px solid var(--edge); border-radius: 3px;
+  color: #8d7f68; font-family: inherit; cursor: pointer;
+}
+.trTabs button:hover { color: #ffd76a; background: rgba(70, 56, 30, .8); }
+.trTabs button.trOn { color: #ffd76a; background: rgba(70, 56, 30, .8); box-shadow: 0 0 10px rgba(200, 160, 90, .25); }
+.trSub { color: var(--gold); font-size: 11.5px; padding: 5px 12px 1px; border-top: 1px solid var(--edge); }
+.trRow { padding: 3px 12px; cursor: pointer; }
+.trRow:hover { background: rgba(80, 64, 38, .35); }
+.trAsk { color: #ffd76a; font-size: 12px; }
+
+/* area map panel (M) */#miniMap {
   position: absolute; top: 14px; right: 14px; z-index: 28;
   border: 2px solid #96702c;
   box-shadow: 0 0 16px rgba(0, 0, 0, 0.55), 0 0 26px rgba(120, 90, 200, 0.16);
