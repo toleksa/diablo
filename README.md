@@ -35,7 +35,10 @@ explore room by room like in Diablo, no pulls from across the map. Kill the
 quota of monsters' worth of progress, find the **boss waiting in the
 deepest room**, slay him to unlock the **portal behind his throne** (it
 stays dim while he lives, blazing bright once he falls) and descend one
-level deeper. Die → stats screen → try again.
+level deeper. Die → stats screen → try again. Every portal you enter
+**saves your journey in the browser** (checkpoint, level, attributes,
+gear, gold) — close the tab and the title screen will offer to continue
+your last journey instead of starting over.
 
 ## Systems
 

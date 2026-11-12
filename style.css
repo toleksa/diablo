@@ -171,11 +171,13 @@ body {
 .panelBox .sub { color: #a89a80; margin-bottom: 18px; font-style: italic; }
 .controls { font-size: 14px; line-height: 1.9; color: #c9bda2; margin-bottom: 24px; }
 .panelBox button {
+  display: block; margin: 16px auto 0;
   font-family: inherit; font-size: 18px; letter-spacing: 2px;
   color: #f3e6c0; background: linear-gradient(#5c3f14, #2c1d08);
   border: 2px solid #96702c; padding: 12px 34px; border-radius: 4px; cursor: pointer;
   text-shadow: 0 1px 2px #000;
 }
+.panelBox button + button { margin: 6px auto 0; }
 .panelBox button:hover { background: linear-gradient(#7a551c, #3c280c); box-shadow: 0 0 18px rgba(230,170,60,.35); }
 
 .red { color: #e05a4a; }

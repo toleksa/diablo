@@ -919,6 +919,32 @@ function openPortal() {
   banner('Portal opened — enter to go deeper', '#58c8f0');
 }
 
+// ---- journey save (issue #10): persisted to the browser on every portal ----
+const SAVEKEY = 'infernalCrucible_journey_v1';
+function saveSnapshot() {
+  try {
+    const data = {
+      v: 1, ts: Date.now(),
+      checkpoint: game.checkpoint,
+      level: P.level, xp: P.xp, xpNeed: P.xpNeed, gold: P.gold,
+      statPoints: P.statPoints,
+      attr: { str: P.attr.str, dex: P.attr.dex, int: P.attr.int, vit: P.attr.vit },
+      inv: P.inv, eq: P.eq,
+      totalKills: game.totalKills,
+    };
+    localStorage.setItem(SAVEKEY, JSON.stringify(data));
+  } catch (e) { /* no storage: silently skip */ }
+}
+function loadSnapshot() {
+  try {
+    const s = localStorage.getItem(SAVEKEY);
+    if (!s) return null;
+    const d = JSON.parse(s);
+    return (d && d.v === 1) ? d : null;
+  } catch (e) { return null; }
+}
+function clearSnapshot() { try { localStorage.removeItem(SAVEKEY); } catch (e) {} }
+
 function nextCheckpoint() {
   game.portal = null;
   game.checkpoint++;
@@ -930,6 +956,7 @@ function nextCheckpoint() {
   P.cd.potion = 0; // fresh potion at every checkpoint
   banner('Checkpoint ' + game.checkpoint, '#e8d8a0');
   preplaceMonsters();
+  saveSnapshot(); // journey saved — offered on the title screen after a restart
 }
 
 function showDeath() {
@@ -1493,6 +1520,7 @@ cv.addEventListener('contextmenu', (e) => {
 
 // ---------- run lifecycle ----------
 function beginRun() {
+  clearSnapshot(); // a brand-new game discards the previous journey
   resetGame(); resetPlayer();
   generateLevel(1);
   preplaceMonsters();
@@ -1501,13 +1529,39 @@ function beginRun() {
   toast('C — character and equipment · walk over items to pick them up', '');
 }
 
+// continue the journey saved at the last portal (issue #10)
+function beginContinue() {
+  const d = loadSnapshot();
+  if (!d) { beginRun(); return; }
+  resetGame(); resetPlayer();
+  game.checkpoint = d.checkpoint;
+  game.totalKills = d.totalKills || 0;
+  P.level = d.level; P.xp = d.xp; P.xpNeed = d.xpNeed; P.gold = d.gold;
+  P.statPoints = d.statPoints;
+  P.attr = { str: d.attr.str, dex: d.attr.dex, int: d.attr.int, vit: d.attr.vit };
+  P.inv = Array.isArray(d.inv) ? d.inv : [];
+  if (d.eq) for (const s of SLOTS) P.eq[s] = d.eq[s] || null;
+  refreshHpMax(); P.hp = P.hpMax; P.mana = mpMax();
+  generateLevel(game.checkpoint);
+  preplaceMonsters();
+  cam.x = P.x - VW / 2; cam.y = P.y - VH / 2;
+  toast('Continuing — checkpoint ' + game.checkpoint + ' · level ' + P.level, '');
+  toast('Your journey is saved at every portal', '');
+}
+
+const contBtn = document.getElementById('continueBtn');
+if (loadSnapshot()) contBtn.classList.remove('hidden'); // a saved journey exists: offer it
 document.getElementById('startBtn').addEventListener('click', () => {
   document.getElementById('startScreen').classList.add('hidden');
   beginRun();
 });
+contBtn.addEventListener('click', () => {
+  document.getElementById('startScreen').classList.add('hidden');
+  beginContinue();
+});
 document.getElementById('restartBtn').addEventListener('click', () => {
   document.getElementById('deathScreen').classList.add('hidden');
-  beginRun();
+  beginContinue(); // retry at the last saved portal; fresh start when there is no save
 });
 
 // ---------- main loop ----------
