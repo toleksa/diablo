@@ -45,7 +45,9 @@ descend one level deeper. Die → stats screen → try again.
   regen from level 5.
 - **Mana** (blue) regenerates slowly; combat swings feed it back.
 - **Items**: common/magic/rare/legendary gear for weapon/helm/armour with
-  affixes; weapons scale with an attribute shown on the item. Every pickup
+  affixes. Each weapon rolls an attribute-scaling bonus **(+1–200% of one
+  attribute, high rolls progressively rarer)**, shown on the item like
+  `Damage: +14 (+87% Strength)` — the bonus is attribute value × that %. Every pickup
   goes to your 12-slot **inventory** — you equip and swap gear manually from
   the sheet (key C), even mid-fight.
 - **Zoom** scales with your monitor: the visible world stays readable on big

@@ -392,8 +392,11 @@ function rollItem(cp, forceGood) {
   let wscale = null;
   if (slot==='weapon') {
     wscale = pick(['str', 'dex', 'int']);
+    // scaling %: 1..200, higher rolls progressively rarer
+    const pct = Math.max(1, Math.round(200 * Math.pow(rand(0, 1), 2.6)));
     const v = Math.round(rand(b.dmg[0], b.dmg[1]) * scale * rar.mult);
-    stats.push({k:'dmg', v, scale: wscale, txt: 'Damage: +' + v + ' (' + ATTRPL[wscale] + ')'});
+    stats.push({k:'dmg', v, scale: wscale, pct,
+      txt: 'Damage: +' + v + ' (+' + pct + '% ' + ATTRPL[wscale] + ')'});
   } else {
     const v = Math.round(rand(b.hp[0], b.hp[1]) * scale * rar.mult);
     stats.push({k:'hp', v, txt:'Life: +'+v});
@@ -401,12 +404,15 @@ function rollItem(cp, forceGood) {
   const names = [];
   for (let i=0;i<rar.afx;i++){
     const a = pick(AFFIX);
-    if (chance(0.5)) { const v = randInt(1,3)*(1+Math.floor(cp/3)); stats.push({k:'dmg', v, scale: wscale, txt: 'Damage: +' + v + (wscale ? ' (' + ATTRPL[wscale] + ')' : '')}); }
+    if (chance(0.5)) { const v = randInt(1,3)*(1+Math.floor(cp/3)); stats.push({k:'dmg', v, txt:'Damage: +'+v}); }
     else { const v = randInt(3,8)*(1+Math.floor(cp/2)); stats.push({k:'hp',v,txt:'Life: +'+v}); }
     names.push(a);
   }
   const nm = (rar.name ? rar.name+' ' : '') + b.name + (names.length ? ' '+names.join(' i ') : '');
-  const score = stats.reduce((s,st)=>s+st.v*(st.k==='dmg'?2.2:1),0);
+  // score counts the scaling bonus at an assumed average attribute (~11):
+  // bonus dmg ≈ pct × 11 / 100
+  const score = stats.reduce((s, st) =>
+    s + (st.k === 'dmg' ? (st.v + (st.pct || 0) * 0.11) * 2.2 : st.v), 0);
   return { slot, name:nm, rarity:rar.id, stats, score, cp };
 }
 
@@ -417,10 +423,18 @@ function dropItem(x, y, cp, guarantee) {
 
 // ---------- COMBAT / PROGRESSION ----------
 // dmg stats on items scale with their scale-attr (weapons carry one)
-function attrBonus(scale) { return 1 + (P.attr[scale || 'str'] - 8) * 0.025; }
 function playerDmg() {
   let d = P.baseDmg + (P.level-1)*2;
-  for (const s of SLOTS) { const e = P.eq[s]; if (e) for (const st of e.stats) if (st.k==='dmg') d += st.v * attrBonus(st.scale); }
+  for (const s of SLOTS) {
+    const e = P.eq[s];
+    if (!e) continue;
+    for (const st of e.stats) {
+      if (st.k !== 'dmg') continue;
+      d += st.v; // flat base damage
+      // scaling bonus: attribute value × weapon pct (rolled 1-200 on spawn)
+      if (st.scale && st.pct) d += P.attr[st.scale] * st.pct / 100;
+    }
+  }
   return d;
 }
 function mpMax() { return 100 + (P.attr.int - 8) * 4; }
