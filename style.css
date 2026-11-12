@@ -126,7 +126,9 @@ body {
 .skillSlot.big .skillIcon { font-size: 30px; }
 .cdRing {
   position: absolute; inset: 0; border-radius: 4px; pointer-events: none;
-  background: conic-gradient(rgba(0,0,0,0) var(--cd, 0turn), rgba(0,0,5,.78) var(--cd, 0turn));
+  /* ready = bright; right after use the whole disc is dark and the dark
+     shadow shrinks away clockwise as the cooldown recovers */
+  background: conic-gradient(rgba(0,0,0,0) calc(1turn - var(--cd, 0turn)), rgba(6,5,10,.85) calc(1turn - var(--cd, 0turn)));
 }
 .keyHint {
   position: absolute; right: 3px; bottom: 2px; font-size: 10px; color: #b7a271;
