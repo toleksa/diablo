@@ -1534,6 +1534,261 @@ function backToMenu() {
   if (scr) scr.classList.remove('hidden');
   if (loadSnapshot()) document.getElementById('continueBtn').classList.remove('hidden');
 }
+
+// ---------- the title screen's painted art (issue #55) ----------
+// no image files anywhere in this game, so the title card is painted too: a
+// wordmark with crossed swords behind it, a warrior in armour framing the left
+// edge and the princess you are there to save framing the right. The princess
+// wears a gown and a crown - a captured prize reads as a prize, deliberately
+// not disrobed.
+const LOGO_W = 470, LOGO_H = 92, FIG_W = 150, FIG_H = 430;
+function paintLogo(g, w, h) {
+  const cx = w / 2, cy = h / 2;
+  g.lineCap = 'round';
+  // the crossed swords that lie behind the word
+  const sword = (x0, y0, x1, y1, col) => {
+    g.strokeStyle = col; g.lineWidth = 6;
+    g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+    const a = Math.atan2(y1 - y0, x1 - x0);
+    const px = Math.cos(a + Math.PI / 2) * 9, py = Math.sin(a + Math.PI / 2) * 9;
+    const gx = x0 + Math.cos(a) * 20, gy = y0 + Math.sin(a) * 20;
+    g.strokeStyle = '#c8a45a'; g.lineWidth = 3.4; // the crossguard
+    g.beginPath(); g.moveTo(gx - px, gy - py); g.lineTo(gx + px, gy + py); g.stroke();
+    g.strokeStyle = '#7c5a24'; g.lineWidth = 4; // the grip
+    g.beginPath(); g.moveTo(x0, y0); g.lineTo(x0 + Math.cos(a) * 14, y0 + Math.sin(a) * 14); g.stroke();
+  };
+  sword(18, h - 12, w - 18, 12, 'rgba(156,166,182,0.5)');
+  sword(w - 18, h - 12, 18, 12, 'rgba(122,132,150,0.42)');
+  // embers under the word
+  for (let i = 0; i < 22; i++) {
+    const ex = (i * 53 + 17) % w, ey = h - (i * 29) % 22;
+    g.fillStyle = 'rgba(226,110,44,' + (0.07 + (i % 4) * 0.03) + ')';
+    g.beginPath(); g.arc(ex, ey, 1 + (i % 3), 0, TAU); g.fill();
+  }
+  // the wordmark: letterspaced, inked dark then laid in gold
+  g.textAlign = 'left'; g.textBaseline = 'middle';
+  g.font = 'bold 31px Georgia';
+  const word = (txt, y, mode) => {
+    let total = 0;
+    const adv = [];
+    for (let i2 = 0; i2 < txt.length; i2++) { const q = g.measureText(txt[i2]).width + 3.4; adv.push(q); total += q; }
+    let px2 = cx - total / 2, i2 = 0;
+    for (const ch2 of txt) {
+      if (mode === 'stroke') g.strokeText(ch2, px2, y);
+      else g.fillText(ch2, px2, y);
+      px2 += adv[i2]; i2++;
+    }
+  };
+  g.shadowColor = 'rgba(206,74,26,0.6)'; g.shadowBlur = 16;
+  g.lineJoin = 'round'; g.lineWidth = 5.5; g.strokeStyle = '#231006';
+  word('INFERNAL', cy - 20, 'stroke');
+  word('CRUCIBLE', cy + 21, 'stroke');
+  const grd = g.createLinearGradient(0, cy - 34, 0, cy + 34);
+  grd.addColorStop(0, '#f2dc9a'); grd.addColorStop(0.52, '#d8b25a'); grd.addColorStop(1, '#8c6728');
+  g.fillStyle = grd;
+  word('INFERNAL', cy - 20, 'fill');
+  word('CRUCIBLE', cy + 21, 'fill');
+  g.shadowBlur = 0;
+}
+
+function paintWarrior(g, w, h) {
+  const cx = w * 0.5, base = h * 0.955;
+  // backdrop: down-lit stone, courses of an old stair
+  const bg = g.createLinearGradient(0, 0, 0, h);
+  bg.addColorStop(0, '#1a1519'); bg.addColorStop(0.5, '#131015'); bg.addColorStop(1, '#090608');
+  g.fillStyle = bg; g.fillRect(0, 0, w, h);
+  const beam = g.createLinearGradient(0, 0, 0, h);
+  beam.addColorStop(0, 'rgba(232,206,158,0.2)'); beam.addColorStop(1, 'rgba(232,206,158,0)');
+  g.fillStyle = beam; g.fillRect(0, 0, w, h);
+  g.strokeStyle = 'rgba(150,132,98,0.14)'; g.lineWidth = 1;
+  for (let i = 1; i < 9; i++) {
+    g.beginPath(); g.moveTo(0, h * (i / 9)); g.lineTo(w, h * (i / 9) + 6); g.stroke();
+  }
+  const U = h / 430; // a figure of the whole panel height
+  g.fillStyle = 'rgba(0,0,0,0.5)';
+  g.beginPath(); g.ellipse(cx, base + 4 * U, 40 * U, 9 * U, 0, 0, TAU); g.fill();
+  // a war-cloak hung behind
+  g.fillStyle = '#5a1c22';
+  g.beginPath();
+  g.moveTo(cx - 30 * U, 138 * U); g.lineTo(cx + 30 * U, 138 * U);
+  g.lineTo(cx + 40 * U, 348 * U); g.lineTo(cx - 40 * U, 348 * U);
+  g.closePath(); g.fill();
+  // legs and boots
+  g.strokeStyle = '#3b4552'; g.lineWidth = 15 * U; g.lineCap = 'round';
+  g.beginPath();
+  g.moveTo(cx - 12 * U, 282 * U); g.lineTo(cx - 16 * U, base - 16 * U);
+  g.moveTo(cx + 12 * U, 282 * U); g.lineTo(cx + 17 * U, base - 16 * U);
+  g.stroke();
+  g.fillStyle = '#22262e';
+  g.beginPath();
+  g.ellipse(cx - 17 * U, base - 6 * U, 15 * U, 9 * U, 0, 0, TAU);
+  g.ellipse(cx + 18 * U, base - 6 * U, 15 * U, 9 * U, 0, 0, TAU);
+  g.fill();
+  // tassets, then the cuirass
+  g.fillStyle = '#47525e';
+  g.beginPath();
+  g.moveTo(cx - 27 * U, 258 * U); g.lineTo(cx + 27 * U, 258 * U);
+  g.lineTo(cx + 22 * U, 296 * U); g.lineTo(cx - 22 * U, 296 * U);
+  g.closePath(); g.fill();
+  g.fillStyle = '#5d6a7c';
+  g.beginPath();
+  g.moveTo(cx - 32 * U, 152 * U); g.lineTo(cx + 32 * U, 152 * U);
+  g.lineTo(cx + 26 * U, 262 * U); g.lineTo(cx - 26 * U, 262 * U);
+  g.closePath(); g.fill();
+  g.strokeStyle = '#8ea0b4'; g.lineWidth = 1.4; // the plates
+  for (let i = 0; i < 4; i++) {
+    g.beginPath(); g.moveTo(cx - 30 * U, (172 + i * 24) * U); g.lineTo(cx + 30 * U, (172 + i * 24) * U); g.stroke();
+  }
+  g.strokeStyle = '#c8a45a'; g.lineWidth = 3 * U; // the gold ridge and belt
+  g.beginPath(); g.moveTo(cx, 158 * U); g.lineTo(cx, 258 * U); g.stroke();
+  g.beginPath(); g.moveTo(cx - 28 * U, 256 * U); g.lineTo(cx + 28 * U, 256 * U); g.stroke();
+  // pauldrons
+  g.fillStyle = '#7e8ea4';
+  g.beginPath();
+  g.arc(cx - 36 * U, 158 * U, 20 * U, 0, TAU);
+  g.arc(cx + 36 * U, 158 * U, 20 * U, 0, TAU);
+  g.fill();
+  // the sword, planted point-down beside the boot
+  g.strokeStyle = '#c9d2dd'; g.lineWidth = 6 * U;
+  g.beginPath(); g.moveTo(cx + 52 * U, 150 * U); g.lineTo(cx + 52 * U, 396 * U); g.stroke();
+  g.fillStyle = '#c9d2dd';
+  g.beginPath();
+  g.moveTo(cx + 49 * U, 396 * U); g.lineTo(cx + 55 * U, 396 * U); g.lineTo(cx + 52 * U, 414 * U);
+  g.closePath(); g.fill();
+  g.strokeStyle = '#c8a45a'; g.lineWidth = 4 * U;
+  g.beginPath(); g.moveTo(cx + 38 * U, 152 * U); g.lineTo(cx + 66 * U, 152 * U); g.stroke();
+  g.fillStyle = '#8a6a34';
+  g.beginPath(); g.arc(cx + 52 * U, 134 * U, 5 * U, 0, TAU); g.fill();
+  // the shield on the other arm
+  g.fillStyle = '#3f4a58';
+  g.beginPath(); g.arc(cx - 44 * U, 226 * U, 28 * U, 0, TAU); g.fill();
+  g.strokeStyle = '#c8a45a'; g.lineWidth = 2.4;
+  g.beginPath(); g.arc(cx - 44 * U, 226 * U, 21 * U, 0, TAU); g.stroke();
+  g.fillStyle = '#c8a45a';
+  g.beginPath(); g.arc(cx - 44 * U, 226 * U, 6 * U, 0, TAU); g.fill();
+  // the helm and its crest
+  g.fillStyle = '#7e8ea4';
+  g.beginPath(); g.arc(cx, 122 * U, 24 * U, 0, TAU); g.fill();
+  g.fillStyle = '#2a313c';
+  g.fillRect(cx - 22 * U, 118 * U, 44 * U, 9 * U); // the visor slit
+  g.fillStyle = '#a03a3a';
+  g.beginPath();
+  g.moveTo(cx - 4 * U, 100 * U);
+  g.bezierCurveTo(cx - 26 * U, 78 * U, cx - 30 * U, 118 * U, cx - 16 * U, 150 * U);
+  g.lineTo(cx - 4 * U, 118 * U);
+  g.closePath(); g.fill();
+  // vignette so the figure reads out of the dark
+  const vg = g.createRadialGradient(cx, h * 0.5, 60, cx, h * 0.5, w * 1.15);
+  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(4,2,8,0.8)');
+  g.fillStyle = vg; g.fillRect(0, 0, w, h);
+}
+
+function paintPrincess(g, w, h) {
+  const cx = w * 0.5, base = h * 0.955;
+  // backdrop: a moonlit arch somewhere far above the Crucible
+  const bg = g.createLinearGradient(0, 0, 0, h);
+  bg.addColorStop(0, '#171626'); bg.addColorStop(0.55, '#121018'); bg.addColorStop(1, '#0a070c');
+  g.fillStyle = bg; g.fillRect(0, 0, w, h);
+  g.fillStyle = 'rgba(150,160,200,0.10)';
+  g.beginPath();
+  g.moveTo(cx - 44 * 1, h * 0.62);
+  g.quadraticCurveTo(cx, h * 0.06, cx + 44, h * 0.62);
+  g.lineTo(cx + 44, h * 0.62);
+  g.closePath(); g.fill();
+  g.fillStyle = 'rgba(222,232,255,0.5)';
+  g.beginPath(); g.arc(cx + 22, h * 0.16, 13, 0, TAU); g.fill();
+  g.fillStyle = 'rgba(222,232,255,0.06)';
+  g.beginPath(); g.arc(cx + 22, h * 0.16, 30, 0, TAU); g.fill();
+  const U = h / 430;
+  g.fillStyle = 'rgba(0,0,0,0.45)';
+  g.beginPath(); g.ellipse(cx, base + 3 * U, 34 * U, 8 * U, 0, 0, TAU); g.fill();
+  // the gown: bodice, then a skirt falling to the floor
+  g.fillStyle = '#8f88c6';
+  g.beginPath();
+  g.moveTo(cx - 18 * U, 152 * U); g.lineTo(cx + 18 * U, 152 * U);
+  g.lineTo(cx + 22 * U, 236 * U); g.lineTo(cx - 22 * U, 236 * U);
+  g.closePath(); g.fill();
+  g.fillStyle = '#a49cd8';
+  g.beginPath();
+  g.moveTo(cx - 22 * U, 236 * U); g.lineTo(cx + 22 * U, 236 * U);
+  g.lineTo(cx + 40 * U, base); g.lineTo(cx - 40 * U, base);
+  g.closePath(); g.fill();
+  g.strokeStyle = 'rgba(70,62,110,0.55)'; g.lineWidth = 1.6; // the folds
+  for (let i = -2; i <= 2; i++) {
+    g.beginPath();
+    g.moveTo(cx + i * 9 * U, 240 * U);
+    g.lineTo(cx + i * 16 * U, base - 3 * U);
+    g.stroke();
+  }
+  g.strokeStyle = '#e6c477'; g.lineWidth = 2.4; // a sash at the waist
+  g.beginPath(); g.moveTo(cx - 21 * U, 232 * U); g.lineTo(cx + 21 * U, 232 * U); g.stroke();
+  // sleeves and folded hands
+  g.strokeStyle = '#8f88c6'; g.lineWidth = 9 * U; g.lineCap = 'round';
+  g.beginPath();
+  g.moveTo(cx - 16 * U, 160 * U); g.lineTo(cx - 22 * U, 244 * U);
+  g.moveTo(cx + 16 * U, 160 * U); g.lineTo(cx + 22 * U, 244 * U);
+  g.stroke();
+  g.fillStyle = '#e2c8b0';
+  g.beginPath(); g.arc(cx, 250 * U, 7 * U, 0, TAU); g.fill();
+  // the lantern at her feet, lit
+  const lx = cx + 44 * U, ly = base - 26 * U;
+  const lg = g.createRadialGradient(lx, ly, 0, lx, ly, 34);
+  lg.addColorStop(0, 'rgba(255,214,120,0.5)'); lg.addColorStop(1, 'rgba(255,214,120,0)');
+  g.fillStyle = lg; g.beginPath(); g.arc(lx, ly, 34, 0, TAU); g.fill();
+  g.strokeStyle = '#a98a50'; g.lineWidth = 2;
+  g.beginPath(); g.moveTo(lx, ly - 16); g.lineTo(lx, ly - 24); g.stroke();
+  g.fillStyle = '#ffe2a0';
+  g.beginPath(); g.arc(lx, ly, 8, 0, TAU); g.fill();
+  g.strokeStyle = '#a98a50'; g.lineWidth = 1.6;
+  g.beginPath(); g.arc(lx, ly, 10, 0, TAU); g.stroke();
+  // hair and a crowned head
+  g.fillStyle = '#c9a25c';
+  g.beginPath();
+  g.moveTo(cx - 16 * U, 106 * U);
+  g.bezierCurveTo(cx - 26 * U, 150 * U, cx - 22 * U, 176 * U, cx - 15 * U, 196 * U);
+  g.lineTo(cx + 15 * U, 196 * U);
+  g.bezierCurveTo(cx + 22 * U, 176 * U, cx + 26 * U, 150 * U, cx + 16 * U, 106 * U);
+  g.closePath(); g.fill();
+  g.fillStyle = '#e6ccba';
+  g.beginPath(); g.arc(cx, 122 * U, 17 * U, 0, TAU); g.fill();
+  g.fillStyle = '#a98a50'; // the crown
+  g.beginPath();
+  g.moveTo(cx - 15 * U, 104 * U); g.lineTo(cx - 15 * U, 92 * U);
+  g.lineTo(cx - 7 * U, 100 * U); g.lineTo(cx, 88 * U);
+  g.lineTo(cx + 7 * U, 100 * U); g.lineTo(cx + 15 * U, 92 * U);
+  g.lineTo(cx + 15 * U, 104 * U);
+  g.closePath(); g.fill();
+  g.fillStyle = '#7ec7e8';
+  g.beginPath(); g.arc(cx, 97 * U, 3 * U, 0, TAU); g.fill();
+  // a snapped bracelet at the base: what was held here is free now
+  g.strokeStyle = '#c8a45a'; g.lineWidth = 2.4;
+  g.beginPath(); g.arc(cx - 30 * U, base - 4 * U, 8 * U, 0.4, 3.4); g.stroke();
+  g.beginPath(); g.arc(cx - 18 * U, base - 2 * U, 7 * U, 2.2, 5.4); g.stroke();
+  const vg = g.createRadialGradient(cx, h * 0.5, 60, cx, h * 0.5, w * 1.15);
+  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(4,2,10,0.8)');
+  g.fillStyle = vg; g.fillRect(0, 0, w, h);
+}
+const logoBox = document.getElementById('logoArt');
+const figL = document.getElementById('artL');
+const figR = document.getElementById('artR');
+if (logoBox && logoBox.appendChild) {
+  const c2 = document.createElement('canvas');
+  c2.width = LOGO_W; c2.height = LOGO_H;
+  logoBox.appendChild(c2);
+  paintLogo(c2.getContext('2d'), LOGO_W, LOGO_H);
+}
+if (figL && figL.appendChild) {
+  const c2 = document.createElement('canvas');
+  c2.width = FIG_W; c2.height = FIG_H;
+  figL.appendChild(c2);
+  paintWarrior(c2.getContext('2d'), FIG_W, FIG_H);
+}
+if (figR && figR.appendChild) {
+  const c2 = document.createElement('canvas');
+  c2.width = FIG_W; c2.height = FIG_H;
+  figR.appendChild(c2);
+  paintPrincess(c2.getContext('2d'), FIG_W, FIG_H);
+}
 // ============ PART 6a — GRAPHICS: setup + world ============
 const cv = document.getElementById('canvas');
 const ctx = cv.getContext('2d');

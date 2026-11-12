@@ -185,6 +185,22 @@ body {
 .red { color: #e05a4a; }
 .cyan { color: #58c8e0; }
 .gold { color: #e6c477; }
+
+/* start screen art (issue #55): a painted logo replaces the title text, and two
+   full-height figures frame the window. The panels reserve gutters for them. */
+#startScreen .panelBox {
+  position: relative; max-width: 900px; padding: 26px 168px 30px;
+}
+.logoArt { width: 470px; max-width: 100%; height: 92px; margin: 0 auto 14px; }
+.logoArt canvas { display: block; width: 100%; height: 100%; }
+.figureArt {
+  position: absolute; top: 8px; bottom: 8px; width: 150px;
+  background: #0b0908; border: 2px solid #4a3820; border-radius: 3px;
+  box-shadow: 0 0 26px rgba(0, 0, 0, .8), inset 0 0 26px rgba(0, 0, 0, .75);
+}
+#artL { left: 10px; }
+#artR { right: 10px; }
+.figureArt canvas { display: block; width: 100%; height: 100%; }
 #winArt {
   width: 268px; height: 252px; margin: 10px auto 14px; background: #0a0710;
   border: 2px solid #6b4f22; border-radius: 3px;

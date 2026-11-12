@@ -14,6 +14,12 @@ the folder:
 python3 -m http.server 8123   # then open http://localhost:8123/
 ```
 
+The title card is painted by the same code as the game: a crossed-swords
+**logo** carries the name, a full-armoured **warrior** with his sword planted
+framing one side of the window and the **crowned princess** you are there to
+save, lantern in hand, framing the other. She keeps her gown on - the prize
+reads as a prize, not as a trophy.
+
 Prefer to watch first? The title screen's **Watch the Demo (AI plays)** button
 hands the hero to a small internal AI and lets the run play itself: the bot
 duels whatever it can actually **see** (a foe behind a wall is ignored, not
