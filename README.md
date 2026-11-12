@@ -55,7 +55,9 @@ level deeper. **Treasure chests** hide among the rooms — walk up to one
 and it springs open: a **magic-or-better** item plus gold. Die → stats
 screen → try again. Foes give chase only up to a **leash** — far from
 their spot they stop, glance around, and walk back to sleep where they
-started. Every portal you enter
+started. The leash even holds the **Goblin Warboss** to his throne room: he
+never hunts the whole dungeon, he is slower than a running hero, and he
+shuffles back to his mark at half pace. Every portal you enter
 **saves your journey in the browser** (checkpoint, level, attributes,
 gear, gold) — close the tab and the title screen will offer to continue
 your last journey instead of starting over.
