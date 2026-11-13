@@ -1709,8 +1709,10 @@ function tryAttack() {
 // blow, a good deal stronger than a plain attack, cheap on mana and ready
 // again in seconds; skill 3 is the finisher, way stronger, way more mana,
 // a long cooldown. The yardstick:
-//   skill 2: 1.7-2.1x a plain hit, 12-14 mana, 4 s
-//   skill 3: 2.2-2.6x a plain hit over an area, 40-45 mana, 11-13 s
+//   skill 2: 1.7-2.1x a plain hit, 12-14 mana, 2 s
+//   skill 3: 2.2-2.6x a plain hit over an area, 40-45 mana, 5.5-6.5 s
+//   (reopened #81 halved every cooldown once: 4 s openers became 2, 11-13 s
+//   finishers 5.5-6.5, and the tonic's 60 s recovery is now 30)
 // One opener does not front-load that blow, and it is not an accident:
 // issue #73 asked that the Rogue's Venom Shot land an ordinary arrow and
 // leave another two plain hits to EAT at the foe over half a minute. Its
@@ -1719,36 +1721,36 @@ function tryAttack() {
 // own bite wearing a different name.
 const SKILLS = {
   cleave: {
-    name: 'Cleave', mana: 12, cd: 4, weapon: 'melee', run: castCleave,
+    name: 'Cleave', mana: 12, cd: 2, weapon: 'melee', run: castCleave,
     blurb: 'a wide two-handed swing that catches every foe in the arc',
   },
   earthquake: {
-    name: 'Earthquake', mana: 40, cd: 12, weapon: 'melee', run: castEarthquake,
+    name: 'Earthquake', mana: 40, cd: 6, weapon: 'melee', run: castEarthquake,
     blurb: 'hurl yourself at the crowd and let the ground answer, stunning it',
   },
   herostrike: {
-    name: 'Hero Strike', mana: 14, cd: 4, weapon: 'melee', run: castHeroStrike,
+    name: 'Hero Strike', mana: 14, cd: 2, weapon: 'melee', run: castHeroStrike,
     precheck: precheckHeroStrike,
     blurb: 'one planted blow, twice a plain attack, that shoves the foe back',
   },
   whirlwind: {
-    name: 'Whirlwind', mana: 40, cd: 11, weapon: 'melee', run: castWhirlwind,
+    name: 'Whirlwind', mana: 40, cd: 5.5, weapon: 'melee', run: castWhirlwind,
     blurb: 'a spin that answers for every foe within reach',
   },
   venshot: {
-    name: 'Venom Shot', mana: 12, cd: 4, weapon: 'ranged', run: castVenomShot,
+    name: 'Venom Shot', mana: 12, cd: 2, weapon: 'ranged', run: castVenomShot,
     blurb: 'an ordinary arrow whose venom keeps eating at the foe for half a minute',
   },
   bladefan: {
-    name: 'Blade Fan', mana: 42, cd: 12, weapon: 'ranged', run: castBladeFan,
+    name: 'Blade Fan', mana: 42, cd: 6, weapon: 'ranged', run: castBladeFan,
     blurb: 'six arrows fanned out around the hero',
   },
   frostlance: {
-    name: 'Frost Lance', mana: 14, cd: 4, weapon: 'ranged', run: castFrostLance,
+    name: 'Frost Lance', mana: 14, cd: 2, weapon: 'ranged', run: castFrostLance,
     blurb: 'a cold bolt that slows whatever it bites',
   },
   chainbolt: {
-    name: 'Chain Bolt', mana: 45, cd: 13, weapon: 'ranged', run: castChainBolt,
+    name: 'Chain Bolt', mana: 45, cd: 6.5, weapon: 'ranged', run: castChainBolt,
     blurb: 'lightning that leaves the hero for the nearest foe he can see, then leaps from foe to foe, each leap drawn as an arc between the two',
   },
 };
@@ -2160,11 +2162,11 @@ function leapLand(x, y, mul, stunT) {
     }
   }
 }
-// potions are unlimited; only a 60 s cooldown gates them (issue: unlimited potions)
+// potions are unlimited; only a 30 s cooldown gates them (issue: unlimited potions)
 function drinkPotion() {
   if (P.dead || P.cd.potion > 0) return false;
   if (P.hp >= P.hpMax) return false;
-  P.cd.potion = 60;
+  P.cd.potion = 30;
   const heal = Math.ceil(P.hpMax * 0.5);
   P.hp = Math.min(P.hpMax, P.hp + heal);
   S.potion();
