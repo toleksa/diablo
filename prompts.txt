@@ -14,7 +14,7 @@
 # The wording follows ART_BIBLE.md: the same palette (names AND hex codes), the
 # same material and silhouette language, the same "painterly detail +
 # believable materials" rule. Keep every image inside that vocabulary so the
-# five pieces read as one art set when shown together.
+# seven pieces read as one art set when shown together.
 #
 # Shared STYLE ANCHOR (already expanded inside each PROMPT):
 #   "Dark Gothic Fantasy, realistic stylization, painterly detail combined with
@@ -165,13 +165,69 @@ FORMAT:
 USE:
 the first level's overlord: BOSSES[0] "Goruk - Goblin Warboss" in game.js,
 which since issue #57 waits by the level-one portal and steps out when the
-hero gets within half sight of it; its big r:27 body and red #b03a3a are the
+hero lets the WHOLE gate into the torchlight around him; its big r:27 body and red #b03a3a are the
 silhouette and palette this asset must keep.
+
+================================================================================
+6. LOCATION FRAGMENT - "The Lich Throne", the thirteenth stage
+================================================================================
+PROMPT:
+A single environment concept tile for a dark fantasy action RPG: the whole
+interior of one small, closed gothic hall read from a high three-quarter isometric
+game angle. Bone-white ash masonry with cold iron fittings and battered iron
+fittings at the corners, and a single blood-red carpet running from a low gate at
+one end up to two steps of dais at the other. On the dais stands one tall gothic
+throne: a spined back crowned by a skull finial, wide flat arms, pale banners
+hung flat on the wall behind it. Free-standing iron candlesticks line the walls
+and flank the carpet, burning cold green candle flame, and a pale word glows
+above the seat. There is no gate, arch or portal anywhere in the room - the prize
+there is furniture. Palette strictly muted: obsidian #171719 shadows, charcoal
+#29282B stone, bone #C6BDAA worn edges and banners, blood burgundy #642A32
+carpet, antique gold #A98A50 only on the throne fittings, no characters, no
+creatures, no user interface, no readable text.
+NEGATIVE:
+modern furniture, corridor maze, another exit, glowing portal, warm torchlight,
+neon, cartoon, chibi, oversaturated red, readable text, watermark, characters
+FORMAT:
+2048x1152 (16:9)
+USE:
+background art for the thirteenth stage: FINAL_THEME and game.finalHall in game.js,
+the lich king's throne room added by issue #69 - one small square hall, the blood
+carpet up to the dais, the candlesticks and the throne, and nothing else in it.
+
+================================================================================
+7. BOSS CHARACTER - "Adrith the Lich King", the last overlord
+================================================================================
+PROMPT:
+A single boss character sheet for a dark fantasy action RPG: an undead lich king
+standing full height and facing the viewer at a slight three-quarter angle, on a
+plain charcoal ground. He is bred far wider and taller than any ordinary overlord:
+broad flat shoulders under a tattered mantle, a crown of tall bone spires rising
+off a skull-like head, hollow sockets lit cold, a long reaping scythe held out in
+one hand with the blade curved over the head, and a cold spectral aura read at his
+feet. Bone-white and ash armour plates over rotted mail, antique gold edging only
+on the crown and the socket of the blade. Dark Gothic Fantasy, realistic
+stylization, painterly detail combined with physically believable materials:
+aged bone, pitted metal, rotted cloth. Palette strictly muted: bone #C6BDAA,
+ash grey #68666A, obsidian #171719, charcoal #29282B, antique gold #A98A50, with
+saturated color reserved for the cold aura. No text, no watermark, no user
+interface, one figure only.
+NEGATIVE:
+living king, human king, warm fire magic, spellcaster robe, goblin proportions,
+small boss, cartoon, chibi, photoreal horror, extra arms, extra fingers, glowing
+eye beams, text, watermark, background architecture
+FORMAT:
+1024x1536 (2:3 vertical)
+USE:
+the last overlord of the run: BOSSES[FINAL_LEVEL - 1] "Adrith the Lich King -
+the Last Throne" in game.js, added by issue #69, whose model is bred FINAL_BOSS_BIG
+against the other overlords and whose hands are the grave chorus, the cold grasp
+and the charge.
 
 ================================================================================
 NOTE - keeping the set coherent
 ================================================================================
-All five prompts share the ART_BIBLE.md anchor on purpose. When the set is
+All seven prompts share the ART_BIBLE.md anchor on purpose. When the set is
 generated, compare them side by side before anything enters the game: same
 light temperature, same material language, same degree of wear, same palette.
 If one asset drifts, regenerate only that one with its approved references

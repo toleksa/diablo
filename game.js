@@ -107,7 +107,7 @@ const P = {
   hp: 120, hpMax: 120, mana: 0,
   attr: { str: 8, dex: 8, int: 8, vit: 10 }, statPoints: 0, inv: [],
   xp: 0, xpNeed: 80, level: 1, gold: 0,
-  atkT: 0, dead: false, leap: null,
+  atkT: 0, dead: false, leap: null, chill: 0, // the lich king's cold grasp (issue #69)
   idleT: 0, idleP: 0, // fifteen idle seconds start a short stretch (issue #47)
   cd: { potion: 0, sk2: 0, sk3: 0 },
   eq: { weapon: null, helm: null, armor: null },
@@ -134,6 +134,7 @@ const game = {
   paused: false, // P freezes the whole simulation (issue #44)
   victoryOpen: false, victoryShown: false, // the tenth level's victory window (issue #51)
   bossSpot: null, bossPending: false, // the overlord waits by the portal (issue #57)
+  throne: null, seat: 0, finalHall: null, // the thirteenth stage (issue #69)
 };
 function resetGame() {
   mcp = 1;
@@ -146,6 +147,7 @@ function resetGame() {
     paused: false,
     victoryOpen: false, victoryShown: false,
     bossSpot: null, bossPending: false,
+    throne: null, seat: 0, finalHall: null,
   });
   game.monsters = []; game.projectiles = []; game.globes = [];
   game.goldpiles = []; game.drops = []; game.particles = [];
@@ -162,7 +164,7 @@ function resetPlayer(cls) {
     cls: (cls && CLASSES[cls]) ? cls : 'barbar',
     attr: { str: c.attr.str, dex: c.attr.dex, int: c.attr.int, vit: c.attr.vit }, statPoints: 0, inv: [],
     xp: 0, xpNeed: 60,
-    level: 1, gold: 0, atkT: 0, dead: false, leap: null,
+    level: 1, gold: 0, atkT: 0, dead: false, leap: null, chill: 0,
     idleT: 0, idleP: 0,
     cd: { potion: 0, sk2: 0, sk3: 0 },
     // a class always starts with its own tool already equipped (issue #65),
@@ -194,13 +196,24 @@ const THEMES = [
     br: '#2a110b', fl: 'rgba(255,120,58,0.95)', fc: 'rgba(255,224,130,0.95)',
     halo: '255,92,40', dark: 'rgba(12,3,3,0.86)', void: '#0b0403' },
 ];
-function themeOf(cp) { return THEMES[clamp(Math.floor((cp - 1) / 3), 0, THEMES.length - 1)]; }
+// the thirteenth stage belongs to no realm: the lich king's throne room is
+// bone-white stone, blood carpet and cold green candle flame (issue #69)
+const FINAL_THEME = { name: 'The Lich Throne', fb: 20, fv: 7, ft: [-3, 4, -3], fm: 'rgba(96,102,94,0.4)',
+    wf: '#15111a', wt: '#332c3c', we: 'rgba(148,140,168,0.22)', ws: 'rgba(190,178,200,0.26)',
+    br: '#241f1c', fl: 'rgba(120,238,164,0.95)', fc: 'rgba(208,248,214,0.95)',
+    halo: '96,224,150', dark: 'rgba(5,4,11,0.87)', void: '#08050c' };
+function themeOf(cp) {
+  if (cp >= FINAL_LEVEL) return FINAL_THEME;
+  return THEMES[clamp(Math.floor((cp - 1) / 3), 0, THEMES.length - 1)];
+}
 
 
 function generateLevel(checkpoint) {
   mcp = checkpoint;
+  const final = checkpoint === FINAL_LEVEL; // the throne room (issue #69)
   game.th = themeOf(checkpoint); // the palette this whole level is drawn in
-  game.quota = 6 + checkpoint * 3;
+  // the last hall has a quota of nothing: its only inhabitant is its king
+  game.quota = final ? 0 : 6 + checkpoint * 3;
   game.killedForQuota = 0;
   game.bossMode = false;
   game.boss = null; // no overlord stands on a fresh level: he waits at the
@@ -253,7 +266,7 @@ function generateLevel(checkpoint) {
   // the tenth level is not a dungeon: it is the arena of the Demon's Roost,
   // one vast hall ringed by pillars so the big boss has room to run and the
   // hero has room to circle him (issue #49)
-  const arena = checkpoint >= FINAL_LEVEL;
+  const arena = checkpoint >= ROOST_HALL && !final; // the Roost's halls, issue #49
   if (arena) {
     const ax = 4, ay = 4, aw = GCOLS - 8, ah = GROWS - 8;
     for (let ty = ay; ty < ay + ah; ty++) for (let tx = ax; tx < ax + aw; tx++) set(tx, ty);
@@ -267,20 +280,60 @@ function generateLevel(checkpoint) {
     rooms.length = 0;
     rooms.push({ x: ax, y: ay, w: aw, h: ah });
   }
+  // the thirteenth stage: one small square hall, walled on every side, its
+  // axis running from the south gate up to the throne at the north end
+  if (final) {
+    for (let ty2 = 0; ty2 < GROWS; ty2++) for (let tx2 = 0; tx2 < GCOLS; tx2++) grid[ty2 * GCOLS + tx2] = 0;
+    const fx = Math.floor((GCOLS - FINAL_HALL) / 2), fy = Math.floor((GROWS - FINAL_HALL) / 2);
+    for (let ty2 = fy; ty2 < fy + FINAL_HALL; ty2++)
+      for (let tx2 = fx; tx2 < fx + FINAL_HALL; tx2++) grid[ty2 * GCOLS + tx2] = 1;
+    game.finalHall = { x: fx, y: fy, w: FINAL_HALL, h: FINAL_HALL };
+    rooms.length = 0;
+    rooms.push({ x: fx, y: fy, w: FINAL_HALL, h: FINAL_HALL });
+  }
   // wall rects for drawing (culling in drawWalls keeps this cheap)
   for (let ty = 0; ty < GROWS; ty++) for (let tx = 0; tx < GCOLS; tx++)
     if (!grid[ty * GCOLS + tx]) game.walls.push({ x: tx * TS, y: ty * TS, w: TS, h: TS });
   // torches on south-facing wall faces above floor tiles
-  for (let ty = 1; ty < GROWS - 1; ty++) for (let tx = 1; tx < GCOLS - 1; tx++) {
-    if (!grid[ty * GCOLS + tx]) continue;
-    if (!grid[(ty - 1) * GCOLS + tx] && ((tx + ty) & 1) === 0 && G(tx * 13, ty * 17) < 0.55)
-      game.torches.push({ x: tx * TS + TS / 2, y: ty * TS + 12, ph: G(tx, ty) * TAU });
+  if (!final) {
+    for (let ty = 1; ty < GROWS - 1; ty++) for (let tx = 1; tx < GCOLS - 1; tx++) {
+      if (!grid[ty * GCOLS + tx]) continue;
+      if (!grid[(ty - 1) * GCOLS + tx] && ((tx + ty) & 1) === 0 && G(tx * 13, ty * 17) < 0.55)
+        game.torches.push({ x: tx * TS + TS / 2, y: ty * TS + 12, ph: G(tx, ty) * TAU });
+    }
+  } else {
+    // candlesticks: a file down each wall and two files down the carpet, so the
+    // hall reads as a gothic throne room rather than as another dungeon (issue
+    // #69). They are ordinary light-carriers, so lightPass keeps them lit.
+    const hl = game.finalHall, ax2 = hl.x, ay2 = hl.y;
+    for (let ty2 = ay2 + 1; ty2 < ay2 + hl.h - 1; ty2 += 2) for (const tx2 of [ax2 + 1, ax2 + hl.w - 2])
+      game.torches.push({ x: tx2 * TS + TS / 2, y: ty2 * TS + TS / 2, candle: true, ph: G(tx2, ty2) * TAU });
+    for (let ty2 = ay2 + 3; ty2 < ay2 + hl.h - 2; ty2 += 3) for (const tx2 of [ax2 + (hl.w >> 1) - 2, ax2 + (hl.w >> 1) + 2])
+      game.torches.push({ x: tx2 * TS + TS / 2, y: ty2 * TS + TS / 2, candle: true, ph: G(tx2, ty2) * TAU });
   }
   // start room, the portal's far end, and the ground where the overlord waits
   // (issue #57: no boss is placed on the level - he steps out when you come
   // close enough for the WHOLE gate to sit inside his torchlight (issue #68
   // set that range), so the spot is held, not a body)
-  if (arena) {
+  if (final) {
+    const hl = game.finalHall, hx = hl.x + hl.w / 2;
+    game.startPos = { x: hx * TS, y: (hl.y + hl.h - 2.5) * TS }; // the south gate
+    P.x = game.startPos.x; P.y = game.startPos.y;
+    // the last stage has no gate to descend through: the throne IS the prize, so
+    // there is nothing for the level to hold as a portal
+    game.portal = null;
+    game.throne = { x: hx * TS, y: (hl.y + 1.4) * TS, sx: hx * TS, sy: (hl.y + 1.9) * TS,
+      active: false, t: 0, gr: 34 }; // gr: how close he has to get to be seated
+    // the king is already in the room, asleep at the head of the carpet, and he
+    // is stirred by light: his whole model has to fit inside the hero's torch
+    // light before he comes down (issue #69, the same construction the gate
+    // learned in issue #68)
+    spawnBoss(hx * TS, (hl.y + hl.h * 0.52) * TS, FINAL_BOSS_BIG);
+    game.boss.act = false;
+    game.boss.aggro = PLAYER_LIGHT - game.boss.r; // wholly inside the light around him
+    game.bossMode = true;
+    game.bossPending = false; // he is waiting in the hall, not held off a gate
+  } else if (arena) {
     const r0 = rooms[0];
     game.startPos = { x: (r0.x + r0.w / 2) * TS, y: (r0.y + r0.h - 2.5) * TS }; // the south gate
     game.portal = { x: (r0.x + r0.w / 2) * TS, y: (r0.y + 2) * TS, t: 0 };      // the north gate
@@ -328,7 +381,7 @@ function generateLevel(checkpoint) {
   if (rooms.length > 1) { tryChest(); if (chance(0.35)) tryChest(); }
   // merchant: one trader per level, in a random room away from the start
   game.merchant = null;
-  for (let t2 = 0; t2 < 20; t2++) {
+  if (!final) for (let t2 = 0; t2 < 20; t2++) {
     const r = rooms[Math.floor(Math.random() * rooms.length)];
     if (!r) continue;
     const tx = r.x + 1 + Math.floor(Math.random() * Math.max(1, r.w - 2));
@@ -375,9 +428,14 @@ const MTYPES = {
   orc:      { name:'Orc Brute', hp:110, dmg:16, speed:66, r:18, color:'#4f6a30', xp:24, touchCd:1.6, ai:'melee' },
   cultist:  { name:'Orc Shaman', hp:40, dmg:13, speed:72, r:14, color:'#6a5a4a', xp:17, touchCd:1.5, ai:'ranged', range:420 },
 };
-// the tenth level is the last one: it is the Roost, and slaying its overlord
-// wins the run (issue #51)
-const FINAL_LEVEL = 10;
+// the run is thirteen stages deep (issue #69): four realms of three levels each,
+// the pillar-ringed halls of the Roost at ten to twelve, and the thirteenth
+// stage is the lich king's throne room, which has no portal in it at all - the
+// throne there is the prize, and sitting on it ends the run
+const FINAL_LEVEL = 13;
+const ROOST_HALL = 10;    // where the Roost's vast halls begin (issue #49), now three levels deep
+const FINAL_HALL = 15;    // the throne room's floor, in tiles: one small square
+const FINAL_BOSS_BIG = 2; // the lich king's model, against the other overlords'
 // one overlord per level (issue #51): ten named bosses, each with its own
 // nameplate, silhouette signature and character. mtier() still scales them by
 // depth, and the table itself only ramps gently - a couple of hundred life and
@@ -396,6 +454,12 @@ const BOSSES = [
   { name:'Tharkas — Dune Reaver',      hp:740,  dmg:22, speed:104, r:28, color:'#a0874f', xp:750, touchCd:0.9, ai:'boss', sig:7 },
   { name:'Vomir — Carrion King',       hp:760,  dmg:23, speed:80, r:31, color:'#8f7a5a', xp:840, touchCd:1.6, ai:'boss', sig:8 },
   { name:'Vermithe the Undying — Overlord of the Roost', hp:770, dmg:23, speed:84, r:32, color:'#c2482e', xp:950, touchCd:1.4, ai:'boss', sig:9 },
+  { name:'Kazrek the Withered — Flayed Overlord', hp:780, dmg:24, speed:86, r:31, color:'#8a6a58', xp:1040, touchCd:1.5, ai:'boss', sig:10 },
+  { name:'Ur-Thul the Bone Crown — Warden of the Roost', hp:800, dmg:25, speed:80, r:33, color:'#6f5a4a', xp:1140, touchCd:1.7, ai:'boss', sig:11 },
+  // the last man: a lich king, and a far wider model than any overlord before
+  // him. His own three hands are the grave chorus, the cold grasp and the
+  // overlord's charge (issue #69); `lich` is what hands them to him.
+  { name:'Adrith the Lich King — the Last Throne', hp:620, dmg:18, speed:74, r:33, color:'#9fb4a8', xp:1300, touchCd:1.6, ai:'boss', sig:12, lich: true },
 ];
 
 function mtier(base, cp) {
@@ -449,6 +513,7 @@ function pickTypeFor(cp) {
 // in the monster update loop, which checks m.act / m.aggro).
 function preplaceMonsters() {
   const cp = game.checkpoint;
+  if (cp === FINAL_LEVEL) return; // one king, and nothing else, in the last hall
   const total = game.quota + Math.ceil(game.quota * 0.6) + 3;
   let placed = 0, tries = 0;
   while (placed < total && tries < 2500) {
@@ -493,6 +558,20 @@ function wakeBoss() {
   return true;
 }
 
+// the throne at the head of the carpet: dim while the lich king stands,
+// cold-lit once he is down. Touching the awake throne is how the run is won.
+function throneTouch() {
+  const tr = game.throne;
+  if (!tr || !tr.active || game.seat > 0 || game.victoryShown) return false;
+  if (P.dead || game.paused) return false;
+  if (Math.hypot(P.x - tr.sx, P.y - tr.sy) > tr.gr) return false;
+  game.seat = 0.001;
+  P.x = tr.sx; P.y = tr.sy; // he is held on the seat
+  game.moveTarget = null;
+  toast('Sit down — the throne is yours', '');
+  return true;
+}
+
 function spawnBoss(x, y, big) {
   if (x == null) { const p = findSpawnPoint(); x = p.x; y = p.y; }
   // the overlord of the level you are standing in (issue #51): each level has
@@ -512,6 +591,7 @@ function spawnBoss(x, y, big) {
     touchCd: d.touchCd, cd: 1, ai: 'boss', range: Math.round(d.r * g) + P.r + 6, elite: false,
     angle: 0, hitFlash: 0, slow: 0, wob: 0, dashCd: 2.5, summonCd: 5, stun: 0, kx: 0, ky: 0,
     act: false, aggro: 460, // waits in the boss room until the player steps near
+    lich: BOSSES[bi].lich === true, graveCd: 6.5, graspCd: 4.2, // the lich king's hands (issue #69)
     homeX: x, homeY: y, leash: 0, leashT: 0, // his throne: bosses leash like any foe (issue #46)
   };
   game.boss = b; game.monsters.push(b);
@@ -810,7 +890,10 @@ function mpMax() { return 80 + (curAttr('int') - 8) * 6 + equipBonus('mp'); }
 function manaRegen() { return 0.25 + curAttr('int') * 0.18; }
 function critChance() { return 0.05 + (curAttr('dex') - 8) * 0.006 + equipBonus('crit') / 100; }
 // movement speed: base × (1 + rolled % bonus from items)
-function moveSpd() { return P.speed * (1 + equipBonus('spd') / 100); }
+// the lich king's cold grasp leaves the hero half-walking for a few seconds
+function moveSpd() {
+  return P.speed * (1 + equipBonus('spd') / 100) * (P.chill > 0 ? 0.58 : 1);
+}
 function playerHpMax() {
   let h = P.baseHp + (P.level-1)*14 + (curAttr('vit') - 10) * 6;
   for (const s of SLOTS) { const e = P.eq[s]; if (e) for (const st of e.stats) if (st.k==='hp') h += st.v; }
@@ -865,9 +948,18 @@ function killMonster(m) {
   if (m.type === 'boss') {
     game.boss = null; game.bossMode = false;
     game.shake = 18; S.impact();
+    if (game.throne) {
+      // the last hall has no gate to blaze open: what his death wakes is the
+      // throne at the head of the carpet (issue #69)
+      game.throne.active = true;
+      game.throne.t = 0;
+    }
     for (let i=0;i<3;i++) dropItem(m.x+rand(-40,40), m.y+rand(-40,40), game.checkpoint, true, 'boss');
     S.portal();
-    banner('Boss defeated — portal active!', '#58c8f0');
+    if (game.throne) {
+      banner('The lich king is slain — the throne is waking', '#78e8a8');
+      toast('The throne at the head of the carpet is awake — touch it and sit down', '');
+    } else banner('Boss defeated — portal active!', '#58c8f0');
   } else {
     game.killedForQuota++;
   }
@@ -924,7 +1016,13 @@ function update(dt) {
   if (!P.dead) {
     if (game.demo) botTick(dt); else bot = null; // spectator mode: AI drives the hero
     // --- player ---
-    if (P.leap) {
+    if (game.seat > 0) {
+      // seated on the last throne: the run is over and the window is being
+      // put up over him, so no keyboard, cursor or bot can ask anything of the
+      // hero until the window is closed (issue #69)
+      game.seat += dt;
+      if (game.seat >= 2.2 && !game.victoryShown) showVictory();
+    } else if (P.leap) {
       const L = P.leap;
       L.t += dt / L.dur;
       if (L.t >= 1) { leapLand(L.tx, L.ty, L.mul, L.stun); P.leap = null; }
@@ -961,6 +1059,7 @@ function update(dt) {
     }
     P.atkT = Math.max(0, P.atkT - dt);
     P.hurtFlash = Math.max(0, P.hurtFlash - dt);
+    P.chill = Math.max(0, P.chill - dt); // the frost hand thaws on its own
     if (K.w || K.a || K.s || K.d || game.moveTarget) P.walkPhase += dt * 11;
     else P.walkPhase *= Math.pow(0.02, dt);
     // idle animation (issue #47): a quarter-minute with nothing asked of the
@@ -986,17 +1085,20 @@ function update(dt) {
       }
     }
     // portal lies behind the boss room — usable only after the boss is slain
-    // the overlord waits at the gate (issue #57): walking within half of
-    // your sight of it stirs him up, and the gate stays shut until he is
-    // down, so you can never slip past a level's boss
+    // the overlord waits at the gate (issue #57): the gate has to sit wholly
+    // inside the torch around him before he stirs (issue #68), and it stays shut
+    // until he is down, so a level cannot be run past. The last stage has no gate
+    // at all - its throne wakes on the king's death instead (issue #69)
     wakeBoss();
+    // the last stage's prize: touching an awake throne seats the hero (issue #69)
+    throneTouch();
     if (game.portal && (game.boss === null || game.boss.dead) && !game.bossPending &&
         Math.hypot(P.x - game.portal.x, P.y - game.portal.y) < 26) {
       // the Roost's own portal is not a descent: stepping into it wins the run
       if (game.checkpoint === FINAL_LEVEL) showVictory();
       else nextCheckpoint();
     }
-    if (game.mouseDown && P.atkT <= 0) tryAttack();
+    if (game.mouseDown && P.atkT <= 0 && game.seat <= 0) tryAttack();
   }
 
   // --- monsters ---
@@ -1086,6 +1188,36 @@ function update(dt) {
 
     if (m.kind === 'boss') {
       m.dashCd -= dt; m.summonCd -= dt;
+      if (m.lich) {
+        // the last king's own three hands (issue #69): the grave chorus raises
+        // the fallen at his feet, the cold grasp is a frost pulse that chills
+        // everything inside it, and he keeps the overlord's charge below
+        m.graveCd -= dt; m.graspCd -= dt;
+        if (m.graveCd <= 0) {
+          m.graveCd = 9;
+          S.elite();
+          banner(game.boss.name + ' raises the fallen!', '#9ff0c8');
+          for (let i = 0; i < 3; i++) {
+            const a = (i / 3) * TAU + (m.wob % TAU);
+            const sx2 = m.x + Math.cos(a) * 120, sy2 = m.y + Math.sin(a) * 120;
+            if (passableAt(sx2, sy2)) {
+              const mm = spawnMonster('skeleton', sx2, sy2, chance(0.2), mcp);
+              mm.act = true; mm.angle = a + Math.PI;
+            }
+          }
+        }
+        if (m.graspCd <= 0 && d < 250) {
+          m.graspCd = 5.4;
+          ring(m.x, m.y, '#8ff0c0');
+          screenShake(6);
+          S.impact();
+          if (!P.dead && d < 210) {
+            hurtPlayer(Math.round(m.dmg * 0.7), m.x, m.y);
+            P.chill = 3.4;
+            dmgText(P.x, P.y - 26, 'CHILLED', '#9fe8f8');
+          }
+        }
+      }
       if (m.summonCd <= 0) {
         m.summonCd = 8;
         S.elite();
@@ -1378,6 +1510,7 @@ function shootRanged() {
 }
 
 function tryAttack() {
+  if (game.seat > 0) return; // seated: the hand stays where it is (issue #69)
   if (rangedWeapon()) { shootRanged(); return; } // a bow or a staff never swings (issue #53)
   P.atkT = P.atkCd;
   // auto-aim at the nearest monster in reach
@@ -1637,7 +1770,7 @@ function castChainBolt() {
 // belongs to another kind of weapon spends nothing and says why.
 function castSkill(n) {
   const sk = skillOf(n);
-  if (!sk || P.dead || P.leap || P.cd['sk' + n] > 0) return false;
+  if (!sk || game.seat > 0 || P.dead || P.leap || P.cd['sk' + n] > 0) return false; // seated: no casting (issue #69)
   if (!skillWeaponOk(sk)) {
     toast(sk.name + ' wants ' + (rangedWeapon() ?
       'something to swing - a bow or a staff will not do'
@@ -1852,17 +1985,25 @@ function showVictory() {
         secs = String(Math.floor(game.time % 60)).padStart(2, '0');
   const fell = (game.boss && game.boss.name) ? game.boss.name : BOSSES[BOSSES.length - 1].name;
   winStatsEl.textContent =
-    fell + ' lies felled on the floor of the Roost. The Infernal Crucible is yours:' +
+    fell + ' kneels at the foot of the Lich Throne. The Infernal Crucible is yours:' +
     ' FAME ' + game.totalKills + ' for the monsters you cleared, GLORY ' + P.gold +
     ' for the gold you hoarded, and the muse above you, carved in marble for the season.' +
+    ' You sat on the last throne and it is yours to keep.· Fame, glory and the prize.' +
     ' Level ' + P.level + ' · Time ' + mins + ':' + secs;
-  banner('The Crucible Is Yours', '#e8c477');
+  banner('The Throne Is Yours', '#e8c477');
 }
 function closeVictoryWindow() {
   game.victoryOpen = false;
   game.paused = false;
   if (winEl) winEl.classList.add('hidden');
   game.moveTarget = null; // the hero stands still until you ask
+  if (game.seat > 0) {
+    // he came up off the throne: control is his again, and the seat has cooled,
+    // so the same prize cannot be claimed twice (issue #69)
+    const tr = game.throne;
+    if (tr) { P.x = tr.sx; P.y = tr.sy + 46; tr.active = false; }
+    game.seat = 0;
+  }
 }
 function backToMenu() {
   closeVictoryWindow();
@@ -2216,6 +2357,63 @@ function drawWalls() {
   }
 }
 
+// the thirteenth hall's own furniture: a blood carpet down its axis, the dais
+// at its head, and the throne there - dim while the lich king stands, cold-
+// lit and worded once he is down, which is the hint the player needs (issue
+// #69)
+function drawThroneRoom(t) {
+  if (!game.finalHall || game.checkpoint !== FINAL_LEVEL) return;
+  const hl = game.finalHall, tr = game.throne;
+  const cxc = (hl.x + hl.w / 2) * TS;
+  const top = (hl.y + 1.0) * TS, bot = (hl.y + hl.h - 1.3) * TS;
+  const cx2 = cxc - vx, tp = top - vy;
+  // the carpet, woven pale at the edges
+  ctx.fillStyle = '#571317';
+  ctx.fillRect(cx2 - 56, tp, 112, bot - top);
+  ctx.strokeStyle = 'rgba(204,174,122,0.5)'; ctx.lineWidth = 2.5;
+  ctx.strokeRect(cx2 - 50, tp + 6, 100, bot - top - 12);
+  ctx.fillStyle = 'rgba(204,174,122,0.10)';
+  ctx.fillRect(cx2 - 7, tp + 12, 14, bot - top - 24);
+  // two steps of dais under the throne
+  ctx.fillStyle = '#241f29'; ctx.fillRect(cx2 - 104, tp - 30, 208, 32);
+  ctx.fillStyle = '#2e2735'; ctx.fillRect(cx2 - 82, tp - 46, 164, 18);
+  if (!tr) return;
+  const tx2 = tr.x - vx, ty2 = tr.y - vy;
+  const wake = tr.active ? 1 : 0;
+  const pulse = wake ? (0.5 + 0.5 * Math.sin(t * 2.6 + tr.t)) : 0;
+  if (wake) {
+    ctx.fillStyle = 'rgba(120,238,164,' + (0.13 + 0.10 * pulse) + ')';
+    ctx.beginPath(); ctx.ellipse(tx2, ty2 + 10, 56 + pulse * 10, 30, 0, 0, TAU); ctx.fill();
+  }
+  // a banner of pale bone hung behind the seat
+  ctx.fillStyle = 'rgba(176,172,186,0.15)';
+  ctx.fillRect(tx2 - 44, ty2 - 106, 88, 30);
+  // the throne: a tall gothic back of bone spires, wide arms, a skull finial
+  ctx.fillStyle = '#221c26';
+  ctx.beginPath();
+  ctx.moveTo(tx2 - 26, ty2 + 22); ctx.lineTo(tx2 - 30, ty2 - 62);
+  ctx.lineTo(tx2 - 13, ty2 - 86); ctx.lineTo(tx2 + 13, ty2 - 86);
+  ctx.lineTo(tx2 + 30, ty2 - 62); ctx.lineTo(tx2 + 26, ty2 + 22);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = wake ? 'rgba(150,242,180,' + (0.48 + 0.3 * pulse) + ')' : 'rgba(150,142,168,0.34)';
+  ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = '#2a2331';
+  ctx.fillRect(tx2 - 32, ty2 - 4, 64, 9);
+  ctx.fillRect(tx2 - 34, ty2 - 22, 9, 24); ctx.fillRect(tx2 + 25, ty2 - 22, 9, 24);
+  ctx.fillStyle = wake ? 'rgba(94,222,150,0.5)' : 'rgba(86,20,26,0.92)';
+  ctx.fillRect(tx2 - 25, ty2 - 6, 50, 7);
+  ctx.fillStyle = '#c8c2b2';
+  ctx.beginPath(); ctx.arc(tx2, ty2 - 90, 7, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#221c26';
+  ctx.fillRect(tx2 - 4, ty2 - 93, 2.4, 3); ctx.fillRect(tx2 + 2, ty2 - 93, 2.4, 3);
+  if (wake) {
+    // the word that tells the player the seat is awake
+    ctx.fillStyle = 'rgba(226,246,170,0.92)';
+    ctx.font = '11px serif';
+    ctx.fillText('THE THRONE IS AWAKE', tx2 - 54, ty2 - 118);
+  }
+}
+
 function drawTorches(t) {
   const th = game.th;
   for (const tc of game.torches) {
@@ -2223,6 +2421,19 @@ function drawTorches(t) {
     if (x < -50 || x > VW + 50 || y < -50 || y > VH + 50) continue;
     const fl = Math.sin(t * 7 + tc.ph) * 0.5 + Math.sin(t * 13.7 + tc.ph * 2) * 0.3;
     const fx = x + fl * 1.6;
+    if (tc.candle) {
+      // a free-standing candelabra: stem, cup and three cold flames
+      ctx.fillStyle = '#6a6455';
+      ctx.fillRect(x - 1.8, y - 21, 3.6, 24);
+      ctx.beginPath(); ctx.ellipse(x, y + 3, 9, 3.6, 0, 0, TAU); ctx.fill();
+      ctx.fillRect(x - 9, y - 22, 18, 2.6);
+      ctx.fillStyle = th.fl;
+      for (const ci of [-9, 0, 9]) {
+        const fh = (ci === 0 ? 9.5 : 7) + fl * 1.6;
+        ctx.beginPath(); ctx.ellipse(x + ci + fl * 1.2, y - 26 - (ci === 0 ? 5 : 0), 3.1, fh, 0, 0, TAU); ctx.fill();
+      }
+      continue;
+    }
     ctx.fillStyle = th.br;
     ctx.fillRect(x - 1.5, y - 13, 3, 13);
     ctx.fillStyle = th.fl;
@@ -2479,6 +2690,36 @@ function drawMonster(m, t) {
       ctx.lineTo(x + r * 0.46, y - r * (1.5 + hl * 0.5) + bob);
       ctx.closePath(); ctx.fill();
     }
+    if (m.lich) {
+      // the lich king: a cold aura under him, a taller skull-crown than any
+      // overlord wears, and a reaping scythe held out along his aim (issue
+      // #69) - and he is bred far wider than the rest of them
+      ctx.strokeStyle = 'rgba(126,238,168,0.5)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(x, y + r * 0.34, r * 1.02, r * 0.58, 0, 0, TAU); ctx.stroke();
+      ctx.fillStyle = 'rgba(120,238,164,0.12)';
+      ctx.beginPath(); ctx.ellipse(x, y - r * 0.4 + bob, r * 1.0, r * 0.86, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#d8d2c2';
+      for (let ci = -2; ci <= 2; ci++) {
+        const cx3 = x + ci * r * 0.17;
+        ctx.beginPath();
+        ctx.moveTo(cx3 - r * 0.05, y - r * 1.58 + bob);
+        ctx.lineTo(cx3, y - r * (1.94 + (ci === 0 ? 0.2 : 0)) + bob);
+        ctx.lineTo(cx3 + r * 0.05, y - r * 1.58 + bob);
+        ctx.closePath(); ctx.fill();
+      }
+      const ax2 = Math.cos(m.angle), ay2 = Math.sin(m.angle);
+      ctx.strokeStyle = '#6a5c4a'; ctx.lineWidth = 3.4;
+      ctx.beginPath();
+      ctx.moveTo(x + ax2 * r * 0.4, y - r * 0.5 + bob + ay2 * r * 0.4);
+      ctx.lineTo(x + ax2 * r * 1.55, y - r * 0.3 + bob + ay2 * r * 1.55);
+      ctx.stroke();
+      ctx.strokeStyle = '#c8d4cc'; ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x + ax2 * r * 1.55, y - r * 0.3 + bob + ay2 * r * 1.55);
+      ctx.quadraticCurveTo(x + ax2 * r * 1.9, y - r * 1.0 + bob + ay2 * r * 1.5,
+        x + ax2 * r * 1.5, y - r * 1.1 + bob + ay2 * r * 1.1);
+      ctx.stroke();
+    }
   } else if (m.type === 'fallen') {
     ctx.fillStyle = col;
     ctx.beginPath();
@@ -2593,8 +2834,12 @@ function drawHandWeapon(wk, hx, hy, ang, flare) {
 }
 
 function drawPlayer() {
-  const x = P.x - vx, y = P.y - vy;
-  shadowAt(x, y + 6, P.r * 1.1, 0.4);
+  const x = P.x - vx;
+  // being seated on the last throne: the figure settles down onto the seat over
+  // the first half second and stays there until the window is closed (issue #69)
+  const seatT = (game.seat > 0) ? Math.min(1, game.seat / 0.5) : 0;
+  const y = P.y - vy + seatT * P.r * 0.36;
+  shadowAt(x, P.y - vy + 6, P.r * 1.1, 0.4);
   const faceX = (P.faceX || 1);
   // idle animation progress: 0 stands, 0..1 arcs through the stretch (issue #47)
   const ip = (P.idleP > 0) ? Math.sin(Math.min(1, P.idleP) * Math.PI) : 0;
@@ -2636,8 +2881,12 @@ function drawPlayer() {
   const shY = y - r * 0.92 + bob * 0.6;        // shoulder line
   const legLen = r * 0.62;
   // legs: steel greaves swinging opposite under the hips
-  const f1x = x - r * 0.2 + s * faceX * r * 0.4 + ip * faceX * r * 0.16, f1y = y - r * 0.34 + legLen + Math.abs(s) * 1.8;
-  const f2x = x + r * 0.2 - s * faceX * r * 0.4 - ip * faceX * r * 0.16, f2y = y - r * 0.34 + legLen + Math.abs(s) * 1.8;
+  // seated legs: thighs out of the hips, shins down off the edge of the seat
+  const sat = seatT > 0.5;
+  const f1x = sat ? x - r * 0.44 : x - r * 0.2 + s * faceX * r * 0.4 + ip * faceX * r * 0.16;
+  const f1y = sat ? y + r * 0.24 : y - r * 0.34 + legLen + Math.abs(s) * 1.8;
+  const f2x = sat ? x + r * 0.44 : x + r * 0.2 - s * faceX * r * 0.4 - ip * faceX * r * 0.16;
+  const f2y = sat ? y + r * 0.24 : y - r * 0.34 + legLen + Math.abs(s) * 1.8;
   ctx.lineCap = 'round';
   ctx.strokeStyle = bare ? cl.skin : '#2c3442'; ctx.lineWidth = r * 0.27;
   ctx.beginPath();
@@ -2845,6 +3094,11 @@ function lightPass(t) {
   }
   if (game.portal) hole((game.portal.x - vx) * D, (game.portal.y - vy) * D,
     (portalActive() ? PORTAL_DRAW_ON : PORTAL_DRAW) * D, 1); // issue #68: the disc the wake rule measures
+  // the awake throne burns cold through the dark: that is how the player is
+  // told the seat is ready (issue #69)
+  if (game.throne && game.throne.active)
+    hole((game.throne.x - vx) * D, (game.throne.y - vy) * D,
+      (158 + 16 * Math.sin(game.time * 2.6)) * D, 0.92);
   for (const pr of game.projectiles) hole((pr.x - vx) * D, (pr.y - vy) * D, 70 * D, 0.65);
   dctx.globalCompositeOperation = 'source-over';
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -2917,6 +3171,7 @@ function render(dt) {
   drawFloor();
   drawGroundFX();
   drawWalls();
+  drawThroneRoom(t);
   drawTorches(t);
   drawPortalG(t);
   const ents = game.monsters.slice();
@@ -2971,9 +3226,16 @@ function hudUpdate() {
   // acts follow the themes: three levels to an act (issue #49)
   const band = Math.min(Math.floor((game.checkpoint - 1) / 3) + 1, ROMAN.length - 1);
   HUD.objTitle.textContent = 'Act ' + ROMAN[band] + ' — ' + game.th.name + ' · Level ' + game.checkpoint;
-  if (game.bossPending) HUD.objText.textContent = 'The overlord waits at the portal — step in until the whole gate stands in your light';
+  if (game.checkpoint === FINAL_LEVEL) {
+    // the last stage has no gate: the king first, then the throne
+    if (game.seat > 0) HUD.objText.textContent = 'Rising from the throne';
+    else if (game.throne && game.throne.active) HUD.objText.textContent = 'The throne is awake — touch it and sit down';
+    else if (game.boss && !game.boss.dead) HUD.objText.textContent = 'Boss: ' + game.boss.name + ' — guarding the throne';
+    else HUD.objText.textContent = 'The throne: your prize';
+  }
+  else if (game.bossPending) HUD.objText.textContent = 'The overlord waits at the portal — step in until the whole gate stands in your light';
   else if (game.boss && !game.boss.dead) HUD.objText.textContent = 'Boss: ' + game.boss.name + ' — guarding the portal';
-  else if (game.checkpoint >= FINAL_LEVEL) HUD.objText.textContent = 'Enter the portal — the Crucible is yours';
+  else if (game.checkpoint > FINAL_LEVEL) HUD.objText.textContent = 'Enter the portal — deeper still';
   else HUD.objText.textContent = 'Enter portal';
   HUD.goldText.textContent = String(P.gold);
   HUD.hpFill.style.height = clamp(P.hp / P.hpMax, 0, 1) * 100 + '%';
@@ -3269,7 +3531,13 @@ function botTick(dt) {
     // an overlord that has not been woken yet is not down: the bot goes to
     // the gate and stirs him there (issue #57)
     const bossDown = !game.bossPending && (game.boss === null || game.boss.dead);
-    if (game.portal && bossDown) {
+    if (game.throne && game.throne.active && bossDown) {
+      // no gate on the last stage: the bot sits down for the prize
+      const td = Math.hypot(game.throne.sx - P.x, game.throne.sy - P.y);
+      if (td < sight * 1.5 && losClear(P.x, P.y, game.throne.sx, game.throne.sy)) {
+        best = { x: game.throne.sx, y: game.throne.sy }; bd2 = 0;
+      }
+    } else if (game.portal && bossDown) {
       const d = Math.hypot(game.portal.x - P.x, game.portal.y - P.y);
       if (d < sight * 1.5 && losClear(P.x, P.y, game.portal.x, game.portal.y)) { best = game.portal; bd2 = 0; }
     } else if (game.boss && !game.boss.dead) {
@@ -3364,9 +3632,10 @@ if (winEl && winMenuBtn.addEventListener)
   winMenuBtn.addEventListener('click', () => { backToMenu(); });
 if (winEl && winJourneyBtn.addEventListener)
   winJourneyBtn.addEventListener('click', () => {
+    // the thirteenth stage is the last one: continuing the journey stands the
+    // hero up off the throne and hands the controls back (issue #69)
     closeVictoryWindow();
-    nextCheckpoint();
-    toast('The journey continues — deeper than the Crucible was drawn', '');
+    toast('The throne is yours and so is the hall — walk about it whenever you like', '');
   });
 
 // ---------- main loop ----------

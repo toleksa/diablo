@@ -196,6 +196,15 @@ Maintain separate visual identities for:
 - Infernal structures.
 - Strong directional lighting.
 
+### Necropolis and Throne Halls
+
+- Bone-white ash masonry and cold iron fittings.
+- A single axis, read from a dais to a gate, dressed by a long blood-red carpet.
+- Tall gothic furniture: a spined throne, a skull finial, banners hung flat behind it.
+- Candlesticks as the light carriers rather than sconces, cold green flame.
+- One square, enclosed room rather than a corridor web when the room is a stage.
+- No portal anywhere in the last stage: the prize there is furniture, not a exit.
+
 ---
 
 # 4. Character Design
@@ -316,6 +325,17 @@ Bosses should have:
 - Unique environmental presentation.
 
 Bosses should be visually impressive without sacrificing gameplay readability.
+
+The last overlord of the run, **Adrith the Lich King**, breaks the ladder on
+purpose: his model is bred far wider than any overlord before him, he carries a
+taller skull-crown than the crowned men wear, a cold aura under his feet and a
+reaping scythe held out along his aim. His hands are legible at a glance: a
+**grave chorus** that raises three of the fallen at his feet, a **cold grasp**
+pulsing frost out of his ring and leaving the hero visibly chilled, and the
+overlord's charge. His hall is read as an undead throne: the seat wakes only
+after he is down, and it announces itself - cold flame, a pale word over its
+head, a light carried through the dark - because a prize the player must walk
+into has to be findable in the dark.
 
 ---
 

@@ -65,11 +65,13 @@ wake up only when you step into their aggro radius (or when you hit them):
 explore room by room like in Diablo, no pulls from across the map. Every
 **three levels the theme changes** — Old Ruins in warm stone, Frozen
 Hollows under cold blue light, Bone Flats in pale dust — and the stones,
-torch flames and the dark between them change with them. The **tenth
-level is no dungeon at all** but the arena of **the Demon's Roost**: one
-vast hall ringed by broken pillars, and its overlord waiting by the gate
-is bred bigger than any other — wider shoulders, thicker hide, heavier
-hand. Kill the
+torch flames and the dark between them change with them, and the **Demon's Roost**
+in brick and ember holds three halls of its own. The thirteenth stage is no
+dungeon and no hall: it is the **Lich Throne**, one small square room hung with
+pale banners, floored by a blood carpet that runs from the south gate up to a
+dais, walled by candlesticks — and the overlord waiting at the head of
+that carpet is bred **far** bigger than any other: wider shoulders, thicker
+hide, heavier hand, a taller skull-crown and a reaping scythe. Kill the
 quota of monsters' worth of progress, find the **portal** — and the level is
 not over the moment you set foot near it: no overlord is placed in the deepest
 room any more — he waits *at the gate itself* and steps out once the **whole
@@ -77,7 +79,14 @@ gate stands inside the ring of torchlight around him** — a gate merely clipped
 by the edge of that ring leaves him asleep in the dark, so once you can make the
 portal out you may back off and prepare for the fight before he comes. The
 gate stays dim and shut under him, so a level cannot be run past — slay him
-and it blazes open and you descend one level deeper. **Treasure chests** hide among the rooms — walk up to one
+and it blazes open and you descend one level deeper. Thirteen stages are drawn in
+all, so the Roost's halls end at the twelfth gate: the **thirteenth has no portal
+at all**. There the lich king waits asleep at the head of the carpet, and he is
+stirred only once his **whole model** sits inside the ring of torchlight around
+you — the same construction the gate learned, read off the king's own
+shoulders. What his death wakes is not a gate but the **throne** on the dais: it
+burns cold, words itself over its head, and touching it sits the hero down, which
+ends the run. **Treasure chests** hide among the rooms — walk up to one
 and it springs open: a **magic-or-better** item plus gold. Die → stats
 screen → try again. Foes give chase only up to a **leash** — far from
 their spot they stop, glance around, and walk back to sleep where they
@@ -92,21 +101,23 @@ stretch that stops the frame any input comes back. Every portal you enter
 gear, gold) — close the tab and the title screen will offer to continue
 your last journey instead of starting over.
 
-**The Crucible is ten levels deep and every level has its own overlord**: Goruk,
+**The Crucible is thirteen stages deep and every one has its own overlord**: Goruk,
 Kragg and Ugruk in the Old Ruins, Vessara, Kryon and Hrolfr out in the Frozen
 Hollows, Sessith, Tharkas and Vomir across the Bone Flats, and **Vermithe the
-Undying** waiting in the Roost — ten men, ten nameplates, ten silhouettes, the
-last one bred taller and heavier than any before him. Foes and overlords get
+Undying**, **Kazrek the Withered** and **Ur-Thul the Bone Crown** in the Roost's own
+three halls — thirteen men, thirteen nameplates, thirteen silhouettes, the last one
+bred far wider than any before him. Foes and overlords get
 stronger the deeper you go, and so do you: your level feeds the loot ladder
 (issue #50), your attributes and your affixes grow with it, so the climb stays a
-fight rather than a slide. Felling the Roost's overlord and stepping into his
-portal **wins the run**: the world holds still and a victory window comes up over
-it, painted with the Roost's own muse — a draped marble figure on a plinth,
-laurel in her raised hand, the overlord's broken crown shattered at her feet —
-above a tally of the **fame** you cleared and the **glory** you hoarded. Two
-buttons sit at its foot: **Return to the Menu** takes you back to the title
-screen, **Continue the Journey** closes the window, hands control back to your
-hero and lets the Roost be run again, as many times deep as you care to go.
+fight rather than a slide. Felling the **Lich King** and sitting on his throne
+**wins the run**: he is held on the seat while he settles into it and nothing
+answers to your hands, then a victory window comes up over the hall, painted with
+the prize — a draped marble figure on a plinth, laurel in her raised hand, the
+king's cold crown at her feet — above a tally of the **fame** you cleared and the
+**glory** you hoarded. Two buttons sit at its foot: **Return to the Menu** takes
+you back to the title screen, **Continue the Journey** closes the window, stands
+the hero up off the throne and hands control back to him; the seat has cooled
+meanwhile, so the prize cannot be claimed twice.
 
 ## Systems
 
@@ -139,6 +150,16 @@ hero and lets the Roost be run again, as many times deep as you care to go.
   affix behind it, so a fresh run starts able to fight without starting holding a
   lucky draw. A saved journey keeps whatever it was carrying, and a hand that
   saved empty is refilled with that same plain tool rather than started bare.
+- **The thirteenth stage**: four realms of three levels each, then the **Lich Throne** —
+  one small square hall with nothing in it but its king, candlesticks around the
+  walls and a blood carpet up to the dais. The **Lich King** waits asleep at the head
+  of that carpet and comes down only when his **whole model** fits inside the torch
+  around you. He has three hands of his own: a **grave chorus** that raises three of
+  the fallen at his feet, a **cold grasp** that pulses frost out of his ring and
+  leaves the hero **chilled** (his legs go at well under half speed for a few
+  seconds), and the overlord's charge. His death wakes the **throne** rather than a
+  gate: the seat burns cold and words itself, and touching it seats the hero there,
+  which ends the run.
 - **Attributes**: Strength, Dexterity, Intelligence, Vitality — +3 points per
   level, spent from the character sheet: press anywhere on a stat's row and the
   plus spends one free point. Main attribute scales your weapon's
