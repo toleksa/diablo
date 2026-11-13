@@ -140,10 +140,17 @@ hero and lets the Roost be run again, as many times deep as you care to go.
   plus spends one free point. Main attribute scales your weapon's
   damage (an axe wants Strength, a sword Dexterity, a staff Intelligence —
   see **Weapon types** below), dexterity feeds crits, intelligence feeds max
-  Mana, vitality feeds HP and very slow natural HP regen from level 5.
-- **Mana** (blue) regenerates slowly; combat swings feed it back. A **staff** shot
-  drinks 5 mana: with less than that left the staff stays silent and the toast
-  says your mana is too low, so the pool is a real budget, not an endless drum.
+  Mana - and, since issue #66, how fast that Mana fills back on its own - while
+  vitality feeds HP and very slow natural HP regen from level 5.
+- **Mana** (blue): the size of the pool AND the pace it fills back at both belong to
+  **Intelligence**, so the classes do not even agree on the same budget. A **Barbarian**
+  (Intelligence 6) holds 68 and gets roughly **1.3 a second**; a **Mage** (14) holds
+  116 and gets roughly **2.8 a second** - a third of what the old flat rate handed
+  everyone, so the arcane is something you spend with care rather than a drum that
+  never stops. The character sheet prints your own rate next to the pool. Combat
+  swings feed a little back and blue Mana globes feed more. A **staff** shot drinks
+  5 mana: with less than that left the staff stays silent and the toast says your
+  mana is too low.
 - **Inventory**: 20-slot backpack. A full backpack **refuses new loot** —
   the item waits on the floor and you are told so,
   but you keep control too: each sheet row has a **discard ✕** (destroys the

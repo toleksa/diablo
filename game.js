@@ -795,7 +795,15 @@ function equipBonus(k) {
 }
 // current attribute = base (points assigned) + affix bonuses from equipped gear (issue #25)
 function curAttr(k) { return P.attr[k] + equipBonus(k); }
-function mpMax() { return 100 + (curAttr('int') - 8) * 4 + equipBonus('mp'); }
+// the pool follows Intelligence hard: a Barbarian on 6 holds 68, a Mage on
+// 14 holds 116, so the two classes do not even agree on how much arcane
+// there is to spend (issue #66)
+function mpMax() { return 80 + (curAttr('int') - 8) * 6 + equipBonus('mp'); }
+// and so does the pace it fills back at: this used to be a flat 6 a
+// second for everyone, which read as an endless drum. Now the stat decides
+// on its own - about 1.3/s for the plate-and-axe pair on Intelligence 6,
+// about 2.8/s for the Mage on 14 (issue #66)
+function manaRegen() { return 0.25 + curAttr('int') * 0.18; }
 function critChance() { return 0.05 + (curAttr('dex') - 8) * 0.006 + equipBonus('crit') / 100; }
 // movement speed: base × (1 + rolled % bonus from items)
 function moveSpd() { return P.speed * (1 + equipBonus('spd') / 100); }
@@ -940,7 +948,8 @@ function update(dt) {
 
     for (const k of ['potion', 'sk2', 'sk3']) P.cd[k] = Math.max(0, P.cd[k] - dt);
     manaWarnT = Math.max(0, manaWarnT - dt); // the too-low grumble is throttled
-    P.mana = Math.min(mpMax(), P.mana + 6 * dt); // slow mana regen
+    // mana comes back at the class' own pace (issue #66)
+    P.mana = Math.min(mpMax(), P.mana + manaRegen() * dt);
     // very slow natural HP regen, unlocked from level 5
     if (P.level >= 5 && P.hp < P.hpMax) {
       const rg = 0.08 + (P.level - 5) * 0.015 + curAttr('vit') * 0.008;
@@ -3699,9 +3708,10 @@ function renderChar() {
   const crit = Math.round(critChance() * 100);
   let h = '<div class="csTitle">' + CLASSES[P.cls || 'barbar'].name + ' — Level ' + P.level + ' <span class="csGold">◈ ' + P.gold + '</span></div>';
   const manaNow = Math.round(clamp(P.mana, 0, mpMax()));
+  const manaRate = manaRegen();
   h += '<div class="csVitals"><span class="csHp">' + Math.ceil(Math.max(0, P.hp)) + '/' + P.hpMax + '</span> · ' +
        '<span class="csMp">' + manaNow + '/' + mpMax() + '</span> · dmg ' + dmg + '±15% · crit ' + crit + '% · exp ' +
-       Math.floor(P.xp) + '/' + P.xpNeed + '</div>';
+       Math.floor(P.xp) + '/' + P.xpNeed + ' | mana rec ' + manaRate.toFixed(1) + '/s</div>';
   h += '<div class="csSub">Attributes — free: <span class="csPts">' + P.statPoints + '</span></div>';
   for (const row of ATTRS4) {
     const base = P.attr[row[0]], cur = curAttr(row[0]);
