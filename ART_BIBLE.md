@@ -578,8 +578,24 @@ Icons should be:
 - Designed for their actual display size.
 - Readable against dark backgrounds.
 - Consistent in perspective and shading.
+- Drawn as one object centred on a square plate, with a frame that carries the
+  state of the slot rather than the object's own colour.
+- Composed the way the thing they stand for behaves, so the icon and the effect
+  in the world are read as one thing and share its colours.
 
 Avoid mixing flat vector icons with highly detailed painted icons.
+
+The game's own skillbar is drawn, not painted: each of the eight class skills
+carries its own inline-SVG plate, assembled at load from a handful of shared
+primitives (a sweep band, a blade, a lance head, a lightning kink, an impact
+star, a droplet) on a shared 40x40 viewBox, framed in currentColor so the rule
+that dims an unusable slot dims the glyph too, and coloured with the exact
+colours the cast itself throws on the floor. The set is meant to be read at the
+slot's 56 px: one object, no lettering, no background, consistent weight.
+Should painted icons be produced for the set (see prompts.txt), they replace
+these plates one for one, keep each skill's existing silhouette and colour,
+and the whole set is approved together — swapping one icon alone breaks the
+consistency this section asks for.
 
 ---
 

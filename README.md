@@ -45,8 +45,8 @@ still holds, the pack turned back into gold.
 | **WASD / arrows** | movement (same as click-to-move) |
 | **Moving while you shoot** | walking never steers your shots: a bow or a staff keeps firing along the cursor line even as you strafe, so an archer running south looses his arrows where he is pointing rather than at his own heels (issue #67) |
 | **1** | healing potion — unlimited uses, one charge per 60 s (fresh at each checkpoint) |
-| **2** | your class' **opener** — the skillbar names it; cheap on Mana, ready again in seconds |
-| **3** | your class' **finisher** — the skillbar names it; way stronger, way more Mana, a long cooldown |
+| **2** | your class' **opener** — the skillbar shows its own plate and names it; cheap on Mana, ready again in seconds |
+| **3** | your class' **finisher** — the skillbar shows its own plate and names it; way stronger, way more Mana, a long cooldown |
 | **C** | character sheet: attributes, equipment, inventory |
 | **M** | area map — fog of war: only parts the player has walked through are revealed (boss/portal/start markers appear once discovered) |
 | **P** | pause: the frame goes dark, nothing regenerates and no enemy stirs, until you press P again |
@@ -142,7 +142,16 @@ meanwhile, so the prize cannot be claimed twice.
   Shot** (1.8x, and the foe it bites crawls) and **Blade Fan** (six arrows down a
   fan). **Mage** — **Frost Lance** (1.9x, chilled) and **Chain Bolt** (lightning
   through the four nearest foes you can see). The skillbar shows which pair you
-  carry, and its tooltip spells out the Mana, the cooldown and the weapon it wants.
+  carry, **each skill riding its own plate**: eight skills, eight drawn icons, no two
+  alike, and each composed the way its cast behaves — **Cleave** sweeps an axe
+  through an arc, **Earthquake** lands in a cracked crater, **Hero Strike** plants a
+  hammer on a shock star and shoves, **Whirlwind** spirals blades, **Venom Shot** is a
+  drawn bow with a dripping head, **Blade Fan** really does fan six shafts, **Frost
+  Lance** is a cold head on a comet, **Chain Bolt** kinks through four heads. They
+  wear the very colour their own cast throws on the floor, and the bar is drawn as
+  vector markup at load rather than as a shared glyph, so nothing has to be
+  downloaded and the plate dims with the slot when the skill cannot be spent. Its
+  tooltip spells out the Mana, the cooldown and the weapon it wants.
 - **Starting kit**: every run begins with the class' own tool already **in hand**,
   equipped from the first frame — a **Barbarian** carries an **Axe**, a **Warrior**
   a **Sword**, a **Rogue** a **Bow** and a **Mage** a **Staff**. It is a plain tool:

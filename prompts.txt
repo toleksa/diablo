@@ -14,7 +14,7 @@
 # The wording follows ART_BIBLE.md: the same palette (names AND hex codes), the
 # same material and silhouette language, the same "painterly detail +
 # believable materials" rule. Keep every image inside that vocabulary so the
-# seven pieces read as one art set when shown together.
+# eight pieces read as one art set when shown together.
 #
 # Shared STYLE ANCHOR (already expanded inside each PROMPT):
 #   "Dark Gothic Fantasy, realistic stylization, painterly detail combined with
@@ -225,9 +225,47 @@ against the other overlords and whose hands are the grave chorus, the cold grasp
 and the charge.
 
 ================================================================================
+8. UI ICON SET - the eight class-skill plates
+================================================================================
+PROMPT:
+A single game UI icon for a dark fantasy action RPG, square composition, the
+object centred and filling the frame with a small margin, on a transparent
+background with no scenery behind it. The object is the eight class skills read
+one at a time, each drawn the way its cast behaves so the icon and the effect in
+the world are the same thing: a wide axe sweeping a bone-coloured arc; a mailed
+fist landing in a cracked crater with a gold shock star; a heavy hammer planted on
+an impact star with a shoved foe beyond it; a spiral of blade tips around a
+hub; a drawn bow whose arrowhead drips venom; six shafts fanned out of a
+grip; a four-sided frost lance head trailing a comet; a lightning kink walking
+from one struck head to the next. Materials: aged bone, pitted iron, rotted
+leather, with saturated colour reserved for the effect itself and for the
+enchanted heads. The plate rim is a consistent thin band of antique gold #A98A50
+on every icon in the set, so the eight read as one set. Palette strictly muted:
+obsidian #171719, charcoal #29282B, ash grey #68666A, bone #C6BDAA, antique gold
+#A98A50, blood burgundy #642A32, with the effect colours infernal orange #D85C27
+for the crater, arcane blue #478CCB for the frost and spectral violet #9567BB
+for the lightning. Painterly detail combined with physically believable
+materials, a single consistent light direction from the upper left across the
+whole set, consistent visual weight. No text, no lettering, no frame furniture,
+no user interface, one object per image.
+NEGATIVE:
+flat vector pictogram, minimalist line icon, emoji, glyph, text, lettering,
+background scenery, drop shadow outside the plate, inconsistent light direction
+within the set, oversaturated colour, cartoon, chibi, modern armour,
+watermark, cropped subject, differing plate rims
+FORMAT:
+256x256 (1:1), PNG with transparency, exported at 2x for the 56 px slot
+USE:
+the painted replacements for the eight skill plates drawn in game.js by the SKILL_ICON
+map added with issue #70 and ridden by HUD.iconSkill2 / HUD.iconSkill3. One asset per
+SKILL_ICON key (cleave, earthquake, herostrike, whirlwind, venshot, bladefan, frostlance,
+chainbolt), and the whole set lands at once: swapping one icon alone breaks the
+consistency ART_BIBLE.md section 10.4 asks of icons.
+
+================================================================================
 NOTE - keeping the set coherent
 ================================================================================
-All seven prompts share the ART_BIBLE.md anchor on purpose. When the set is
+All eight prompts share the ART_BIBLE.md anchor on purpose. When the set is
 generated, compare them side by side before anything enters the game: same
 light temperature, same material language, same degree of wear, same palette.
 If one asset drifts, regenerate only that one with its approved references

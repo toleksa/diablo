@@ -1604,6 +1604,178 @@ function skillWeaponOk(sk) {
   return true;
 }
 
+// ---------- the plate every skill rides its slot with (issue #70) ----------
+// One glyph for both class slots made the bar lie: eight skills live in it, and
+// the player had to read the nameplate under the icon before he knew what he
+// was carrying. So every skill now draws its own plate. There are no bitmaps in
+// this game, so the plates are vector markup assembled from primitives, the
+// same shapes the world already draws with (a swing's arc, a blade, a bolt of
+// lightning, a droplet), and each one is composed the way its cast actually
+// behaves: Cleave sweeps, Whirlwind spirals, Blade Fan really does fan six
+// arrows, Chain Bolt really does link four foes. They also wear the exact
+// colour that cast throws on the floor - castCleave's ring, castVenomShot's
+// arrowhead, castChainBolt's burst - so the bar and the fight read as one
+// thing rather than as two vocabularies. ART_BIBLE.md 10.4 asks of icons: one
+// object, centred, square, readable at the slot's 56 px, no lettering, and the
+// frame rides on currentColor so the rule that dims an unusable slot dims the
+// glyph with it.
+const ICON_V = 40; // every plate shares this square viewBox
+
+// --- the primitives: one shape each, each returns its own markup ---
+function icoRing(cx, cy, r, color, w, dashed) {
+  return '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + color +
+    '" stroke-width="' + w + '"' + (dashed ? ' stroke-dasharray="2 3"' : '') + '/>';
+}
+function icoDisc(cx, cy, r, color) {
+  return '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="' + color + '"/>';
+}
+// a band of sweep: the arc a swing leaves, closed into a fat wedge
+function icoArc(cx, cy, ro, ri, a0, a1, color) {
+  const t = (a) => (a - 90) * Math.PI / 180; // 0 degrees points up
+  const p = (r, a) => (cx + Math.cos(t(a)) * r).toFixed(2) + ' ' + (cy + Math.sin(t(a)) * r).toFixed(2);
+  const sweep = ((a1 - a0) % 360 + 360) % 360 > 180 ? 1 : 0;
+  return '<path d="M ' + p(ro, a0) + ' A ' + ro + ' ' + ro + ' 0 ' + sweep + ' 1 ' + p(ro, a1) +
+    ' L ' + p(ri, a1) + ' A ' + ri + ' ' + ri + ' 0 ' + sweep + ' 0 ' + p(ri, a0) + ' Z" fill="' +
+    color + '"/>';
+}
+// the same sweep, but as a line rather than a filled band
+function icoStroke(cx, cy, r, a0, a1, color, w) {
+  const t = (a) => (a - 90) * Math.PI / 180;
+  const p = (a) => (cx + Math.cos(t(a)) * r).toFixed(2) + ' ' + (cy + Math.sin(t(a)) * r).toFixed(2);
+  const sweep = ((a1 - a0) % 360 + 360) % 360 > 180 ? 1 : 0;
+  return '<path d="M ' + p(a0) + ' A ' + r + ' ' + r + ' 0 ' + sweep + ' 1 ' + p(a1) +
+    '" fill="none" stroke="' + color + '" stroke-width="' + w + '" stroke-linecap="round"/>';
+}
+function icoLine(x1, y1, x2, y2, w, color) {
+  return '<line x1="' + x1.toFixed(2) + '" y1="' + y1.toFixed(2) + '" x2="' + x2.toFixed(2) +
+    '" y2="' + y2.toFixed(2) + '" stroke="' + color + '" stroke-width="' + w +
+    '" stroke-linecap="round"/>';
+}
+// a tapered blade: base at (x, y), point along an angle in degrees
+function icoBlade(x, y, len, ang, w, color) {
+  const t = ang * Math.PI / 180;
+  const dx = Math.cos(t), dy = Math.sin(t), px = -dy * w / 2, py = dx * w / 2;
+  return '<path d="M ' + (x + px).toFixed(2) + ' ' + (y + py).toFixed(2) + ' L ' + (x - px).toFixed(2) +
+    ' ' + (y - py).toFixed(2) + ' L ' + (x + dx * len).toFixed(2) + ' ' + (y + dy * len).toFixed(2) +
+    ' Z" fill="' + color + '"/>';
+}
+// a four-sided lance head centred on (x, y): base, two barbs, point
+function icoHead(x, y, len, ang, w, color) {
+  const t = ang * Math.PI / 180;
+  const dx = Math.cos(t), dy = Math.sin(t), px = -dy * w / 2, py = dx * w / 2;
+  return '<path d="M ' + (x - dx * len).toFixed(2) + ' ' + (y - dy * len).toFixed(2) + ' L ' +
+    (x + px).toFixed(2) + ' ' + (y + py).toFixed(2) + ' L ' + (x + dx * len).toFixed(2) + ' ' +
+    (y + dy * len).toFixed(2) + ' L ' + (x - px).toFixed(2) + ' ' + (y - py).toFixed(2) +
+    ' Z" fill="' + color + '"/>';
+}
+// a lightning kink: out, jogged out, jogged back, out
+function icoBolt(x, y, ang, len, color, w) {
+  const t = ang * Math.PI / 180;
+  const dx = Math.cos(t), dy = Math.sin(t), px = -dy, py = dx, u = len / 3;
+  const p = (s, off) => (x + dx * u * s + px * off).toFixed(2) + ',' +
+    (y + dy * u * s + py * off).toFixed(2);
+  return '<polyline points="' + p(0, 0) + ' ' + p(1, -3.4) + ' ' + p(2, 3.4) + ' ' + p(3, 0) +
+    '" fill="none" stroke="' + color + '" stroke-width="' + w + '" stroke-linejoin="round"/>';
+}
+// an impact star: the shock a planted blow or a landing leaves on the floor
+function icoStar(cx, cy, ro, ri, n, color) {
+  let pts = '';
+  for (let i = 0; i < n * 2; i++) {
+    const a = (i * 180 / n - 90) * Math.PI / 180;
+    const r = (i % 2) ? ri : ro;
+    pts += (cx + Math.cos(a) * r).toFixed(2) + ',' + (cy + Math.sin(a) * r).toFixed(2) + ' ';
+  }
+  return '<polygon points="' + pts.trim() + '" fill="' + color + '"/>';
+}
+function icoDrop(x, y, r, color) {
+  return '<path d="M ' + x + ' ' + (y - r * 1.8).toFixed(2) + ' C ' + (x + r) + ' ' + (y - r * 0.3) +
+    ' ' + (x + r) + ' ' + (y + r * 0.7) + ' ' + x + ' ' + (y + r) + ' C ' + (x - r) + ' ' + (y + r * 0.7) +
+    ' ' + (x - r) + ' ' + (y - r * 0.3) + ' ' + x + ' ' + (y - r * 1.8).toFixed(2) + ' Z" fill="' +
+    color + '"/>';
+}
+// two half turns that keep getting wider: the spin of a whirlwind
+function icoSpiral(cx, cy, r, color, w) {
+  return '<path d="M ' + cx + ' ' + (cy - r * 0.3).toFixed(2) + ' A ' + (r * 0.3).toFixed(2) +
+    ' ' + (r * 0.3).toFixed(2) + ' 0 0 1 ' + cx + ' ' + (cy + r * 0.3).toFixed(2) + ' A ' + (r * 0.6).toFixed(2) +
+    ' ' + (r * 0.6).toFixed(2) + ' 0 0 1 ' + cx + ' ' + (cy - r * 0.6).toFixed(2) + ' A ' + (r * 0.92).toFixed(2) +
+    ' ' + (r * 0.92).toFixed(2) + ' 0 0 1 ' + cx + ' ' + (cy + r * 0.92).toFixed(2) + '" fill="none" stroke="' +
+    color + '" stroke-width="' + w + '" stroke-linecap="round"/>';
+}
+
+// the colours a plate may spend: the ones its own cast throws on the floor,
+// plus the bone and the dirt the dungeon is drawn in
+const BARB = '#e8ddc0', WAR = '#d8c060', VEN = '#9ed05a', STEEL = '#e8e0c0';
+const FROST = '#8fd6f0', ARC = '#9fd8ff', GRIT = '#594536', EMBER = '#ffd75e';
+const WAR2 = '#f2e6b0'; // the paler gold both of the warrior's own plates spend
+const SKILL_ICON = {
+  cleave: () =>
+    // an axe head at the top of a wide sweep, the sweep itself drawn in the bone
+    // of castCleave's ring: this is what a swing leaves, not a sword
+    icoArc(20, 25, 16.4, 11.6, 44, 132, BARB) +
+    icoBlade(9.4, 26.6, 11.4, -8, 4.8, '#8e8779') +
+    icoBlade(9.4, 26.6, 9.4, 4, 5.2, '#a49b8a') +
+    icoLine(5.6, 28, 19.4, 19.6, 2.6, '#6b5426'),
+  earthquake: () =>
+    // the hero's own two feet going into a crater: the landing star in the gold
+    // of leapLand's ring, the ground cracked out of it in dungeon dirt
+    icoStar(20, 22.4, 12.4, 5.4, 8, EMBER) +
+    icoDisc(20, 22.4, 4.2, '#c8b070') +
+    icoBolt(20, 5.4, 90, 12.6, EMBER, 2.6) +
+    icoBolt(7.2, 30.6, 28, 10, GRIT, 2) + icoBolt(32.8, 30.6, 152, 10, GRIT, 2),
+  herostrike: () =>
+    // one planted blow and the shove behind it: the head of a heavy hammer
+    // brought down on a shock star, the foe pushed along a bone arrow
+    icoLine(12.4, 32.6, 22.2, 13.4, 3, '#6b5426') +
+    '<rect x="15.8" y="9" width="14" height="8" rx="1.4" transform="rotate(-38 22.8 13)" fill="#a49b8a"/>' +
+    icoStar(26.2, 23.8, 8.4, 3.4, 6, WAR2) +
+    icoBlade(26.6, 26.8, 6.6, 30, 3.2, WAR2),
+  whirlwind: () =>
+    // the spin as the spin: a spiral of blades around the hero's own hub
+    icoSpiral(20, 21, 15, WAR, 2.8) +
+    icoBlade(20, 21, 15.4, 42, 4.6, STEEL) + icoBlade(20, 21, 15.4, 222, 4.6, STEEL) +
+    icoDisc(20, 21, 3.4, '#6b5426'),
+  venshot: () =>
+    // a drawn bow with a fanged arrow, and the venom droplet the arrowhead
+    // leaves behind in the green of castVenomShot's arrow
+    icoStroke(7.8, 20, 13.2, 42, 138, '#6b5426', 2.6) +
+    icoLine(16.7, 11.1, 12.8, 20, 1.2, STEEL) + icoLine(12.8, 20, 16.7, 29.1, 1.2, STEEL) +
+    icoLine(12.8, 20, 26.4, 20, 1.6, '#6b5426') +
+    icoBlade(23.8, 20, 8, 0, 4.2, VEN) +
+    icoDrop(30.2, 30.4, 3.4, VEN) + icoDrop(24.8, 31.2, 2.1, '#c8e888'),
+  bladefan: () =>
+    // six shafts out of the hub, the fan castBladeFan really throws
+    (() => {
+      let fan = '';
+      for (let k = 0; k < 6; k++) fan += icoBlade(20, 22, 15, -140 + k * 20, 3.4, STEEL);
+      return fan + icoDisc(20, 22, 3.6, BARB);
+    })(),
+  frostlance: () =>
+    // the head first, then the comet behind it: cold, and clearly not an arrow
+    icoHead(20, 12.6, 8.4, -90, 11, FROST) +
+    icoLine(20, 21, 20, 31, 3.6, '#6f9fbe') + icoDisc(20, 32.6, 2.6, FROST) +
+    icoStroke(20, 20, 16.4, 244, 296, FROST, 1.4),
+  chainbolt: () =>
+    // the bolt walking the room: kinks linking four heads, the pale blue of
+    // castChainBolt's ring and burst
+    icoBolt(7.6, 10.4, 58, 12, ARC, 2.6) + icoBolt(14.4, 19.2, 20, 11, ARC, 2.6) +
+    icoBolt(24.2, 22.4, 48, 11, ARC, 2.6) +
+    icoDisc(7.6, 10.4, 2.8, ARC) + icoDisc(14.4, 19.2, 2.8, ARC) +
+    icoDisc(24.2, 22.4, 2.8, ARC) + icoDisc(31.6, 30.6, 3.4, ARC),
+};
+
+// the markup a slot carries: the glyph, on a bone frame that rides on current
+// Color so the CSS that dims an unusable slot dims the plate with it too
+function iconSvgFor(key) {
+  const glyph = SKILL_ICON[key] ? SKILL_ICON[key]() : '';
+  if (!glyph) return '';
+  return '<svg viewBox="0 0 ' + ICON_V + ' ' + ICON_V + '">' +
+    icoRing(20, 20, 17.4, 'currentColor', 1.8) + icoRing(20, 20, 14.8, 'currentColor', 0.9, true) +
+    glyph + '</svg>';
+}
+// which plate each slot is already showing: the skillbar is rewritten only when
+// the class' pair changes, never once a frame
+const iconKey = { 2: '', 3: '' };
+
 // the shared melee arc: the plain attack sweeps reach 1 / arc 1, a class'
 // opener reaches further or wider
 function meleeSweep(reachMul, dmgMul, arcMul, critBonus) {
@@ -3203,6 +3375,8 @@ const HUD = {
   slotPotion: document.getElementById('slotPotion'),
   slotSkill2: document.getElementById('slotSkill2'),
   slotSkill3: document.getElementById('slotSkill3'),
+  iconSkill2: document.getElementById('iconSkill2'),
+  iconSkill3: document.getElementById('iconSkill3'),
   skName2: document.getElementById('skName2'),
   skName3: document.getElementById('skName3'),
   slotLMB: document.getElementById('slotLMB'),
@@ -3263,6 +3437,13 @@ function hudUpdate() {
   for (const k of [2, 3]) {
     const sk = skillOf(k);
     HUD['skName' + k].textContent = sk ? sk.name : '';
+    // the plate the slot rides (issue #70): the glyph its own skill is, put
+    // back only when the class' pair changes, so the bar is never rewritten
+    // once a frame
+    const ic = HUD['iconSkill' + k];
+    const row = CLASS_SKILLS[P.cls || 'barbar'];
+    const pkey = sk ? row[k - 2] : '';
+    if (ic && iconKey[k] !== pkey) { iconKey[k] = pkey; ic.innerHTML = iconSvgFor(pkey); }
     HUD['slotSkill' + k].setAttribute('title', sk ? sk.name + ' - ' + sk.mana +
       ' Mana, ' + sk.cd + ' s cooldown (' + (sk.weapon === 'melee' ?
         'a swung weapon' : 'a bow or a staff') + ') - ' + sk.blurb : '');
