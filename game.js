@@ -103,7 +103,7 @@ const CLASSES = {
 const P = {
   r: 15, speed: 190, atkRange: 58, atkCd: 0.5, atkArc: 1.5,
   baseDmg: 12, baseHp: 120, manaMax: 100,
-  x: 0, y: 0, aim: 0, walkPhase: 0, hurtT: -1, hurtFlash: 0,
+  x: 0, y: 0, aim: 0, walkPhase: 0, moveAim: 0, ppx: 0, ppy: 0, hurtT: -1, hurtFlash: 0,
   hp: 120, hpMax: 120, mana: 0,
   attr: { str: 8, dex: 8, int: 8, vit: 10 }, statPoints: 0, inv: [],
   xp: 0, xpNeed: 80, level: 1, gold: 0,
@@ -178,6 +178,9 @@ function resetPlayer(cls) {
   // no walk to earn a charge first; the pool size itself already follows
   // Intelligence from the reopened #66
   P.mana = mpMax();
+  // issue #78: the remembered walk line starts on the hero's facing, so a
+  // Space shot before any first step still has a sane direction
+  P.ppx = P.x; P.ppy = P.y; P.moveAim = P.aim;
 }
 
 // ---------- Walls / level generation ----------
@@ -1156,6 +1159,14 @@ function update(dt) {
     P.chill = Math.max(0, P.chill - dt); // the frost hand thaws on its own
     if (K.w || K.a || K.s || K.d || game.moveTarget) P.walkPhase += dt * 11;
     else P.walkPhase *= Math.pow(0.02, dt);
+    // issue #78: remember the way the hero actually moved, whatever asked
+    // for the step (keys, click-to-move, the demo bot) - a Space shot flies
+    // this line, and it survives standing put: "is/was moving"
+    {
+      const mdx = P.x - P.ppx, mdy = P.y - P.ppy;
+      if (mdx * mdx + mdy * mdy > 1.2) P.moveAim = Math.atan2(mdy, mdx);
+      P.ppx = P.x; P.ppy = P.y;
+    }
     // idle routines (issue #72): a quarter-minute with nothing asked of the
     // hero starts one of three of them, chosen at random. As long as he keeps
     // standing, another starts five idle seconds after the previous one
@@ -1164,7 +1175,7 @@ function update(dt) {
     // hammering the same stretch over and over. Any input at all - a step,
     // a swing, the bot taking over - stops the whole cadence on the frame
     // it lands on, and the fifteen seconds have to be sat through again.
-    if (K.w || K.a || K.s || K.d || game.moveTarget || game.mouseDown ||
+    if (K.w || K.a || K.s || K.d || K.space || game.moveTarget || game.mouseDown ||
         P.dead || P.leap || P.atkT > 0) {
       P.idleT = 0; P.idleP = 0; P.idleNext = -1; // doing something: no cadence
     } else if (P.idleP > 0) {
@@ -1200,7 +1211,7 @@ function update(dt) {
       if (game.checkpoint === FINAL_LEVEL) showVictory();
       else nextCheckpoint();
     }
-    if (game.mouseDown && P.atkT <= 0 && game.seat <= 0) tryAttack();
+    if ((game.mouseDown || K.space) && P.atkT <= 0 && game.seat <= 0) tryAttack();
   }
 
   // --- monsters ---
@@ -1654,7 +1665,14 @@ function shootRanged() {
 
 function tryAttack() {
   if (game.seat > 0) return; // seated: the hand stays where it is (issue #69)
-  if (rangedWeapon()) { shootRanged(); return; } // a bow or a staff never swings (issue #53)
+  if (rangedWeapon()) {
+    // issue #78: Space is a second attack key. With the cursor not held down,
+    // a ranged shot flies the way the hero is or was heading - not down the
+    // cursor line. Melee keeps its own auto-aim untouched
+    if (K.space && !game.mouseDown) P.aim = P.moveAim;
+    shootRanged();
+    return;
+  }
   P.atkT = P.atkCd;
   // auto-aim at the nearest monster in reach
   let best = null, bd = 1e9;
@@ -3636,7 +3654,7 @@ function render(dt) {
   if (game.paused) pauseVeil();
 }
 // ============ PART 7 — INPUT, HUD, MAIN LOOP ============
-const K = { w: false, a: false, s: false, d: false };
+const K = { w: false, a: false, s: false, d: false, space: false };
 const ROMAN = ['','I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
 
 const HUD = {
@@ -3749,6 +3767,7 @@ window.addEventListener('keydown', (e) => {
     case 'KeyS': case 'ArrowDown': K.s = true; break;
     case 'KeyA': case 'ArrowLeft': K.a = true; break;
     case 'KeyD': case 'ArrowRight': K.d = true; break;
+    case 'Space': K.space = true; break;
     case 'Digit1': case 'Numpad1': if (game.running && !game.paused) drinkPotion(); break;
     case 'Digit2': case 'Numpad2': if (game.running && !game.paused) trySkill2(); break;
     case 'Digit3': case 'Numpad3': if (game.running && !game.paused) trySkill3(); break;
@@ -3766,6 +3785,7 @@ window.addEventListener('keyup', (e) => {
     case 'KeyS': case 'ArrowDown': K.s = false; break;
     case 'KeyA': case 'ArrowLeft': K.a = false; break;
     case 'KeyD': case 'ArrowRight': K.d = false; break;
+    case 'Space': K.space = false; break;
   }
 });
 
@@ -3837,6 +3857,7 @@ function beginRun(cls) {
   // the run should say what the class brought, not leave the player to find
   // the skillbar by accident (issue #63)
   toast('Skills: ' + skillOf(2).name + ' (2) and ' + skillOf(3).name + ' (3)', '');
+  toast('Space — attack: arrows and bolts fly where you run', '');
   toast('Checkpoint 1 — Old Ruins', '');
   toast('Class: ' + CLASSES[P.cls].name + ' · C — character and equipment', '');
 }
