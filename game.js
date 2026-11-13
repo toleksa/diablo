@@ -3167,13 +3167,18 @@ function drawHandWeapon(wk, hx, hy, ang, flare) {
 // body put and turns the head over whatever is down the halls. Only the
 // amounts change between them, which is why the row is data and not three
 // drawings - the drawing is the same limbs, asked for a different amount.
+// reopened #72: the cadence was already three-deep and random, but at the
+// gameplay camera a 2 px sway all three of them shared reads as "the same
+// animation" every time. Each routine is now unmistakable at that zoom:
+// he heaves his weight shoulder-wide, hoists the weapon to eye line, or
+// turns the head a full hand's width over both shoulders
 const IDLE = [
-  { dur: 1.9, lean: 0.075, bob: 1.9, feet: 0.17, arm: 0.13, hand: 3.6, head: 2.8,
-    dip: 1.2, crest: 2, lift: 0.55 }, // shifts its weight over planted feet
-  { dur: 2.7, lean: 0.02, bob: 1.1, feet: 0.05, arm: 0.3, hand: 8.4, head: 1.4,
-    dip: 2.4, crest: 1, lift: 1.25 }, // brings the weapon up and reads it
-  { dur: 2.4, lean: 0.03, bob: 1.4, feet: 0.08, arm: 0.08, hand: 1.6, head: 5.2,
-    dip: 0.6, crest: 3.2, lift: 0.3 }, // stands put and turns over the halls
+  { dur: 1.9, lean: 0.11, bob: 3.2, feet: 0.55, arm: 0.18, hand: 4.5, head: 1.6,
+    dip: 1.8, crest: 2.4, lift: 0.7 }, // shifts its weight over planted feet
+  { dur: 2.7, lean: 0.03, bob: 1.6, feet: 0.1, arm: 0.5, hand: 11, head: 1.8,
+    dip: 3.0, crest: 1.2, lift: 1.35 }, // brings the weapon up and reads it
+  { dur: 2.4, lean: 0.05, bob: 2.0, feet: 0.15, arm: 0.1, hand: 2.5, head: 7.5,
+    dip: 1.2, crest: 4.0, lift: 0.35 }, // stands put and turns over the halls
 ];
 const IDLE_FIRST = 15; // seconds of standing before the first routine
 const IDLE_AGAIN = 5;  // and seconds of standing between routines
