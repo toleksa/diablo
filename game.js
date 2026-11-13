@@ -122,6 +122,7 @@ const game = {
   spawnDelay: 1.2,
   monsters: [], projectiles: [], globes: [], goldpiles: [],
   drops: [], particles: [], texts: [], rings: [],
+  bolts: [], // the lightning a chain bolt leaves between the foes it struck
   corpses: [], decals: [],
   walls: [], torches: [], grid: null, startPos: null,
   portal: null, boss: null, visited: null,
@@ -152,7 +153,7 @@ function resetGame() {
   game.monsters = []; game.projectiles = []; game.globes = [];
   game.goldpiles = []; game.drops = []; game.particles = [];
   game.chests = [];
-  game.texts = []; game.rings = [];
+  game.texts = []; game.rings = []; game.bolts = [];
   game.decals = [];
 }
 function resetPlayer(cls) {
@@ -620,6 +621,32 @@ function burst(x, y, color, n, spd) {
     const a = rand(0,TAU), s = rand(40, spd||180);
     game.particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:rand(0.25,0.6),color,size:rand(1.5,3.5)});
   }
+}
+// a bolt of lightning down a line: the kinks are thrown when the bolt is born,
+// so the bolt keeps its own shape for the whole of its short life rather than
+// shivering every frame. Every segment carries its ends, which is what lets the
+// bar and the light pass agree where the strike actually was (issue #71)
+function boltFx(x1, y1, x2, y2, color) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const d = Math.hypot(dx, dy) || 1;
+  const px = -dy / d, py = dx / d; // the perpendicular: this is which way a kink jogs
+  const steps = clamp(Math.round(d / 22), 2, 14);
+  const pts = [{ x: x1, y: y1 }];
+  for (let k2 = 1; k2 < steps; k2++) {
+    const t = k2 / steps;
+    const jog = (k2 % 2 ? 1 : -1) * rand(4, 13) * (1 - Math.abs(t - 0.5) * 0.9);
+    pts.push({ x: x1 + dx * t + px * jog, y: y1 + dy * t + py * jog });
+  }
+  pts.push({ x: x2, y: y2 });
+  game.bolts.push({ pts, color, life: 0.26, max: 0.26 });
+  if (game.bolts.length > 40) game.bolts.splice(0, game.bolts.length - 40);
+}
+// the same polyline on the canvas, wherever the camera currently stands
+function boltTrail(b) {
+  ctx.beginPath();
+  ctx.moveTo(b.pts[0].x - vx, b.pts[0].y - vy);
+  for (let k2 = 1; k2 < b.pts.length; k2++) ctx.lineTo(b.pts[k2].x - vx, b.pts[k2].y - vy);
+  ctx.stroke();
 }
 function blood(x,y){ burst(x,y,'#8a1f1f',10,150); }
 
@@ -1436,6 +1463,12 @@ function update(dt) {
   game.texts = game.texts.filter(t => t.life > 0);
   for (const r of game.rings) { r.r += (r.grow || 420) * dt; r.life -= dt; }
   game.rings = game.rings.filter(r => r.life > 0);
+  // a bolt of lightning is the shortest-lived thing on the board: ART_BIBLE.md
+  // 7.2 asks of lightning that it reads as short-lived flashes, and the path it
+  // flashes along was decided when it was born, so a bolt does not shimmer
+  // once a frame
+  for (const b of game.bolts) b.life -= dt;
+  game.bolts = game.bolts.filter(b => b.life > 0);
   if (game.portal) game.portal.t += dt;
 }
 // ============ PART 4 — FIGHTING, SKILLS, PORTAL, DEATH ============
@@ -1582,7 +1615,7 @@ const SKILLS = {
   },
   chainbolt: {
     name: 'Chain Bolt', mana: 45, cd: 13, weapon: 'ranged', run: castChainBolt,
-    blurb: 'lightning through the four nearest foes you can see',
+    blurb: 'lightning that leaves the hero for the nearest foe he can see, then leaps from foe to foe, each leap drawn as an arc between the two',
   },
 };
 const CLASS_SKILLS = {
@@ -1924,14 +1957,25 @@ function castChainBolt() {
     if (d > 430 || !losClear(P.x, P.y, m.x, m.y)) continue;
     cand.push({ m: m, d: d });
   }
-  cand.sort((a, b) => a.d - b.d);
-  let n = 0;
-  for (let k = 0; k < 4 && k < cand.length; k++) {
-    const m = cand[k].m;
+  // the bolt travels rather than branching: it leaves the hero for the nearest
+  // foe he can see, and from there it answers for whichever foe stands nearest
+  // to the one it has just struck, so the line the player sees runs BETWEEN the
+  // crowd instead of being four separate flashes at the hero's feet (issue #71)
+  const left = cand.slice();
+  let ax = P.x, ay = P.y, n = 0;
+  while (n < 4 && left.length > 0) {
+    let bi = 0;
+    for (let k2 = 1; k2 < left.length; k2++) {
+      if (Math.hypot(left[k2].m.x - ax, left[k2].m.y - ay) <
+        Math.hypot(left[bi].m.x - ax, left[bi].m.y - ay)) bi = k2;
+    }
+    const m = left.splice(bi, 1)[0].m;
+    boltFx(ax, ay, m.x, m.y, '#9fd8ff'); // the arc that just struck, drawn where it struck
     damageMonster(m, Math.round(playerDmg() * 2.3 * rand(0.9, 1.1)),
       chance(critChance() + 0.15), P);
     ring(m.x, m.y, '#9fd8ff');
     burst(m.x, m.y, '#9fd8ff', 9, 230);
+    ax = m.x; ay = m.y;
     n++;
   }
   if (n === 0) burst(P.x, P.y, '#9fd8ff', 6, 160);
@@ -2031,7 +2075,7 @@ function nextCheckpoint() {
   game.portal = null;
   game.checkpoint++;
   game.monsters = []; game.projectiles = []; game.globes = [];
-  game.goldpiles = []; game.drops = []; game.rings = [];
+  game.goldpiles = []; game.drops = []; game.rings = []; game.bolts = [];
   generateLevel(game.checkpoint);
   P.x = game.startPos.x; P.y = game.startPos.y;
   game.moveTarget = null;
@@ -3227,6 +3271,19 @@ function drawFX() {
     ctx.fillRect(p.x - vx - p.size / 2, p.y - vy - p.size / 2, p.size, p.size);
   }
   ctx.globalAlpha = 1;
+  // a chain bolt's lightning, over the crowd rather than under it: a wide soft
+  // arc for the halo, then a thin bright core over that, both read off the one
+  // path the bolt was born with. ART_BIBLE.md 7.2 asks of lightning that it be
+  // a bright, high-contrast arc with a clear direction (issue #71)
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  for (const b of game.bolts) {
+    const a2 = Math.min(1, b.life / b.max * 1.7);
+    ctx.strokeStyle = hexA(b.color, 0.4 * a2); ctx.lineWidth = 7.5;
+    boltTrail(b);
+    ctx.strokeStyle = hexA('#eef6ff', 0.95 * a2); ctx.lineWidth = 2.2;
+    boltTrail(b);
+  }
+  ctx.globalAlpha = 1;
   for (const r of game.rings) {
     ctx.strokeStyle = hexA(r.color, Math.min(1, r.life * 2.2) * 0.85);
     ctx.lineWidth = 2.6;
@@ -3272,6 +3329,14 @@ function lightPass(t) {
     hole((game.throne.x - vx) * D, (game.throne.y - vy) * D,
       (158 + 16 * Math.sin(game.time * 2.6)) * D, 0.92);
   for (const pr of game.projectiles) hole((pr.x - vx) * D, (pr.y - vy) * D, 70 * D, 0.65);
+  // the lightning carries light with it, and not only at its ends: the room the
+  // bolt walks through flashes, so a chain that leaps from foe to foe can be
+  // followed in an unlit hall rather than only inside the hero's torch (issue #71)
+  for (const b of game.bolts) {
+    const a2 = Math.min(1, b.life / b.max);
+    for (let k2 = 0; k2 < b.pts.length; k2 += 2)
+      hole((b.pts[k2].x - vx) * D, (b.pts[k2].y - vy) * D, 74 * D, 0.86 * a2);
+  }
   dctx.globalCompositeOperation = 'source-over';
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.drawImage(darkCv, 0, 0);
@@ -3295,6 +3360,14 @@ function lightPass(t) {
     g.addColorStop(1, 'rgba(70,190,240,0)');
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.arc(game.portal.x - vx, game.portal.y - vy, pr, 0, TAU); ctx.fill();
+  }
+  // the bolt glows over the dark: a strike is its own light, which is what makes
+  // the line of it legible where the hero's torch does not reach (issue #71)
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  for (const b of game.bolts) {
+    const a2 = Math.min(1, b.life / b.max);
+    ctx.strokeStyle = hexA(b.color, 0.55 * a2); ctx.lineWidth = 8;
+    boltTrail(b);
   }
   ctx.globalCompositeOperation = 'source-over';
   // red pulse at low HP

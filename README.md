@@ -140,8 +140,13 @@ meanwhile, so the prize cannot be claimed twice.
   (one planted blow, 2.1x, that shoves the foe back; with nothing in reach it
   refuses) and **Whirlwind** (2.2x for every foe inside it). **Rogue** — **Venom
   Shot** (1.8x, and the foe it bites crawls) and **Blade Fan** (six arrows down a
-  fan). **Mage** — **Frost Lance** (1.9x, chilled) and **Chain Bolt** (lightning
-  through the four nearest foes you can see). The skillbar shows which pair you
+  fan). **Mage** — **Frost Lance** (1.9x, chilled) and **Chain Bolt**, which **travels**
+  rather than branching: the bolt leaves the hero for the nearest foe he can see,
+  and from there it answers for whichever foe stands nearest to the one it has just
+  struck, up to four. Every leap is drawn — a wide arcane halo under a thin white
+  core, kinked when the bolt is born so it does not shiver — and each arc carries its
+  own light, so a chain that runs BETWEEN the crowd can be followed in an unlit hall
+  rather than only inside the hero's torch. The skillbar shows which pair you
   carry, **each skill riding its own plate**: eight skills, eight drawn icons, no two
   alike, and each composed the way its cast behaves — **Cleave** sweeps an axe
   through an arc, **Earthquake** lands in a cracked crater, **Hero Strike** plants a

@@ -427,6 +427,14 @@ The player must always be able to understand what is happening.
 - Bright, high-contrast electrical arcs.
 - Short-lived flashes.
 - Clear directional patterns.
+- A chain reads as one line travelling, not as several flashes sharing a centre:
+  the arc leaves the caster for the first struck target, then runs from that target
+  to the next, so the player can follow where the bolt went.
+- The kinks of an arc are decided once, when it is born, and kept for the whole of
+  its short life; a shivering arc reads as noise rather than as a strike.
+- A strike carries its own light, and not only at its ends, so the arc stays legible
+  where no torch reaches.
+- An arc is a wide soft halo with a thin bright core over it: two weights, one path.
 
 ### Arcane
 
