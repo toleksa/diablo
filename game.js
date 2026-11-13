@@ -915,7 +915,11 @@ function curAttr(k) { return P.attr[k] + equipBonus(k); }
 // the pool follows Intelligence hard: a Barbarian on 6 holds 68, a Mage on
 // 14 holds 116, so the two classes do not even agree on how much arcane
 // there is to spend (issue #66)
-function mpMax() { return 80 + (curAttr('int') - 8) * 6 + equipBonus('mp'); }
+// reopened #66 also wants the POOL itself lower: a level-1 barbarian or
+// warrior (int 6) must sit at exactly one 40-mana finisher, so the base fell
+// from 80 to 56 and Intelligence now carries more of the curve (x8). The
+// class-less dummy (int 8) keeps its old 56 as its budget.
+function mpMax() { return 56 + (curAttr('int') - 8) * 8 + equipBonus('mp'); }
 // and so does the pace it fills back at: this used to be a flat 6 a
 // second for everyone, which read as an endless drum. Now the stat decides
 // on its own - about 1.3/s for the plate-and-axe pair on Intelligence 6,
