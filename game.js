@@ -554,8 +554,9 @@ function wakeBoss() {
   // in the dark and gives the hero room to back off and prepare (issue #68)
   if (Math.hypot(P.x - game.portal.x, P.y - game.portal.y) > BOSS_WAKE_R) return false;
   if (P.dead) return false;
-  const s = game.bossSpot;
-  spawnBoss(s.x, s.y, s.big);
+  // issue #77: he comes out of the gate itself, not ten strides down the
+  // approach at the hero - and he folds in over BOSS_WARP seconds first
+  spawnBoss(game.portal.x, game.portal.y, game.bossSpot.big, true);
   // he comes out ASLEEP, so the game's own awakening (the roar, the banner,
   // the exclamation) plays on the next frame exactly as it does for a foe the
   // hero has walked into sight
@@ -582,7 +583,11 @@ function throneTouch() {
   return true;
 }
 
-function spawnBoss(x, y, big) {
+// reopened #77: a portal boss does not just pop - BOSS_WARP seconds of warping
+// in before he can act or be touched. The lich king asleep on the throne is
+// bred awake, so he never warps
+const BOSS_WARP = 1.3;
+function spawnBoss(x, y, big, warp) {
   if (x == null) { const p = findSpawnPoint(); x = p.x; y = p.y; }
   // the overlord of the level you are standing in (issue #51): each level has
   // its own man, and past the tenth the Roost's overlord keeps coming back
@@ -601,6 +606,7 @@ function spawnBoss(x, y, big) {
     touchCd: d.touchCd, cd: 1, ai: 'boss', range: Math.round(d.r * g) + P.r + 6, elite: false,
     angle: 0, hitFlash: 0, slow: 0, wob: 0, dashCd: 2.5, summonCd: 5, stun: 0, kx: 0, ky: 0,
     poison: 0, poisonClock: 1, poisonLeft: 0, poisonTicks: 0,
+    spawnT: warp ? BOSS_WARP : 0, spawnRing: 0, // mid-warp: not there yet (issue #77)
     act: false, aggro: 460, // waits in the boss room until the player steps near
     lich: BOSSES[bi].lich === true, graveCd: 6.5, graspCd: 4.2, // the lich king's hands (issue #69)
     homeX: x, homeY: y, leash: 0, leashT: 0, // his throne: bosses leash like any foe (issue #46)
@@ -616,6 +622,17 @@ function ring(x, y, color) { game.rings.push({x,y,r:8,max:90,color,life:0.5}); }
 function splash(x, y, color) {
   game.rings.push({ x, y, r: 2, max: 30, grow: 110, color, life: 0.26 });
   burst(x, y, color, 7, 150);
+}
+// the warp-in fold (issue #77): motes dive from the portal dark into the
+// forming body, p closing 0->1 as the boss materialises. Arcane violet so
+// it never reads like blood or a spell hit on something else
+function warpFx(x, y, p) {
+  for (let i = 0; i < 3; i++) {
+    const a = rand(0, TAU), d0 = 26 + 78 * (1 - p);
+    game.particles.push({ x: x + Math.cos(a) * d0, y: y + Math.sin(a) * d0 * 0.7,
+      vx: -Math.cos(a) * rand(90, 150), vy: -Math.sin(a) * rand(70, 120),
+      life: rand(0.16, 0.34), color: i % 2 ? '#b46ae0' : '#e8c8f5', size: rand(1.6, 3.2) });
+  }
 }
 function banner(text, color) {
   const b = document.getElementById('checkpointBanner');
@@ -992,6 +1009,7 @@ function poisonFx(x, y) {
 }
 
 function damageMonster(m, dmg, isCrit, knockFrom) {
+  if (m.spawnT > 0) return; // mid-warp the body is not fully there yet (issue #77)
   m.act = true; // getting hit wakes a sleeping monster
   if (killMode) dmg = m.hp + 1000; // dev menu insta kill: anything dies in one blow
   m.hp -= dmg; m.hitFlash = 0.12;
@@ -1207,6 +1225,17 @@ function update(dt) {
   }
   for (const m of game.monsters) {
     if (m.dead) continue;
+    // a warping-in boss (issue #77): he folds out of the portal dark - rings
+    // pulse over the spot, motes dive inward, and he can neither act, wake,
+    // nor be hurt until the warp completes (damageMonster refuses the blow)
+    if (m.spawnT > 0) {
+      m.spawnT -= dt;
+      const p0 = 1 - m.spawnT / BOSS_WARP;
+      warpFx(m.x, m.y, p0);
+      m.spawnRing -= dt;
+      if (m.spawnRing <= 0) { m.spawnRing = 0.16; ring(m.x, m.y, p0 < 0.5 ? '#b46ae0' : '#e8c8f5'); }
+      continue;
+    }
     m.hitFlash = Math.max(0, m.hitFlash - dt);
     m.touchCd = Math.max(0, m.touchCd - dt);
     m.slow = Math.max(0, m.slow - dt);
@@ -2911,7 +2940,8 @@ function visOn(e, pad) {
 function drawMonster(m, t) {
   const x = m.x - vx, y = m.y - vy;
   if (!visOn(m, 70)) return;
-  const r = m.r;
+  // a warping-in boss draws small and grows to full as the warp completes
+  const r = m.r * (m.spawnT > 0 ? 0.12 + 0.88 * (1 - m.spawnT / BOSS_WARP) : 1);
   const bob = Math.sin(m.wob) * 2;
   shadowAt(x, y + r * 0.28, r * 0.95, 0.32);
   if (m.elite) {
