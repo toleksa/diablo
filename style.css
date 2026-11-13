@@ -119,6 +119,12 @@ body {
   box-shadow: inset 0 0 10px #000;
 }
 .skillSlot.big { width: 66px; height: 66px; }
+/* reopened issue #15: #hud is click-transparent on purpose (world commands
+   must read through the dark the HUD covers), but that also made the slots
+   unclickable - the click-on-icon path never got a DOM click. Slots take
+   their pointer-events back; the icon plate, cooldown ring and name label
+   stay transparent so they still bubble up to the slot itself */
+.skillSlot { pointer-events: auto; }
 .skillIcon {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   font-size: 26px; color: #e6d5a8; text-shadow: 0 0 8px rgba(255,200,90,.35);

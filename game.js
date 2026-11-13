@@ -3700,7 +3700,12 @@ for (const sc of [
   [HUD.slotLMB, tryAttack],
 ]) {
   if (sc[0] && sc[0].addEventListener)
-    sc[0].addEventListener('click', (e) => { if (e.button === 0 && game.running) sc[1](); });
+    // reopened #15: the old gate read `e.button === 0`, but DOM click events
+    // carry a boolean button (the numeric 0/1/2 lives on mousedown/mouseup)
+    // - the guard never passed and no slot click ever spent a skill. DOM
+    // 'click' is left-button only by definition, so running is all the gate
+    // needs; the CSS pairs with it by giving the slots their own pointer-events
+    sc[0].addEventListener('click', () => { if (game.running && !game.paused) sc[1](); });
 }
 
 // sheet re-render ticker: the vitals panel is refreshed a few times a second
