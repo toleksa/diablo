@@ -163,7 +163,7 @@ function resetPlayer(cls) {
   Object.assign(P, {
     x: WORLD.w / 2, y: WORLD.h - 200, aim: -Math.PI / 2, walkPhase: 0,
     hurtT: -1, hurtFlash: 0,
-    hp: P.baseHp, hpMax: P.baseHp, mana: 0,
+    hp: 0, hpMax: 0, mana: 0, // sized from the roll below, not a flat number
     cls: (cls && CLASSES[cls]) ? cls : 'barbar',
     attr: { str: c.attr.str, dex: c.attr.dex, int: c.attr.int, vit: c.attr.vit }, statPoints: 0, inv: [],
     xp: 0, xpNeed: 60,
@@ -181,6 +181,9 @@ function resetPlayer(cls) {
   // issue #78: the remembered walk line starts on the hero's facing, so a
   // Space shot before any first step still has a sane direction
   P.ppx = P.x; P.ppy = P.y; P.moveAim = P.aim;
+  // issue #82: the life pool is sized from Vitality the moment the class is
+  // rolled, so a fresh Mage and a fresh Barbarian no share a flat 120
+  refreshHpMax(); P.hp = P.hpMax;
 }
 
 // ---------- Walls / level generation ----------
@@ -956,7 +959,13 @@ function moveSpd() {
   return P.speed * (1 + equipBonus('spd') / 100) * (P.chill > 0 ? 0.58 : 1);
 }
 function playerHpMax() {
-  let h = P.baseHp + (P.level-1)*14 + (curAttr('vit') - 10) * 6;
+  // issue #82: life answers to Vitality the way mana answers to Intelligence -
+  // a small carried base plus a handful of points per vitality, anchored so a
+  // vit-10 body still lands on the old ~120 and classes fan out around it:
+  // level-1 Mage (vit 6) 96, Barbarian (vit 11) 126, Warrior (vit 14) 144,
+  // Rogue (vit 9) 114 - goblin touches (6 dmg) and zombie shambles (10) stay
+  // survivable for everyone, the squishy class just reads squishy now
+  let h = 60 + (P.level - 1) * 14 + curAttr('vit') * 6;
   for (const s of SLOTS) { const e = P.eq[s]; if (e) for (const st of e.stats) if (st.k==='hp') h += st.v; }
   return h;
 }
