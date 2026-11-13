@@ -197,6 +197,8 @@ body {
 }
 .panelBox button + button { margin: 6px auto 0; }
 .panelBox button:hover { background: linear-gradient(#7a551c, #3c280c); box-shadow: 0 0 18px rgba(230,170,60,.35); }
+/* issue #79: the small line under the win screen's Continue button */
+.gauntletNote { display: block; margin: 8px auto 0; font-size: 11px; letter-spacing: 2px; color: #9c8a5e; opacity: .88; }
 
 .red { color: #e05a4a; }
 .cyan { color: #58c8e0; }

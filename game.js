@@ -2368,6 +2368,18 @@ function backToMenu() {
   if (scr) scr.classList.remove('hidden');
   if (loadSnapshot()) document.getElementById('continueBtn').classList.remove('hidden');
 }
+// issue #79: "Continue the Journey" on the win screen is no longer a stroll
+// around the trophy hall - it carries the hero past the throne into the
+// endless gauntlet. Past stage 13 the Roost's halls keep regenerating (the
+// theme table pins them to FINAL_THEME, the arena layout takes over) and the
+// same overlord keeps coming back through the clamped boss table, forever
+function continueJourney() {
+  closeVictoryWindow();
+  game.boss = null; // the lich from the throne hall is out of the way
+  nextCheckpoint(); // stage 14 and on: same hero, same gear, new hall
+  banner('Endless Gauntlet - stage ' + game.checkpoint, '#c84a3a');
+  toast('The gauntlet has no end - the halls go on past the throne', '');
+}
 
 // ---------- the title screen's painted art (issue #55) ----------
 // no image files anywhere in this game, so the title card is painted too: a
@@ -4118,12 +4130,7 @@ document.getElementById('restartBtn').addEventListener('click', () => {
 if (winEl && winMenuBtn.addEventListener)
   winMenuBtn.addEventListener('click', () => { backToMenu(); });
 if (winEl && winJourneyBtn.addEventListener)
-  winJourneyBtn.addEventListener('click', () => {
-    // the thirteenth stage is the last one: continuing the journey stands the
-    // hero up off the throne and hands the controls back (issue #69)
-    closeVictoryWindow();
-    toast('The throne is yours and so is the hall — walk about it whenever you like', '');
-  });
+  winJourneyBtn.addEventListener('click', () => { continueJourney(); });
 
 // ---------- main loop ----------
 let lastT = 0;
