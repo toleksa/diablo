@@ -94,9 +94,15 @@ started. The leash even holds each level's **overlord to his post by the
 portal**: he
 never hunts the whole dungeon, he is slower than a running hero, and he
 shuffles back to his mark at half pace. Stand **idle for a quarter of a
-minute** and the hero starts shifting weight on his own - shoulder roll,
-blade lifting off the shoulder, head scanning the hall - a two-second
-stretch that stops the frame any input comes back. Every portal you enter
+minute** and one of **three** idle routines starts on its own - a **weight
+shift** over planted feet, a **weapon read** that takes the blade off the
+shoulder and brings it up to eye height, or a **look round** the halls that
+leaves the body put and turns the head. Each runs about two seconds, and as
+long as he keeps standing another starts **five idle seconds** after the
+previous one settled, always a different routine from the one just played,
+so the three alternate rather than repeating. Any input at all stops the
+whole cadence on the frame it comes back on, and the quarter-minute has to
+be sat through again. Every portal you enter
 **saves your journey in the browser** (checkpoint, level, attributes,
 gear, gold) — close the tab and the title screen will offer to continue
 your last journey instead of starting over.

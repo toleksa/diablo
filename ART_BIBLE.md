@@ -277,6 +277,28 @@ When generating additional images of an existing character, use approved referen
 
 Never redesign an established character unintentionally.
 
+## 4.5. Idle Animation
+
+Standing put is not a frozen pose. A character left alone goes through
+**three** idle routines, and all three obey:
+
+- Each routine reads as its own action: it moves a different part of the
+  figure, so the three cannot be mistaken for one another at the
+  character's on-screen size.
+- Every routine starts and ends on the standing pose, so nothing leaves a
+  shifted figure behind and no routine can be mistaken for a step.
+- None of them travels: planted feet stay planted, and the shadow stays put
+  while the body works above it.
+- The head turns over the shoulder rather than snapping, and a routine that
+  brings the weapon up keeps it in step with the hand that holds it.
+- The cadence is slow: a long wait before the first routine, a short one
+  between the rest, and never the same routine twice in a row.
+
+In the game the set is drawn, not keyed: the three rows in game.js's IDLE
+table are amounts asked of the same limbs, and the head rides a full turn
+while every other limb rides an out-and-back, which is what keeps all three
+routines opening and closing on the plain stance (issue #72).
+
 ---
 
 # 5. Enemy Design

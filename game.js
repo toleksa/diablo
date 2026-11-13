@@ -108,7 +108,9 @@ const P = {
   attr: { str: 8, dex: 8, int: 8, vit: 10 }, statPoints: 0, inv: [],
   xp: 0, xpNeed: 80, level: 1, gold: 0,
   atkT: 0, dead: false, leap: null, chill: 0, // the lich king's cold grasp (issue #69)
-  idleT: 0, idleP: 0, // fifteen idle seconds start a short stretch (issue #47)
+  idleT: 0, idleP: 0, idleAnim: -1, idleNext: -1,
+  // fifteen idle seconds start one of three idle routines, and a routine
+  // that has finished arms another five seconds later (issue #72)
   cd: { potion: 0, sk2: 0, sk3: 0 },
   eq: { weapon: null, helm: null, armor: null },
 };
@@ -166,7 +168,7 @@ function resetPlayer(cls) {
     attr: { str: c.attr.str, dex: c.attr.dex, int: c.attr.int, vit: c.attr.vit }, statPoints: 0, inv: [],
     xp: 0, xpNeed: 60,
     level: 1, gold: 0, atkT: 0, dead: false, leap: null, chill: 0,
-    idleT: 0, idleP: 0,
+    idleT: 0, idleP: 0, idleAnim: -1, idleNext: -1,
     cd: { potion: 0, sk2: 0, sk3: 0 },
     // a class always starts with its own tool already equipped (issue #65),
     // so the first swing of a fresh run is a swing with something
@@ -1089,18 +1091,26 @@ function update(dt) {
     P.chill = Math.max(0, P.chill - dt); // the frost hand thaws on its own
     if (K.w || K.a || K.s || K.d || game.moveTarget) P.walkPhase += dt * 11;
     else P.walkPhase *= Math.pow(0.02, dt);
-    // idle animation (issue #47): a quarter-minute with nothing asked of the
-    // hero and he starts shifting weight - shoulder roll, blade lifting off
-    // the shoulder, head scanning. Any input stops it on the very next frame.
+    // idle routines (issue #72): a quarter-minute with nothing asked of the
+    // hero starts one of three of them, chosen at random. As long as he keeps
+    // standing, another starts five idle seconds after the previous one
+    // finished, and the next one is always drawn from the two that are not
+    // the routine he just played, so the three of them alternate instead of
+    // hammering the same stretch over and over. Any input at all - a step,
+    // a swing, the bot taking over - stops the whole cadence on the frame
+    // it lands on, and the fifteen seconds have to be sat through again.
     if (K.w || K.a || K.s || K.d || game.moveTarget || game.mouseDown ||
         P.dead || P.leap || P.atkT > 0) {
-      P.idleT = 0; P.idleP = 0;
+      P.idleT = 0; P.idleP = 0; P.idleNext = -1; // doing something: no cadence
     } else if (P.idleP > 0) {
-      P.idleP += dt / 1.9; // the routine itself runs about two seconds
-      if (P.idleP >= 1) { P.idleP = 0; P.idleT = 0; } // settled: wait again
+      P.idleP += dt / IDLE[Math.max(0, P.idleAnim)].dur;
+      if (P.idleP >= 1) { P.idleP = 0; P.idleNext = IDLE_AGAIN; } // settled: arm the next
+    } else if (P.idleNext > 0) {
+      P.idleNext -= dt;
+      if (P.idleNext <= 0) { P.idleNext = -1; pickIdle(); }
     } else {
       P.idleT += dt;
-      if (P.idleT >= 15) P.idleP = 0.001;
+      if (P.idleT >= IDLE_FIRST) pickIdle();
     }
     // fog of war: stamp the tiles around the player as visited (issue #13)
     if (game.visited) {
@@ -3049,6 +3059,51 @@ function drawHandWeapon(wk, hx, hy, ang, flare) {
   }
 }
 
+// ---------- the three ways the hero stands when nothing is asked (issue #72) ----------
+// The first quarter-minute of standing puts one of these three up, and every
+// five idle seconds after that another one goes. Each moves a different part
+// of the figure so the three read as three different things: the first rocks
+// the whole body over its planted feet, the second takes the weapon off the
+// shoulder and brings it up to eye height to look at it, the third leaves the
+// body put and turns the head over whatever is down the halls. Only the
+// amounts change between them, which is why the row is data and not three
+// drawings - the drawing is the same limbs, asked for a different amount.
+const IDLE = [
+  { dur: 1.9, lean: 0.075, bob: 1.9, feet: 0.17, arm: 0.13, hand: 3.6, head: 2.8,
+    dip: 1.2, crest: 2, lift: 0.55 }, // shifts its weight over planted feet
+  { dur: 2.7, lean: 0.02, bob: 1.1, feet: 0.05, arm: 0.3, hand: 8.4, head: 1.4,
+    dip: 2.4, crest: 1, lift: 1.25 }, // brings the weapon up and reads it
+  { dur: 2.4, lean: 0.03, bob: 1.4, feet: 0.08, arm: 0.08, hand: 1.6, head: 5.2,
+    dip: 0.6, crest: 3.2, lift: 0.3 }, // stands put and turns over the halls
+];
+const IDLE_FIRST = 15; // seconds of standing before the first routine
+const IDLE_AGAIN = 5;  // and seconds of standing between routines
+// the routine that comes next: drawn at random out of the two that are not
+// the one just played, which is what makes the three alternate
+function pickIdle() {
+  const last = P.idleAnim;
+  const pool = [];
+  for (let a2 = 0; a2 < IDLE.length; a2++) if (a2 !== last) pool.push(a2);
+  P.idleAnim = pool[Math.floor(Math.random() * pool.length)];
+  P.idleP = 0.001;
+}
+// the pose a routine holds at progress p. Every field is how far a part of
+// the figure has moved by then, so p = 0 and p = 1 both put the hero back
+// where he stands: the routines start and end on the plain idle stance and
+// never leave a shifted figure behind. The head rides a full turn (sweep)
+// rather than an out-and-back, so it looks over one shoulder and then the
+// other, which is what a man standing put in the dark actually does.
+function idlePose(a2, p) {
+  const row = IDLE[clamp(Math.floor(a2), 0, IDLE.length - 1)];
+  const arc = Math.sin(clamp(p, 0, 1) * Math.PI); // out and back again
+  const sweep = Math.sin(clamp(p, 0, 1) * TAU); // one turn across
+  return {
+    lean: row.lean * arc, bob: row.bob * arc, feet: row.feet * arc,
+    arm: row.arm * arc, hand: row.hand * arc, lift: row.lift * arc,
+    head: row.head * sweep, dip: row.dip * arc, crest: row.crest * arc,
+  };
+}
+
 function drawPlayer() {
   const x = P.x - vx;
   // being seated on the last throne: the figure settles down onto the seat over
@@ -3057,17 +3112,19 @@ function drawPlayer() {
   const y = P.y - vy + seatT * P.r * 0.36;
   shadowAt(x, P.y - vy + 6, P.r * 1.1, 0.4);
   const faceX = (P.faceX || 1);
-  // idle animation progress: 0 stands, 0..1 arcs through the stretch (issue #47)
-  const ip = (P.idleP > 0) ? Math.sin(Math.min(1, P.idleP) * Math.PI) : 0;
-  if (ip > 0) {
+  // which of the three routines is running, and how far through it it is
+  const idling = P.idleP > 0;
+  const pose = idling ? idlePose(P.idleAnim, P.idleP)
+    : { lean: 0, bob: 0, feet: 0, arm: 0, hand: 0, head: 0, dip: 0, crest: 0, lift: 0 };
+  if (idling) {
     // the whole figure leans over its planted feet as the weight shifts side to
     // side, so the shadow stays put while the body rocks above it
     ctx.save();
     ctx.translate(x, y + 4);
-    ctx.rotate(ip * 0.055 * faceX);
+    ctx.rotate(pose.lean * faceX);
     ctx.translate(-x, -(y + 4));
   }
-  const bob = Math.sin(P.walkPhase) * (Math.abs(Math.cos(P.walkPhase)) > 0.2 ? 2 : 1) + ip * 1.8;
+  const bob = Math.sin(P.walkPhase) * (Math.abs(Math.cos(P.walkPhase)) > 0.2 ? 2 : 1) + pose.bob;
   const r = P.r;
   const cl = CLASSES[P.cls || 'barbar']; // class colors (issue #22)
   const bare = !!cl.topless; // the barbarian wears furs, not a cuirass (issue #52)
@@ -3099,9 +3156,12 @@ function drawPlayer() {
   // legs: steel greaves swinging opposite under the hips
   // seated legs: thighs out of the hips, shins down off the edge of the seat
   const sat = seatT > 0.5;
-  const f1x = sat ? x - r * 0.44 : x - r * 0.2 + s * faceX * r * 0.4 + ip * faceX * r * 0.16;
+  // the feet slide apart and back together under the body: that is what a
+  // weight shift has to do to its planted feet, and the seated hero keeps
+  // his legs on the dais (issue #72)
+  const f1x = sat ? x - r * 0.44 : x - r * 0.2 + s * faceX * r * 0.4 + pose.feet * faceX * r;
   const f1y = sat ? y + r * 0.24 : y - r * 0.34 + legLen + Math.abs(s) * 1.8;
-  const f2x = sat ? x + r * 0.44 : x + r * 0.2 - s * faceX * r * 0.4 - ip * faceX * r * 0.16;
+  const f2x = sat ? x + r * 0.44 : x + r * 0.2 - s * faceX * r * 0.4 - pose.feet * faceX * r;
   const f2y = sat ? y + r * 0.24 : y - r * 0.34 + legLen + Math.abs(s) * 1.8;
   ctx.lineCap = 'round';
   ctx.strokeStyle = bare ? cl.skin : '#2c3442'; ctx.lineWidth = r * 0.27;
@@ -3155,10 +3215,14 @@ function drawPlayer() {
   ctx.beginPath(); ctx.arc(x - r * 0.44, shY + 1, r * 0.21, 0, TAU); ctx.arc(x + r * 0.44, shY + 1, r * 0.21, 0, TAU); ctx.fill();
   // arms: right holds the sword (swings with the slash), left counter-swings
   const armS = moving ? Math.sin(w) : 0;
-  const hRx = x + r * 0.52 + (P.atkT > P.atkCd - 0.3 ? Math.cos(P.aim) * r * 0.35 : -armS * faceX * r * 0.3 + ip * faceX * r * 0.12);
-  const hRy = shY + r * 0.42 - (P.atkT > P.atkCd - 0.3 ? 2 : Math.abs(armS) * 1.2 + ip * 3.4);
-  const hLx = x - r * 0.52 + armS * faceX * r * 0.3 - ip * faceX * r * 0.1;
-  const hLy = shY + r * 0.44 - ip * 1.4;
+  const hRx = x + r * 0.52 + (P.atkT > P.atkCd - 0.3 ? Math.cos(P.aim) * r * 0.35 : -armS * faceX * r * 0.3 + pose.arm * faceX * r);
+  // the weapon hand is what rides the routine: off the shoulder and up to
+  // eye height for the read, a knuckle's lift for the weight shift (issue #72)
+  const hRy = shY + r * 0.42 - (P.atkT > P.atkCd - 0.3 ? 2 : Math.abs(armS) * 1.2 + pose.hand);
+  // the off hand answers to the same routine as well: it carries the torch,
+  // so it rides the same breath the body does
+  const hLx = x - r * 0.52 + armS * faceX * r * 0.3 - pose.arm * faceX * r * 0.7;
+  const hLy = shY + r * 0.44 - pose.hand * 0.45;
   ctx.strokeStyle = bare ? cl.skin : cl.paul; ctx.lineWidth = r * 0.19;
   ctx.beginPath();
   ctx.moveTo(x + r * 0.4, shY + 2); ctx.lineTo(hRx, hRy);
@@ -3170,12 +3234,17 @@ function drawPlayer() {
   // the facing direction (issue #27 keeps it off the cursor), during a swing it
   // rides the arc, and a drawn bow or a charging staff points at the aim
   let wa;
-  if (ranged) wa = P.aim;
+  // a ranged weapon keeps its eye on the cursor whatever the body is doing -
+  // issues #61/#62 still hold - but it rides the routine's lift a third of
+  // the way, so a staff is still raised to eye height for the read
+  if (ranged) wa = P.aim + pose.lift * 0.3 * (faceX > 0 ? 1 : -1);
   else if (swingT >= 0) wa = P.aim - 0.7 + 1.4 * swingT;
-  else wa = (faceX > 0 ? 0.55 : Math.PI - 0.55) - ip * 0.52 * (faceX > 0 ? 1 : -1);
+  else wa = (faceX > 0 ? 0.55 : Math.PI - 0.55) - pose.lift * (faceX > 0 ? 1 : -1);
   drawHandWeapon(wk, hRx, hRy, wa, (ranged && swingT >= 0) ? 1 : 0);
-  // head + helmet - during the idle stretch the neck turns to scan the halls
-  const hx2 = x + ip * faceX * 2.6, hy2 = y - r * 1.15 + bob * 0.6 - ip * 1.2;
+  // head + helmet: the neck turns over whatever is down the halls, or dips in
+  // over a weapon being read. Only the head of the third routine moves, and
+  // it moves furthest, which is what tells the three apart (issue #72)
+  const hx2 = x + pose.head * faceX, hy2 = y - r * 1.15 + bob * 0.6 + pose.dip;
   ctx.fillStyle = cl.skin; // the face: every class shows its own skin
   ctx.beginPath(); ctx.arc(hx2, hy2, r * 0.36, 0, TAU); ctx.fill();
   if (bare) {
@@ -3188,7 +3257,7 @@ function drawPlayer() {
     ctx.moveTo(hx2 - r * 0.2, hy2 + r * 0.02); ctx.lineTo(hx2 + r * 0.08, hy2 + r * 0.02);
     ctx.stroke();
     ctx.strokeStyle = '#3e2b1c'; ctx.lineWidth = 2.2; // the topknot behind it
-    ctx.beginPath(); ctx.moveTo(hx2, hy2 - r * 0.3); ctx.lineTo(hx2 - faceX * (2 + ip * 2), hy2 - r * 0.52); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(hx2, hy2 - r * 0.3); ctx.lineTo(hx2 - faceX * (2 + pose.crest), hy2 - r * 0.52); ctx.stroke();
   } else {
     ctx.fillStyle = cl.paul;
     ctx.beginPath(); ctx.arc(hx2, hy2, r * 0.4, Math.PI * 1.02, Math.PI * 1.98); ctx.fill();
@@ -3197,7 +3266,7 @@ function drawPlayer() {
   }
   // helmet crest
   ctx.strokeStyle = cl.crest; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(hx2, hy2 - r * 0.4); ctx.lineTo(hx2 - faceX * (3 + ip * 3), hy2 - r * 0.6); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(hx2, hy2 - r * 0.4); ctx.lineTo(hx2 - faceX * (3 + pose.crest * 1.5), hy2 - r * 0.6); ctx.stroke();
   // hurt flash
   if (P.hurtFlash > 0) {
     ctx.fillStyle = 'rgba(220,40,40,' + Math.min(0.6, P.hurtFlash * 4) + ')';
@@ -3207,7 +3276,7 @@ function drawPlayer() {
     ctx.closePath(); ctx.fill();
     ctx.beginPath(); ctx.arc(hx2, hy2, r * 0.38, 0, TAU); ctx.fill();
   }
-  if (ip > 0) ctx.restore(); // undo the idle lean
+  if (idling) ctx.restore(); // undo the idle lean
 }
 // ============ PART 6d — FX, lighting, main render ============
 function drawProjectiles() {
