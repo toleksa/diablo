@@ -174,6 +174,10 @@ function resetPlayer(cls) {
     // so the first swing of a fresh run is a swing with something
     eq: { weapon: startWeapon(cls), helm: null, armor: null },
   });
+  // issue #75: a fresh run starts with the pool FULL, not empty - there is
+  // no walk to earn a charge first; the pool size itself already follows
+  // Intelligence from the reopened #66
+  P.mana = mpMax();
 }
 
 // ---------- Walls / level generation ----------
