@@ -484,6 +484,9 @@ function spawnMonster(type, x, y, elite, cp) {
     xp: d.xp, color: elite?'#d8a23c':d.color, touchCd: d.touchCd, cd: rand(0.4,1.2),
     ai: d.ai, range: d.range || (d.r + 27), elite: !!elite, angle: rand(0,TAU),
     hitFlash: 0, slow: 0, wob: rand(0,TAU), stun: 0, kx: 0, ky: 0,
+    // the dose a rogue's arrowhead leaves behind (issue #73): secs left,
+    // the countdown to the next tick, and what the dose still has to give
+    poison: 0, poisonClock: 1, poisonLeft: 0, poisonTicks: 0,
     act: true, aggro: (d.ai === 'ranged' ? 380 : 310) + (elite ? 70 : 0),
     homeX: x, homeY: y, leash: 0, leashT: 0, // chase leash (issue #29)
   };
@@ -593,6 +596,7 @@ function spawnBoss(x, y, big) {
     speed: Math.min(d.speed, 152), xp: Math.round(d.xp * (1 + (g - 1) * 1.2)), color: d.color,
     touchCd: d.touchCd, cd: 1, ai: 'boss', range: Math.round(d.r * g) + P.r + 6, elite: false,
     angle: 0, hitFlash: 0, slow: 0, wob: 0, dashCd: 2.5, summonCd: 5, stun: 0, kx: 0, ky: 0,
+    poison: 0, poisonClock: 1, poisonLeft: 0, poisonTicks: 0,
     act: false, aggro: 460, // waits in the boss room until the player steps near
     lich: BOSSES[bi].lich === true, graveCd: 6.5, graspCd: 4.2, // the lich king's hands (issue #69)
     homeX: x, homeY: y, leash: 0, leashT: 0, // his throne: bosses leash like any foe (issue #46)
@@ -944,6 +948,41 @@ function hurtPlayer(dmg, fromX, fromY) {
   if (P.hp <= 0) { P.hp = 0; P.dead = true; showDeath(); }
 }
 
+// ---------- the venom a rogue's arrow leaves behind (issue #73) ----------
+// A dose is a promise: it hands over POISON_MULT plain hits spread over
+// POISON_SECS seconds in POISON_TICK-long ticks. A tick takes an even share
+// of whatever the dose still has left to give, so the whole course adds up
+// to exactly the promise instead of a pile of rounded-up ticks, and a fresh
+// dose replaces the one already on a foe rather than stacking with it, so
+// two arrows cannot turn into a wall of venom.
+const POISON_SECS = 30;   // half a minute of it
+const POISON_TICK = 1;    // taken one second at a time
+const POISON_TICKS = POISON_SECS / POISON_TICK;
+const POISON_MULT = 2;    // two hundred percent of a plain attack
+const POISON_TINT = '#69a83c'; // the coat a poisoned foe wears
+function applyPoison(m, dmg) {
+  m.poison = POISON_SECS;
+  m.poisonClock = POISON_TICK;
+  m.poisonLeft = dmg;
+  m.poisonTicks = POISON_TICKS;
+  // the dose is announced the frame it lands, so the player can see which
+  // foe he just envenomed rather than counting green motes off a crowd
+  poisonFx(m.x, m.y);
+  dmgText(m.x, m.y - m.r * 1.5, 'POISONED', '#8cbf3f');
+}
+// what a single tick of the dose is worth
+function poisonShare(m) {
+  if (m.poisonTicks <= 0 || m.poisonLeft <= 0) return 0;
+  return Math.min(m.poisonLeft, Math.max(1, Math.round(m.poisonLeft / m.poisonTicks)));
+}
+// the bubbles the venom climbs off a foe with
+function poisonFx(x, y) {
+  for (let i = 0; i < 5; i++)
+    game.particles.push({ x: x + rand(-7, 7), y: y - rand(0, 12), vx: rand(-9, 9),
+      vy: -rand(14, 34), life: rand(0.5, 0.95), color: i % 2 ? '#8cbf3f' : '#b9dc6a',
+      size: rand(1.6, 3) });
+}
+
 function damageMonster(m, dmg, isCrit, knockFrom) {
   m.act = true; // getting hit wakes a sleeping monster
   if (killMode) dmg = m.hp + 1000; // dev menu insta kill: anything dies in one blow
@@ -1164,6 +1203,29 @@ function update(dt) {
     m.touchCd = Math.max(0, m.touchCd - dt);
     m.slow = Math.max(0, m.slow - dt);
     m.wob += dt * 6;
+    // the dose eats once a second for half a minute (issue #73). It eats
+    // whatever the foe is doing: feeling the venom wakes a sleeping one,
+    // so poison is never a free sleep-kill, and it eats through a stun,
+    // because venom is not a blow anything can stagger. Killing with it is
+    // a kill like any other - it counts, drops and leaves a corpse.
+    if (m.poison > 0) {
+      m.poisonClock -= dt;
+      if (m.poisonClock <= 0) {
+        m.poisonClock += POISON_TICK;
+        const vk = poisonShare(m);
+        m.poisonLeft -= vk;
+        m.poisonTicks--;
+        if (vk > 0) {
+          m.act = true;
+          m.hp -= vk;
+          m.hitFlash = Math.max(m.hitFlash, 0.1);
+          dmgText(m.x + rand(-6, 6), m.y - m.r * 0.7, '-' + vk, '#8cbf3f');
+          poisonFx(m.x, m.y);
+        }
+      }
+      if (m.poisonTicks <= 0) m.poison = 0; // the dose has handed over all of it
+      if (m.hp <= 0) { killMonster(m); continue; }
+    }
     if (m.kx || m.ky) {
       if (passableAt(m.x + m.kx * dt, m.y)) m.x += m.kx * dt;
       if (passableAt(m.x, m.y + m.ky * dt)) m.y += m.ky * dt;
@@ -1377,7 +1439,8 @@ function update(dt) {
       for (const m of game.monsters) {
         if (m.hp <= 0) continue;
         if (Math.hypot(pr.x - m.x, pr.y - m.y) < m.r + 6) {
-          if (pr.slow) m.slow = Math.max(m.slow, pr.slow); // issue #63: venom and frost
+          if (pr.slow) m.slow = Math.max(m.slow, pr.slow); // the Mage's cold still bites (issue #63)
+          if (pr.poison) applyPoison(m, pr.poisonDmg); // issue #73: the venom the arrowhead left
           const crit = chance(critChance());
           damageMonster(m, Math.round(pr.dmg * (crit ? 1.9 : rand(0.9, 1.1))), crit, P);
           splash(pr.x, pr.y, pr.color); // issue #62: the hit reads on the board
@@ -1593,6 +1656,12 @@ function tryAttack() {
 // a long cooldown. The yardstick:
 //   skill 2: 1.7-2.1x a plain hit, 12-14 mana, 4 s
 //   skill 3: 2.2-2.6x a plain hit over an area, 40-45 mana, 11-13 s
+// One opener does not front-load that blow, and it is not an accident:
+// issue #73 asked that the Rogue's Venom Shot land an ordinary arrow and
+// leave another two plain hits to EAT at the foe over half a minute. Its
+// bite is paid out in seconds rather than in one swing, which is the whole
+// point of the issue - an arrow that only made a foe crawl was the Mage's
+// own bite wearing a different name.
 const SKILLS = {
   cleave: {
     name: 'Cleave', mana: 12, cd: 4, weapon: 'melee', run: castCleave,
@@ -1613,7 +1682,7 @@ const SKILLS = {
   },
   venshot: {
     name: 'Venom Shot', mana: 12, cd: 4, weapon: 'ranged', run: castVenomShot,
-    blurb: 'a quick shot that slows whatever it bites',
+    blurb: 'an ordinary arrow whose venom keeps eating at the foe for half a minute',
   },
   bladefan: {
     name: 'Blade Fan', mana: 42, cd: 12, weapon: 'ranged', run: castBladeFan,
@@ -1916,14 +1985,20 @@ function castWhirlwind() {
 }
 
 // ROGUE skill 2: the rogue fights at arm's length, so his opener is a shot -
-// it leaves down the cursor line like every other arrow (issues #61/#62) but
-// it is heavier and it leaves the foe crawling: 1.8x and a two second slow
+// it leaves down the cursor line like every other arrow (issues #61/#62). The
+// slow that used to ride it has been taken off (issue #73): a rogue's arrow
+// that only made a foe crawl was the Mage's Frost Lance wearing another name.
+// What it does instead is what an arrow with a poisoned head should do: it
+// lands an ordinary hit - the arrow is the rogue's plain shot, same draw and
+// speed - and the venom the arrowhead leaves behind eats at the foe for half
+// a minute, a second apart, for two hundred percent of that same plain hit.
 function castVenomShot() {
   S.bow();
   const hx = P.x + Math.cos(P.aim) * (P.r + 6), hy = P.y + Math.sin(P.aim) * (P.r + 6) - 4;
   game.projectiles.push({ x: hx, y: hy, vx: Math.cos(P.aim) * 760, vy: Math.sin(P.aim) * 760,
-    dmg: Math.round(playerDmg() * 1.8), life: (PROJ_RANGE + 12) / 760, color: '#9ed05a',
-    side: 'p', arrow: true, home: false, slow: 2.2 });
+    dmg: playerDmg(), life: (PROJ_RANGE + 12) / 760, color: '#9ed05a',
+    side: 'p', arrow: true, home: false,
+    poison: POISON_SECS, poisonDmg: Math.round(playerDmg() * POISON_MULT) });
 }
 
 // ROGUE skill 3: six arrows thrown down a fan around the cursor line. No
@@ -2835,7 +2910,27 @@ function drawMonster(m, t) {
     ctx.strokeStyle = 'rgba(216,162,60,0.85)'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.ellipse(x, y + r * 0.28, r + 6, (r + 6) * 0.55, 0, 0, TAU); ctx.stroke();
   }
-  const col = m.slow > 0 ? '#6ea8d8' : m.color;
+  // a poisoned foe wears the venom (issue #73): a green coat under a green
+  // haze, with bubbles climbing off it. The read is loud on its own, so the
+  // foe you are holding venom on is obvious across a whole dark room, and
+  // it stays obvious for the whole half-minute the dose is worth
+  const col = m.poison > 0 ? POISON_TINT : m.slow > 0 ? '#6ea8d8' : m.color;
+  if (m.poison > 0) {
+    // the stink of it, hugging the body so the shape still reads through
+    ctx.fillStyle = 'rgba(96,168,50,0.2)';
+    ctx.beginPath(); ctx.arc(x, y - r * 0.5 + bob, r * 1.16, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#9ed05a';
+    for (let i2 = 0; i2 < 3; i2++) {
+      // three bubbles climbing the body, staggered and wrapping round
+      const ph = ((m.wob * 0.5 + i2 * 2.1) % 3) / 3;
+      ctx.globalAlpha = 0.85 - ph * 0.55;
+      ctx.beginPath();
+      ctx.arc(x + Math.sin(m.wob + i2 * 2.1) * r * 0.52,
+        y - r * (0.18 + ph * 1.3) + bob, r * (0.14 - ph * 0.05), 0, TAU);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
   // body
   ctx.fillStyle = col;
   ctx.beginPath(); ctx.ellipse(x, y - r * 0.4 + bob, r * 0.85, r * 0.72, 0, 0, TAU); ctx.fill();

@@ -145,7 +145,12 @@ meanwhile, so the prize cannot be claimed twice.
   yourself at the crowd, 2.4x and a stun that holds). **Warrior** — **Hero Strike**
   (one planted blow, 2.1x, that shoves the foe back; with nothing in reach it
   refuses) and **Whirlwind** (2.2x for every foe inside it). **Rogue** — **Venom
-  Shot** (1.8x, and the foe it bites crawls) and **Blade Fan** (six arrows down a
+  Shot** (an ordinary arrow that **poisons** what it bites instead of slowing it:
+  the arrow lands a basic hit, and the venom the arrowhead leaves behind then eats
+  another **two hundred percent** of that same hit, taken one second at a time for
+  **thirty seconds** — and the envenomed foe wears a green coat, a green haze and
+  bubbles climbing off it for as long as the dose is worth) and **Blade Fan** (six
+  arrows down a
   fan). **Mage** — **Frost Lance** (1.9x, chilled) and **Chain Bolt**, which **travels**
   rather than branching: the bolt leaves the hero for the nearest foe he can see,
   and from there it answers for whichever foe stands nearest to the one it has just

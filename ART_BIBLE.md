@@ -475,6 +475,18 @@ The player must always be able to understand what is happening.
 - Muted green.
 - Organic particle shapes.
 - Controlled atmospheric effects.
+- A poisoned target is marked, not hinted at: its own colour shifts to the
+  poison green, a haze hugs the body without swallowing its silhouette, and
+  bubbles climb off it. The read has to survive a whole room at a glance,
+  because the player scans for which foe the venom is currently worth.
+- The mark lasts as long as the dose does. A read that fades after a second
+  asks the player to re-check every hit; a dose worth half a minute wears
+  for half a minute.
+- A dose announces itself the frame it lands, in words as well as in colour,
+  so a crowd does not have to be counted mote by mote.
+- Poison is a lingering bite and nothing else: it never stands in for a slow,
+  a stun or a knockdown, which is what keeps one class' arrow from reading
+  as another class' cold.
 
 ### Dark Magic
 
