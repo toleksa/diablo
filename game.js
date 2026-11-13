@@ -3871,10 +3871,15 @@ function botTick(dt) {
   // ignored, not walked into)
   const sight = Math.min(VW, VH); // what the hero can actually see (issue #59)
   const mer = game.merchant;
+  // reopened #59 adds a hard rule for fighting: the bot attacks only foes
+  // standing inside the hero's own torchlight, so a shot never sails down
+  // a hall that the player could not even see - the screen edge is not
+  // the eye's reach, the flame hole is (PLAYER_LIGHT)
+  const fightR = Math.min(sight, PLAYER_LIGHT);
   // the bot answers only to things inside its sight AND down a clear line -
   // never through a wall - and when nothing interesting stands around it
   // simply free-explores (issue #59)
-  let tgt = null, bd = sight;
+  let tgt = null, bd = fightR;
   for (const m of game.monsters) {
     if (m.hp <= 0) continue; // corpses are not targets
     const d = Math.hypot(m.x - P.x, m.y - P.y);
