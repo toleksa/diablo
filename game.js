@@ -932,7 +932,7 @@ function update(dt) {
         const l = Math.hypot(mx, my);
         moveWithCollide(P, mx / l * moveSpd() * dt, my / l * moveSpd() * dt);
         if (mx) P.faceX = mx > 0 ? 1 : -1;
-        P.aim = Math.atan2(my, mx);
+        P.aim = walkAim(mx, my); // the cursor's line, not the walk (issue #67)
         game.moveTarget = null;
       } else if (game.moveTarget) {
         const dx = game.moveTarget.x - P.x, dy = game.moveTarget.y - P.y;
@@ -941,7 +941,7 @@ function update(dt) {
         else {
           moveWithCollide(P, dx / d * moveSpd() * dt, dy / d * moveSpd() * dt);
           if (dx) P.faceX = dx > 0 ? 1 : -1;
-          P.aim = Math.atan2(dy, dx);
+          P.aim = walkAim(dx, dy); // click-to-move walks; the cursor still aims (issue #67)
         }
       }
     }
@@ -3027,6 +3027,24 @@ window.addEventListener('keyup', (e) => {
   }
 });
 
+// ---------- where the cursor is ----------
+// a moving hero used to have his aim overwritten with the direction he was
+// walking in, so an archer strafing south loosed his arrows at his own heels
+// (issue #67). The cursor's world position is remembered instead, and the aim
+// is recomputed from it every frame - it has to be recomputed, because the
+// angle from the hero to a cursor that has not moved changes as he walks.
+let curWX = null, curWY = null; // null until the mouse has been pointed once
+function cursorAim() {
+  if (curWX === null) return null;
+  return Math.atan2(curWY - P.y, curWX - P.x);
+}
+// a walking hero aims at the cursor's line; only a hero the mouse has never
+// been moved for falls back to the direction he is walking in
+function walkAim(mx, my) {
+  const ca = cursorAim();
+  return ca === null ? Math.atan2(my, mx) : ca;
+}
+
 // screen (client) px -> world coords, robust to any CSS scaling of the canvas
 function worldAt(cx, cy) {
   const r = cv.getBoundingClientRect();
@@ -3037,6 +3055,7 @@ function worldAt(cx, cy) {
 }
 cv.addEventListener('mousemove', (e) => {
   const w2 = worldAt(e.clientX, e.clientY);
+  curWX = w2.x; curWY = w2.y; // remembered, so the aim can follow while walking
   if (!P.dead && game.running && !P.leap) {
     P.aim = Math.atan2(w2.y - P.y, w2.x - P.x);
     // RMB held down: the character continuously follows the cursor (issue #14)
@@ -3044,8 +3063,12 @@ cv.addEventListener('mousemove', (e) => {
   }
 });
 cv.addEventListener('mousedown', (e) => {
+  // a click is also a point: record it, so a hero clicked at without the mouse
+  // having moved since still has a line to aim down (issue #67)
+  const w2 = worldAt(e.clientX, e.clientY);
+  curWX = w2.x; curWY = w2.y;
   if (e.button === 0) game.mouseDown = true;
-  else if (e.button === 2) { game.rmbDown = true; game.moveTarget = worldAt(e.clientX, e.clientY); }
+  else if (e.button === 2) { game.rmbDown = true; game.moveTarget = w2; }
 });
 cv.addEventListener('mouseup', (e) => {
   if (e.button === 0) game.mouseDown = false;
@@ -3053,8 +3076,10 @@ cv.addEventListener('mouseup', (e) => {
 });
 cv.addEventListener('contextmenu', (e) => {
   e.preventDefault();
+  const w2 = worldAt(e.clientX, e.clientY);
+  curWX = w2.x; curWY = w2.y;
   game.rmbDown = true;
-  game.moveTarget = worldAt(e.clientX, e.clientY);
+  game.moveTarget = w2;
 });
 
 // ---------- run lifecycle ----------
@@ -3162,7 +3187,13 @@ function botTick(dt) {
     // the real distance the blade's tip can actually bite at (issue #59 -
     // it used to flail at foes a hand's width past reach)
     const wr = ranged ? 500 : P.atkRange + tgt.r - 4;
-    if (ranged) P.aim = Math.atan2(tgt.y - P.y, tgt.x - P.x); // its 'cursor' (issue #61)
+    if (ranged) {
+      // the bot drives the hero the way a player drives it: it points the
+      // cursor at what it means to shoot (issue #67), and the same rule that
+      // lets a strafing archer keep his line aims the hero at it
+      curWX = tgt.x; curWY = tgt.y;
+      P.aim = Math.atan2(tgt.y - P.y, tgt.x - P.x);
+    }
     if (bd > wr) { gx = tgt.x; gy = tgt.y; }
     game.mouseDown = bd <= wr;
     // a swing that ended without the foe losing a single hit point was thin

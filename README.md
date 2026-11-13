@@ -43,6 +43,7 @@ still holds, the pack turned back into gold.
 | **Right mouse button / click** | move to the clicked point; **hold it down** and the character keeps following the cursor, stopping the instant you release |
 | **Left mouse button** (hold) | attack with whatever is in your hand — an axe or a sword swings, a bow fires an arrow straight at the cursor, a staff looses a magic missile that curves only toward foes in front of it |
 | **WASD / arrows** | movement (same as click-to-move) |
+| **Moving while you shoot** | walking never steers your shots: a bow or a staff keeps firing along the cursor line even as you strafe, so an archer running south looses his arrows where he is pointing rather than at his own heels (issue #67) |
 | **1** | healing potion — unlimited uses, one charge per 60 s (fresh at each checkpoint) |
 | **2** | your class' **opener** — the skillbar names it; cheap on Mana, ready again in seconds |
 | **3** | your class' **finisher** — the skillbar names it; way stronger, way more Mana, a long cooldown |
@@ -53,7 +54,8 @@ still holds, the pack turned back into gold.
 
 Clicking an **icon of a skill with the left mouse button** casts it directly —
 potion, your class' opener, its finisher or the attack of whatever you are holding — handy when you
-don't want to reach the keyboard.
+don't want to reach the keyboard. Aim is the cursor's at all times: only a hero
+the mouse has never been pointed for aims down his own walk (issue #67).
 
 ## The loop
 
