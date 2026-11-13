@@ -278,7 +278,8 @@ function generateLevel(checkpoint) {
   }
   // start room, the portal's far end, and the ground where the overlord waits
   // (issue #57: no boss is placed on the level - he steps out when you come
-  // within half of your sight of the portal, so the spot is held, not a body)
+  // close enough for the WHOLE gate to sit inside his torchlight (issue #68
+  // set that range), so the spot is held, not a body)
   if (arena) {
     const r0 = rooms[0];
     game.startPos = { x: (r0.x + r0.w / 2) * TS, y: (r0.y + r0.h - 2.5) * TS }; // the south gate
@@ -468,12 +469,15 @@ function preplaceMonsters() {
 }
 
 // the overlord is not walking the halls: he waits unseen at his portal and
-// steps out when the hero gets within half of what he can see (issue #57),
-// then comes straight at you. Only then can the gate open.
+// steps out when the hero brings the WHOLE gate inside his torchlight (issue
+// #68 replaced the old half-sight rule), then comes straight at you. Only then
+// can the gate open.
 function wakeBoss() {
   if (!game.bossPending || !game.bossSpot || !game.portal) return false;
-  const sight = Math.min(VW, VH) * 0.5; // half of the hero's sight
-  if (Math.hypot(P.x - game.portal.x, P.y - game.portal.y) > sight) return false;
+  // he is stirred by light, not by distance: the gate has to sit wholly inside
+  // the hero's torchlight, so spotting a clipped edge of it leaves him asleep
+  // in the dark and gives the hero room to back off and prepare (issue #68)
+  if (Math.hypot(P.x - game.portal.x, P.y - game.portal.y) > BOSS_WAKE_R) return false;
   if (P.dead) return false;
   const s = game.bossSpot;
   spawnBoss(s.x, s.y, s.big);
@@ -1326,6 +1330,20 @@ const PROJ_RANGE = 520;
 const HOME_SENSE = 260; // how far down its own lane a magic missile notices a foe
 const STAFF_MANA = 5;   // mana a staff shot drinks
 let manaWarnT = 0;      // throttle for the 'mana too low' warning
+
+// ---------- the gate and the dark around it (issue #68) ----------
+// the portal's own drawn disc, dim and open: lightPass punches a hole this
+// wide around it. This is the size of the GATE, not of the light around the
+// hero - the two are separate numbers on purpose.
+const PORTAL_DRAW = 118;
+const PORTAL_DRAW_ON = 180;
+// the overlord steps out only once the WHOLE portal disc sits inside the
+// hero's torchlight: the lit hole is PLAYER_LIGHT wide and the dim gate is
+// PORTAL_DRAW across, so he wakes at the difference of the two. A gate that
+// is merely clipped by the edge of the light does not stir him - which is
+// what lets a hero who has spotted it back off and prepare for the fight
+// before he comes (issue #68)
+const BOSS_WAKE_R = PLAYER_LIGHT - PORTAL_DRAW; // world px from the gate
 
 function shootRanged() {
   const w = P.eq.weapon;
@@ -2825,7 +2843,8 @@ function lightPass(t) {
     if (x < -160 * D || x > cv.width + 160 * D || y < -160 * D || y > cv.height + 160 * D) continue;
     hole(x, y, (102 + fl) * D, 1);
   }
-  if (game.portal) hole((game.portal.x - vx) * D, (game.portal.y - vy) * D, (portalActive() ? 180 : 118) * D, 1);
+  if (game.portal) hole((game.portal.x - vx) * D, (game.portal.y - vy) * D,
+    (portalActive() ? PORTAL_DRAW_ON : PORTAL_DRAW) * D, 1); // issue #68: the disc the wake rule measures
   for (const pr of game.projectiles) hole((pr.x - vx) * D, (pr.y - vy) * D, 70 * D, 0.65);
   dctx.globalCompositeOperation = 'source-over';
   ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -2952,7 +2971,7 @@ function hudUpdate() {
   // acts follow the themes: three levels to an act (issue #49)
   const band = Math.min(Math.floor((game.checkpoint - 1) / 3) + 1, ROMAN.length - 1);
   HUD.objTitle.textContent = 'Act ' + ROMAN[band] + ' — ' + game.th.name + ' · Level ' + game.checkpoint;
-  if (game.bossPending) HUD.objText.textContent = 'The overlord waits at the portal — walk up to it';
+  if (game.bossPending) HUD.objText.textContent = 'The overlord waits at the portal — step in until the whole gate stands in your light';
   else if (game.boss && !game.boss.dead) HUD.objText.textContent = 'Boss: ' + game.boss.name + ' — guarding the portal';
   else if (game.checkpoint >= FINAL_LEVEL) HUD.objText.textContent = 'Enter the portal — the Crucible is yours';
   else HUD.objText.textContent = 'Enter portal';

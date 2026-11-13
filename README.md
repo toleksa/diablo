@@ -72,8 +72,10 @@ is bred bigger than any other — wider shoulders, thicker hide, heavier
 hand. Kill the
 quota of monsters' worth of progress, find the **portal** — and the level is
 not over the moment you set foot near it: no overlord is placed in the deepest
-room any more — he waits *at the gate itself* and steps out when you come
-within **half of what your hero can see** of it, then comes straight at you. The
+room any more — he waits *at the gate itself* and steps out once the **whole
+gate stands inside the ring of torchlight around him** — a gate merely clipped
+by the edge of that ring leaves him asleep in the dark, so once you can make the
+portal out you may back off and prepare for the fight before he comes. The
 gate stays dim and shut under him, so a level cannot be run past — slay him
 and it blazes open and you descend one level deeper. **Treasure chests** hide among the rooms — walk up to one
 and it springs open: a **magic-or-better** item plus gold. Die → stats
