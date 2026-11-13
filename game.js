@@ -3082,9 +3082,10 @@ function drawMonster(m, t) {
 
 // the equipped weapon, painted in the hero's hand (issue #53): what you wear
 // is what you see, and an empty hand is a bare fist
-function drawHandWeapon(wk, hx, hy, ang, flare, reach) {
-  if (reach === undefined) reach = 1; // issue #74: a melee swing stretches
-  // the haft so the axe head rides the sweep it leaves, not the fist
+function drawHandWeapon(wk, hx, hy, ang, flare) {
+  // reopened #74 again: the weapon is ALWAYS drawn the same way - the axe
+  // never grows or stretches during an attack, idle and swing share one
+  // exact figure
   if (!wk) return;
   if (wk === 'sword') {
     ctx.strokeStyle = '#cad3de'; ctx.lineWidth = 2.4;
@@ -3100,27 +3101,25 @@ function drawHandWeapon(wk, hx, hy, ang, flare, reach) {
     return;
   }
   if (wk === 'axe') {
-    const rz = reach; // reopened #74: during a swing the haft stretches,
-    // so the ONE weapon on the figure is the one biting at the arc
     ctx.strokeStyle = '#6b4a28'; ctx.lineWidth = 2.6; // the haft
     ctx.beginPath();
-    ctx.moveTo(hx - Math.cos(ang) * 6 * rz, hy - Math.sin(ang) * 6 * rz);
-    ctx.lineTo(hx + Math.cos(ang) * 13 * rz, hy + Math.sin(ang) * 13 * rz);
+    ctx.moveTo(hx - Math.cos(ang) * 6, hy - Math.sin(ang) * 6);
+    ctx.lineTo(hx + Math.cos(ang) * 13, hy + Math.sin(ang) * 13);
     ctx.stroke();
     const pa = ang + Math.PI / 2;
-    const ax = hx + Math.cos(ang) * 10 * rz, ay = hy + Math.sin(ang) * 10 * rz;
+    const ax = hx + Math.cos(ang) * 10, ay = hy + Math.sin(ang) * 10;
     ctx.fillStyle = '#b8c1cb'; // a broad axe head
     ctx.beginPath();
-    ctx.moveTo(ax - Math.cos(ang) * 4 * rz, ay - Math.sin(ang) * 4 * rz);
-    ctx.lineTo(ax + Math.cos(pa) * 7.5 * rz, ay + Math.sin(pa) * 7.5 * rz);
-    ctx.lineTo(ax + Math.cos(ang) * 6 * rz + Math.cos(pa) * 4 * rz, ay + Math.sin(ang) * 6 * rz + Math.sin(pa) * 4 * rz);
-    ctx.lineTo(ax + Math.cos(ang) * 6 * rz - Math.cos(pa) * 4 * rz, ay + Math.sin(ang) * 6 * rz - Math.sin(pa) * 4 * rz);
-    ctx.lineTo(ax - Math.cos(pa) * 7.5 * rz, ay - Math.sin(pa) * 7.5 * rz);
+    ctx.moveTo(ax - Math.cos(ang) * 4, ay - Math.sin(ang) * 4);
+    ctx.lineTo(ax + Math.cos(pa) * 7.5, ay + Math.sin(pa) * 7.5);
+    ctx.lineTo(ax + Math.cos(ang) * 6 + Math.cos(pa) * 4, ay + Math.sin(ang) * 6 + Math.sin(pa) * 4);
+    ctx.lineTo(ax + Math.cos(ang) * 6 - Math.cos(pa) * 4, ay + Math.sin(ang) * 6 - Math.sin(pa) * 4);
+    ctx.lineTo(ax - Math.cos(pa) * 7.5, ay - Math.sin(pa) * 7.5);
     ctx.closePath(); ctx.fill();
     ctx.strokeStyle = '#7f8791'; ctx.lineWidth = 1; // the socket
     ctx.beginPath();
-    ctx.moveTo(ax - Math.cos(pa) * 7 * rz, ay - Math.sin(pa) * 7 * rz);
-    ctx.lineTo(ax + Math.cos(pa) * 7 * rz, ay + Math.sin(pa) * 7 * rz);
+    ctx.moveTo(ax - Math.cos(pa) * 7, ay - Math.sin(pa) * 7);
+    ctx.lineTo(ax + Math.cos(pa) * 7, ay + Math.sin(pa) * 7);
     ctx.stroke();
     return;
   }
@@ -3349,8 +3348,7 @@ function drawPlayer() {
   if (ranged) wa = P.aim + pose.lift * 0.3 * (faceX > 0 ? 1 : -1);
   else if (swingT >= 0) wa = P.aim - 0.7 + 1.4 * swingT;
   else wa = (faceX > 0 ? 0.55 : Math.PI - 0.55) - pose.lift * (faceX > 0 ? 1 : -1);
-  drawHandWeapon(wk, hRx, hRy, wa, (ranged && swingT >= 0) ? 1 : 0,
-    (swingT >= 0 && !ranged) ? 1.75 : 1); // #74: the melee swing rides the haft out
+  drawHandWeapon(wk, hRx, hRy, wa, (ranged && swingT >= 0) ? 1 : 0);
   // head + helmet: the neck turns over whatever is down the halls, or dips in
   // over a weapon being read. Only the head of the third routine moves, and
   // it moves furthest, which is what tells the three apart (issue #72)
