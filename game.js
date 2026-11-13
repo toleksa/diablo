@@ -3246,19 +3246,13 @@ function drawPlayer() {
   // the swing arc: only a weapon that swings leaves one (issue #53)
   const swingT = (P.atkT > P.atkCd - 0.3) ? Math.max(0, Math.min(1, (P.atkCd - P.atkT) / 0.3)) : -1;
   if (swingT >= 0 && !ranged) {
-    const sa = P.aim - 0.7 + 1.4 * swingT;
-    // reopened #74: NO separate axe animation - one flash common to every
-    // swinging weapon; the axe (if held) rides it on its stretched haft,
-    // so the only weapon visible on the figure is the equipped one
-    ctx.strokeStyle = 'rgba(235,238,250,0.85)'; ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(x + Math.cos(sa) * 8, y - 6 + Math.sin(sa) * 8);
-    ctx.lineTo(x + Math.cos(sa) * 30, y - 6 + Math.sin(sa) * 30);
-    ctx.stroke();
+    // issue #76: the line from the weapon was confusing - a melee swing
+    // leaves ONLY the arc, which marks the reach: pulled in to three
+    // quarters of atkRange so it sits tight around the player
     ctx.strokeStyle = 'rgba(245,245,255,' + (0.8 * (1 - swingT)) + ')';
     ctx.lineWidth = 4.5;
     ctx.beginPath();
-    ctx.arc(x, y - 6, P.atkRange * 0.8, P.aim - 1.0 + 1.6 * swingT, P.aim - 0.2 + 1.6 * swingT);
+    ctx.arc(x, y - 6, P.atkRange * 0.75, P.aim - 1.0 + 1.6 * swingT, P.aim - 0.2 + 1.6 * swingT);
     ctx.stroke();
   }
   // --- walk cycle phase ---
