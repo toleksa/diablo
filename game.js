@@ -192,7 +192,7 @@ function resetPlayer(cls) {
 // dark between them. Level ten is not a ruin at all but the Demon's Roost
 // (the stone tones follow the muted primaries of ART_BIBLE.md)
 const THEMES = [
-  { name: 'Old Ruins', fb: 24, fv: 9, ft: [8, 3, -4], fm: 'rgba(92,84,66,0.55)',
+  { name: 'Old Ruins', bd: 'assets/environment_old_ruins_v01.png', fb: 24, fv: 9, ft: [8, 3, -4], fm: 'rgba(92,84,66,0.55)',
     wf: '#191410', wt: '#39322a', we: 'rgba(120,102,74,0.2)', ws: 'rgba(150,132,98,0.22)',
     br: '#241b10', fl: 'rgba(255,188,74,0.92)', fc: 'rgba(255,242,190,0.92)',
     halo: '255,145,45', dark: 'rgba(4,3,8,0.87)', void: '#070503' },
@@ -211,7 +211,7 @@ const THEMES = [
 ];
 // the thirteenth stage belongs to no realm: the lich king's throne room is
 // bone-white stone, blood carpet and cold green candle flame (issue #69)
-const FINAL_THEME = { name: 'The Lich Throne', fb: 20, fv: 7, ft: [-3, 4, -3], fm: 'rgba(96,102,94,0.4)',
+const FINAL_THEME = { name: 'The Lich Throne', bd: 'assets/environment_lich_throne_v01.png', fb: 20, fv: 7, ft: [-3, 4, -3], fm: 'rgba(96,102,94,0.4)',
     wf: '#15111a', wt: '#332c3c', we: 'rgba(148,140,168,0.22)', ws: 'rgba(190,178,200,0.26)',
     br: '#241f1c', fl: 'rgba(120,238,164,0.95)', fc: 'rgba(208,248,214,0.95)',
     halo: '96,224,150', dark: 'rgba(5,4,11,0.87)', void: '#08050c' };
@@ -219,6 +219,145 @@ function themeOf(cp) {
   if (cp >= FINAL_LEVEL) return FINAL_THEME;
   return THEMES[clamp(Math.floor((cp - 1) / 3), 0, THEMES.length - 1)];
 }
+
+// ---------- ART SET: the painted plates of the assets/ directory ----------
+// The foes whose silhouette is settled in the art set are drawn from their
+// plate instead of the painted blob: the cut plates come from a chroma pass
+// over the renders, so they carry a real alpha and sit straight on the arena
+// floor. A plate that is missing or has not finished loading falls the figure
+// back to the painted blob, which keeps the game playable with no art at all.
+const SPRITES = {
+  // cx: the body line inside the cropped plate, in plate pixels, measured from
+  // the crop's left edge; k: plate height as a multiple of the body radius
+  fallen: { src: 'assets/character_goblin_cut_v01.png', w: 776, h: 735, cx: 353, k: 2.95 },
+  zombie: { src: 'assets/character_zombie_cut_v01.png', w: 605, h: 906, cx: 274, k: 2.75 },
+  // the first level's overlord and the last one: the rest of the overlords keep
+  // their painted silhouettes, since the set has no plate for them yet
+  sig0: { src: 'assets/character_goruk_cut_v01.png', w: 885, h: 1245, cx: 447, k: 3.15 },
+  lich: { src: 'assets/character_adrith_cut_v01.png', w: 815, h: 1380, cx: 443, k: 3.15 },
+};
+const ART_IMG = {};
+function artLoad(src) {
+  if (!src || typeof Image !== 'function') return null;   // no canvas image here
+  let im = ART_IMG[src];
+  if (im === undefined) {
+    try { im = new Image(); im.src = src; } catch (e) { im = null; }
+    ART_IMG[src] = im;
+  }
+  return im;
+}
+function artReady(im) {
+  return im && im.complete && (im.naturalWidth || 0) > 0 ? im : null;
+}
+function spriteOf(m) {
+  const key = m.type === 'boss' ? (m.lich ? 'lich' : 'sig' + (m.sig || 0)) : m.type;
+  const s = SPRITES[key];
+  if (!s) return null;
+  const im = artReady(artLoad(s.src));
+  return im ? { im, s } : null;
+}
+// a status wash has to carry the plate's own shape, not a rectangle of light,
+// so the plate is painted into a scratch canvas and the colour stamped through
+// it. One scratch per plate and colour, built the first time a foe wears it,
+// and at a bounded size: the figure on screen never outgrows it by much, and a
+// flat wash upscaled is still a flat wash
+const ART_TINT = {};
+function tintFor(sp, colour) {
+  const key = sp.s.src + '|' + colour;
+  let c = ART_TINT[key];
+  if (c === undefined) {
+    c = null;
+    try {
+      const f = Math.min(1, 256 / Math.max(sp.s.w, sp.s.h));
+      const cv2 = document.createElement('canvas');
+      cv2.width = Math.max(1, Math.round(sp.s.w * f));
+      cv2.height = Math.max(1, Math.round(sp.s.h * f));
+      const g = cv2.getContext('2d');
+      g.drawImage(sp.im, 0, 0, cv2.width, cv2.height);
+      // keep the plate's alpha, throw its colour away
+      g.globalCompositeOperation = 'source-in';
+      g.fillStyle = colour;
+      g.fillRect(0, 0, cv2.width, cv2.height);
+      c = cv2;
+    } catch (e) { c = null; }
+    ART_TINT[key] = c;
+  }
+  return c;
+}
+// a plate is drawn with its feet on the ground line, flipped to face where the
+// foe is facing, and riding the same bob as the painted blob does
+function paintSprite(sp, x, y, r, bob, ang, tint) {
+  const hy = r * sp.s.k;
+  const sc = hy / sp.s.h;
+  const w = sp.s.w * sc;
+  ctx.save();
+  ctx.translate(x, y + r * 0.3 + bob);
+  if (Math.cos(ang) > 0) ctx.scale(-1, 1);   // the plates all face camera-left
+  ctx.drawImage(sp.im, -(sp.s.cx * sc), -hy, w, hy);
+  if (tint) {
+    // the wash over the plate, inside the plate's own silhouette
+    ctx.globalAlpha = 0.55;
+    ctx.drawImage(tint, -(sp.s.cx * sc), -hy, w, hy);
+    ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+}
+// the level's own plate laid over the stone as atmosphere: it carries the light
+// of the realm (a torch flare here, cold candlelight in the throne room) at a
+// weight that never carries the floor away, so a room stays readable. The plate
+// is baked once per realm at half the world's size, so a frame only has to blit
+// the window the camera can see instead of resampling the whole plate.
+const ART_BD = {};
+function bakeBackdrop(src) {
+  if (!src) return null;
+  let b = ART_BD[src];
+  if (b === undefined) {
+    b = null;
+    const im = artReady(artLoad(src));
+    try {
+      if (im && document.createElement) {
+        const f = 0.5;
+        const w = Math.round(WORLD.w * f), h = Math.round(WORLD.h * f);
+        const cv2 = document.createElement('canvas');
+        cv2.width = w; cv2.height = h;
+        const g = cv2.getContext('2d');
+        const sc = Math.max(w / im.naturalWidth, h / im.naturalHeight);
+        const dw = im.naturalWidth * sc, dh = im.naturalHeight * sc;
+        g.drawImage(im, (w - dw) / 2, (h - dh) / 2, dw, dh);
+        b = { cv: cv2, f };
+      }
+    } catch (e) { b = null; }
+    ART_BD[src] = b;
+  }
+  return b;
+}
+function drawBackdrop() {
+  const b = bakeBackdrop(game.th && game.th.bd ? game.th.bd : null);
+  if (!b) return;
+  const f = b.f;
+  // the window the camera can see, in the baked plate's own pixels
+  let sw = VW * f, sh = VH * f;
+  const sx = Math.min(vx * f, b.cv.width - sw > 0 ? b.cv.width - sw : 0);
+  const sy = Math.min(vy * f, b.cv.height - sh > 0 ? b.cv.height - sh : 0);
+  sw = Math.min(sw, b.cv.width - sx);
+  sh = Math.min(sh, b.cv.height - sy);
+  ctx.save();
+  // multiply, not a wash: the plate gives the stone its own detail, and a
+  // multiply pass can only ever darken, so a room the hero has not reached
+  // stays as black as it was. A wash would drag the plate's mid tones
+  // through the dark and leave grey slabs floating in the unlit rooms.
+  ctx.globalCompositeOperation = 'multiply';
+  ctx.globalAlpha = 0.42;
+  ctx.drawImage(b.cv, sx, sy, sw, sh, sx / f, sy / f, sw / f, sh / f);
+  ctx.restore();
+}
+// boot the fetches for every plate the set holds, so the first frame of a
+// fight never waits on one; a plate that has not arrived is drawn as its blob
+(function () {
+  for (const k in SPRITES) artLoad(SPRITES[k].src);
+  for (const t of THEMES) if (t.bd) artLoad(t.bd);
+  if (FINAL_THEME.bd) artLoad(FINAL_THEME.bd);
+})();
 
 
 function generateLevel(checkpoint) {
@@ -2994,22 +3133,16 @@ function drawMonster(m, t) {
   // foe you are holding venom on is obvious across a whole dark room, and
   // it stays obvious for the whole half-minute the dose is worth
   const col = m.poison > 0 ? POISON_TINT : m.slow > 0 ? '#6ea8d8' : m.color;
+  const status = m.poison > 0 ? POISON_TINT : m.slow > 0 ? '#6ea8d8' : null;
   if (m.poison > 0) {
     // the stink of it, hugging the body so the shape still reads through
     ctx.fillStyle = 'rgba(96,168,50,0.2)';
     ctx.beginPath(); ctx.arc(x, y - r * 0.5 + bob, r * 1.16, 0, TAU); ctx.fill();
-    ctx.fillStyle = '#9ed05a';
-    for (let i2 = 0; i2 < 3; i2++) {
-      // three bubbles climbing the body, staggered and wrapping round
-      const ph = ((m.wob * 0.5 + i2 * 2.1) % 3) / 3;
-      ctx.globalAlpha = 0.85 - ph * 0.55;
-      ctx.beginPath();
-      ctx.arc(x + Math.sin(m.wob + i2 * 2.1) * r * 0.52,
-        y - r * (0.18 + ph * 1.3) + bob, r * (0.14 - ph * 0.05), 0, TAU);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
   }
+  // the plate, or the painted blob when the art set has no plate for this foe
+  const spr = spriteOf(m);
+  if (spr) paintSprite(spr, x, y, r, bob, m.angle, status ? tintFor(spr, status) : null);
+  else {
   // body
   ctx.fillStyle = col;
   ctx.beginPath(); ctx.ellipse(x, y - r * 0.4 + bob, r * 0.85, r * 0.72, 0, 0, TAU); ctx.fill();
@@ -3128,18 +3261,46 @@ function drawMonster(m, t) {
     ctx.lineTo(x - r * 0.05, y - r * 1.45 + bob);
     ctx.closePath(); ctx.fill();
   }
-  // eyes
+  }
+  // eyes: only the painted figure needs them, a plate already has its own
+  if (!spr) {
   const ex = Math.cos(m.angle) * r * 0.18, ey = Math.sin(m.angle) * r * 0.18;
   ctx.fillStyle = m.type === 'boss' ? '#ffe14a' : m.elite ? '#ffd75e' : '#f4e4a8';
   ctx.beginPath();
   ctx.arc(x - r * 0.16 + ex, y - r * 1.22 + ey + bob, 1.7, 0, TAU);
   ctx.arc(x + r * 0.16 + ex, y - r * 1.22 + ey + bob, 1.7, 0, TAU);
   ctx.fill();
-  // hit flash
+  }
+  if (m.poison > 0) {
+    // the bubbles climb over whatever the foe is drawn as, so a plate keeps
+    // the read the blob had
+    ctx.fillStyle = '#9ed05a';
+    for (let i2 = 0; i2 < 3; i2++) {
+      // three bubbles climbing the body, staggered and wrapping round
+      const ph = ((m.wob * 0.5 + i2 * 2.1) % 3) / 3;
+      ctx.globalAlpha = 0.85 - ph * 0.55;
+      ctx.beginPath();
+      ctx.arc(x + Math.sin(m.wob + i2 * 2.1) * r * 0.52,
+        y - r * (0.18 + ph * 1.3) + bob, r * (0.14 - ph * 0.05), 0, TAU);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+  // hit flash: a plate flashes as itself, the painted blob flashes as its two
+  // shapes
   if (m.hitFlash > 0) {
-    ctx.fillStyle = 'rgba(255,255,255,' + (m.hitFlash / 0.12 * 0.65) + ')';
-    ctx.beginPath(); ctx.ellipse(x, y - r * 0.4 + bob, r * 0.85, r * 0.72, 0, 0, TAU); ctx.fill();
-    ctx.beginPath(); ctx.arc(x, y - r * 1.22 + bob, r * 0.44, 0, TAU); ctx.fill();
+    const fl = m.hitFlash / 0.12 * 0.65;
+    if (spr) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = Math.min(0.85, fl * 0.7);
+      paintSprite(spr, x, y, r, bob, m.angle);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = 'rgba(255,255,255,' + fl + ')';
+      ctx.beginPath(); ctx.ellipse(x, y - r * 0.4 + bob, r * 0.85, r * 0.72, 0, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.arc(x, y - r * 1.22 + bob, r * 0.44, 0, TAU); ctx.fill();
+    }
   }
   // hp bar
   if (m.hp < m.hpMax && m.type !== 'boss') {
@@ -3664,6 +3825,7 @@ function render(dt) {
   drawFloor();
   drawGroundFX();
   drawWalls();
+  drawBackdrop();
   drawThroneRoom(t);
   drawTorches(t);
   drawPortalG(t);

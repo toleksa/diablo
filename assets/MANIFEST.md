@@ -19,6 +19,10 @@ The Comfy graphs live in `assets/workflows/` and run against the local ComfyUI s
 | CHR-GOR-001 | `character_goruk_warboss_v01.png` | character | Goruk the Goblin Warboss: hulking red goblinoid warlord, broken spiked iron crown, gold-trimmed lamellar, notched black-iron cleaver with a faint infernal edge glow | z-image_turbo Q4_K_M GGUF | `assets/workflows/zimage_goruk_v01.json` | 305 | `character_goblin_swarmling_v01.png` (must read far larger) | 1024x1536 | review | `BOSSES[0]` first level overlord, `r:27` body and red #b03a3a |
 | ENV-LIC-001 | `environment_lich_throne_v01.png` | environment | Lich Throne hall: bone-white masonry, blood carpet up a two-step dais, skull-crowned gothic throne, cold green candle flame, no exit in the room | z-image_turbo Q4_K_M GGUF, rendered 1536x864 then Lanczos to 2048x1152 | `assets/workflows/zimage_lichthrone_v01.json` | 406 | none | 2048x1152 | review | background for stage thirteen, `FINAL_THEME` / `game.finalHall` |
 | CHR-ADR-001 | `character_adrith_lichking_v01.png` | character | Adrith the Lich King: skull head under a crown of bone spires, bone-and-ash plate over rotted mail, reaping scythe with the blade curved over the head, cold aura at the feet | z-image_turbo Q4_K_M GGUF | `assets/workflows/zimage_adrith_v01.json` | 507 | `environment_lich_throne_v01.png` | 1024x1536 | review | `BOSSES[FINAL_LEVEL - 1]`, `FINAL_BOSS_BIG` |
+| CHR-GOB-001C | `character_goblin_cut_v01.png` | character | The goblin plate above, cut from a chroma-magenta ground and cropped to its own bounds, alpha included | same graph re-rendered on a chroma plate (`assets/workflows/chroma_goblin_v01.json`, seed 103) and colour-keyed by `assets/tools/chromakey.py` | `assets/workflows/chroma_goblin_v01.json` | 103 | `character_goblin_swarmling_v01.png` | 776x735 | review | the plate the arena draws for `MTYPES.fallen`, feet on the ground line and `cx: 353` as the body line |
+| CHR-ZOM-001C | `character_zombie_cut_v01.png` | character | The zombie plate above, cut and cropped the same way | same graph re-rendered on a chroma plate (`assets/workflows/chroma_zombie_v01.json`, seed 204) and keyed by `assets/tools/chromakey.py` | `assets/workflows/chroma_zombie_v01.json` | 204 | `character_zombie_shambler_v01.png` | 605x906 | review | the plate the arena draws for `MTYPES.zombie` |
+| CHR-GOR-001C | `character_goruk_cut_v01.png` | character | The Goruk plate above, cut and cropped the same way | same graph re-rendered on a chroma plate (`assets/workflows/chroma_goruk_v01.json`, seed 305) and keyed by `assets/tools/chromakey.py` | `assets/workflows/chroma_goruk_v01.json` | 305 | `character_goruk_warboss_v01.png` | 885x1245 | review | the plate the arena draws for `BOSSES[0]`, `SPRITES.sig0` |
+| CHR-ADR-001C | `character_adrith_cut_v01.png` | character | The Adrith plate above, cut and cropped the same way | same graph re-rendered on a chroma plate (`assets/workflows/chroma_adrith_v01.json`, seed 507) and keyed by `assets/tools/chromakey.py` | `assets/workflows/chroma_adrith_v01.json` | 507 | `character_adrith_lichking_v01.png` | 815x1380 | review | the plate the arena draws for the last overlord, `SPRITES.lich` |
 | UI-ICONS-001 | `icon_skill_*_v01.png` (8 pieces, not generated yet) | ui icon | The eight class-skill plates: cleave, earthquake, herostrike, whirlwind, venshot, bladefan, frostlance, chainbolt | - | - | - | the approved character set above | 256x256 PNG with alpha, 2x for the 56 px slot | planned | painted replacements for `SKILL_ICON` (issue #70), ridden by `HUD.iconSkill2` / `HUD.iconSkill3`; the set lands as one piece, one icon alone breaks section 10.4 |
 
 ## Set notes
@@ -28,6 +32,17 @@ The Comfy graphs live in `assets/workflows/` and run against the local ComfyUI s
   is meant to be sampled, so the `NEGATIVE:` blocks in prompts.txt were not pasted into the graph:
   with cfg 1.0 a negative prompt has no effect. Off-model wording is instead carried by the shared
   style anchor inside every PROMPT.
-- Nothing in this table is wired into `game.js` yet. ART_BIBLE 13.2 and the note at the end of
-  prompts.txt both ask for the side-by-side check and an explicit approval before production
-  references switch, and the previous painted sprites in `game.js` stay untouched until then.
+- The four `*_cut_*` plates are the same renders re-run on a flat chroma-magenta ground at the same
+  seed, then colour-keyed by `assets/tools/chromakey.py`, which also crops to the figure and reports
+  `cx` (the body line) from the crop's left edge. `game.js` draws those cut plates and nothing else
+  from the set, so the uncut renders in the table above stay for review only.
+- What is wired in `game.js` now: the two backdrop plates as the realm's atmosphere (`THEMES[0].bd`
+  and `FINAL_THEME.bd`, baked to half world size once per realm and laid over the stone as a
+  multiply pass so an unlit room stays as black as it was), and four cut plates as the figures of
+  `MTYPES.fallen`, `MTYPES.zombie`, `BOSSES[0]` and the last overlord. A foe with no plate keeps its
+  painted silhouette, and a plate that has not loaded falls the figure back to that silhouette, so
+  the game still runs with an empty `assets/`.
+- Status reads survive the swap: a poisoned or frozen plate is washed in its own silhouette
+  (`tintFor` stamps the colour through the plate's alpha), the venom haze and bubbles are painted
+  over whatever the foe is drawn as, and the hit flash re-draws the plate through `lighter`.
+- Approval is still `review` on everything: the human check ART_BIBLE 13.2 asks for has not run.
