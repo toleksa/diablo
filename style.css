@@ -137,6 +137,13 @@ body {
 .skillIcon svg { width: 78%; height: 78%; }
 .skillSlot.big .skillIcon svg { width: 80%; height: 80%; }
 .skillSlot.noFury .skillIcon svg { opacity: .46; }
+/* the generated plates of the art set sit on the slot once they are on hand,
+   and the painted glyph is dropped then; a plate that never arrives leaves the
+   glyph in place. `.plate` marks which of the two a slot is wearing so the
+   rules that dim an unusable slot dim a plate as much as they dim a glyph */
+.skillIcon { background-size: 84% 84%; background-position: center; background-repeat: no-repeat; }
+.skillSlot.big .skillIcon { background-size: 88% 88%; }
+.skillSlot.noFury .skillIcon.plate { opacity: .46; }
 .cdRing {
   position: absolute; inset: 0; border-radius: 4px; pointer-events: none;
   /* ready = bright; right after use the whole disc is dark and the dark

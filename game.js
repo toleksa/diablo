@@ -2089,9 +2089,22 @@ function iconSvgFor(key) {
     icoRing(20, 20, 17.4, 'currentColor', 1.8) + icoRing(20, 20, 14.8, 'currentColor', 0.9, true) +
     glyph + '</svg>';
 }
+// the generated plates of the set, one per skill: the painted glyph above stays
+// as what a run with no art set shows, and the plate rides over it once it is
+// on hand, which is why the swap is asked for every frame rather than only at
+// the class change - the first class change can happen before a plate has
+// finished loading
+const ICON_PLATE = {};
+for (const ik in SKILL_ICON) ICON_PLATE[ik] = 'assets/icon_skill_' + ik + '_v03.png';
+function plateReady(key) {
+  const src = ICON_PLATE[key];
+  return src && artReady(artLoad(src)) ? src : null;
+}
+
 // which plate each slot is already showing: the skillbar is rewritten only when
 // the class' pair changes, never once a frame
 const iconKey = { 2: '', 3: '' };
+const iconPlate = { 2: '', 3: '' };
 
 // the shared melee arc: the plain attack sweeps reach 1 / arc 1, a class'
 // opener reaches further or wider
@@ -3931,7 +3944,35 @@ function hudUpdate() {
     const ic = HUD['iconSkill' + k];
     const row = CLASS_SKILLS[P.cls || 'barbar'];
     const pkey = sk ? row[k - 2] : '';
-    if (ic && iconKey[k] !== pkey) { iconKey[k] = pkey; ic.innerHTML = iconSvgFor(pkey); }
+    // the slot wears the set's plate when the plate is on hand, and the painted
+    // glyph the moment it is not, so a run with no art set still says what the
+    // skill is. The pair is re-asked every frame - only the class' pair is
+    // guaranteed to change after a plate has had a chance to load
+    const plate = plateReady(pkey);
+    const seen = pkey + '|' + (plate || '');
+    if (ic && iconKey[k] !== seen) {
+      iconKey[k] = seen;
+      if (plate) {
+        ic.innerHTML = '';
+        ic.style.backgroundImage = 'url("' + plate + '")';
+        ic.classList.add('plate');
+      } else {
+        ic.style.backgroundImage = 'none';
+        ic.classList.remove('plate');
+        ic.innerHTML = iconSvgFor(pkey);
+      }
+    }
+    // the set's plate over the painted glyph, asked for every frame because the
+    // class' pair changes long before a plate has necessarily finished loading
+    if (ic) {
+      const plate = plateReady(pkey);
+      const seen = plate || '';
+      if (iconPlate[k] !== seen) {
+        iconPlate[k] = seen;
+        if (plate) ic.classList.add('plate');
+        else ic.classList.remove('plate');
+      }
+    }
     HUD['slotSkill' + k].setAttribute('title', sk ? sk.name + ' - ' + sk.mana +
       ' Mana, ' + sk.cd + ' s cooldown (' + (sk.weapon === 'melee' ?
         'a swung weapon' : 'a bow or a staff') + ') - ' + sk.blurb : '');

@@ -1,0 +1,109 @@
+{
+  "1": {
+    "class_type": "UnetLoaderGGUF",
+    "inputs": {
+      "unet_name": "gguf/z_image_turbo-Q4_K_M.gguf"
+    }
+  },
+  "2": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "qwen_3_4b_fp8_mixed.safetensors",
+      "type": "lumina2",
+      "device": "cpu"
+    }
+  },
+  "3": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "ae.safetensors"
+    }
+  },
+  "4": {
+    "class_type": "ModelSamplingAuraFlow",
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "shift": 3
+    }
+  },
+  "5": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "A single game UI icon for a dark fantasy action RPG, square composition, the object centred and filling the frame with a small margin, on a flat solid pure chroma magenta #ff00ff background filling the whole frame, with no scenery behind it. The object is: a four-sided frost lance head trailing a comet. The icon is one square panel with a thin band rim of antique gold #A98A50 running along its square edge, and the one object is painted on the panel alone: nothing else shares the panel, the panel is not split into squares, tiles or compartments, and no second object or smaller icon appears anywhere in the image. Materials: aged bone, pitted iron, rotted leather, with saturated colour reserved for the effect itself and for the enchanted heads. Palette strictly muted: obsidian #171719, charcoal #29282B, ash grey #68666A, bone #C6BDAA, antique gold #A98A50, blood burgundy #642A32. The effect itself carries arcane blue #478CCB and nothing else in the panel glows. Painterly detail combined with physically believable materials, a single consistent light direction from the upper left, one object filling the panel at a comfortable margin.",
+      "clip": [
+        "2",
+        0
+      ]
+    }
+  },
+  "6": {
+    "class_type": "ConditioningZeroOut",
+    "inputs": {
+      "conditioning": [
+        "5",
+        0
+      ]
+    }
+  },
+  "7": {
+    "class_type": "EmptySD3LatentImage",
+    "inputs": {
+      "width": 512,
+      "height": 512,
+      "batch_size": 1
+    }
+  },
+  "8": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "4",
+        0
+      ],
+      "seed": 707,
+      "steps": 8,
+      "cfg": 1,
+      "sampler_name": "res_multistep",
+      "scheduler": "simple",
+      "positive": [
+        "5",
+        0
+      ],
+      "negative": [
+        "6",
+        0
+      ],
+      "latent_image": [
+        "7",
+        0
+      ],
+      "denoise": 1
+    }
+  },
+  "9": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "8",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "10": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "9",
+        0
+      ],
+      "filename_prefix": "icon_skill_frostlance_v03"
+    }
+  }
+}
