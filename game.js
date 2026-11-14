@@ -238,8 +238,12 @@ const SPRITES = {
     // line and one ground line and switching a beat cannot shuffle the figure.
     // stride is the ground one beat covers, in body radii: the cycle is picked
     // by the distance a foe has travelled, so its feet pace its speed instead
-    // of sliding over the stone
-    run: { stride: 1.15, w: 782, h: 760, cx: 379, k: 2.95, src: [
+    // of sliding over the stone. dip and lean are the body language the plates
+    // need on top of the four poses: a 38 px figure whose only change is a
+    // limb flickers instead of walking, so the body presses down as a foot
+    // plants, rides up as the trailing leg swings through, and leans into the
+    // direction of travel (see spriteOf and paintSprite for where they apply)
+    run: { stride: 1.6, dip: 0.16, lean: 0.06, w: 782, h: 760, cx: 379, k: 2.95, src: [
       'assets/character_goblin_walkA_v01.png',
       'assets/character_goblin_walkB_v01.png',
       'assets/character_goblin_walkC_v01.png',
@@ -280,10 +284,20 @@ function spriteOf(m) {
   // nothing, so the cycle cannot blink mid-fetch
   if (run && m.stepping > 0) {
     const n = run.src.length;
-    const i = ((Math.floor(m.pace / (m.r * run.stride)) % n) + n) % n;
+    const p = m.pace / (m.r * run.stride); // where along the cycle the foe stands
+    const i = ((Math.floor(p) % n) + n) % n;
     const src = run.src[i];
     const im = artReady(artLoad(src));
-    if (im) return { im, s: { src, w: run.w, h: run.h, cx: run.cx, k: run.k } };
+    if (im) {
+      // the body rides the stride: it presses down as a foot plants (beats 1
+      // and 3 are the contacts) and lifts as the trailing leg swings through
+      // (beats 2 and 4), one down-and-up across every two beats, which is the
+      // standard two-beat bounce of a four-frame run. Without this a figure
+      // this small changes only a limb and reads as flickering instead of
+      // walking, which is what the plates alone leave you with
+      const dip = Math.cos(Math.PI * (p - 0.5)) * run.dip * m.r;
+      return { im, s: { src, w: run.w, h: run.h, cx: run.cx, k: run.k }, lean: run.lean, dip };
+    }
   }
   const im = artReady(artLoad(s.src));
   return im ? { im, s } : null;
@@ -324,7 +338,12 @@ function paintSprite(sp, x, y, r, bob, ang, tint) {
   const w = sp.s.w * sc;
   ctx.save();
   ctx.translate(x, y + r * 0.3 + bob);
-  if (Math.cos(ang) > 0) ctx.scale(-1, 1);   // the plates all face camera-left
+  // a running figure leans into its travel, about its feet, which is the other
+  // half of what makes the stride read: the plates all face camera-left, so a
+  // mirrored plate leans the other way round
+  const lean = sp.lean || 0;
+  if (Math.cos(ang) > 0) { ctx.scale(-1, 1); if (lean) ctx.rotate(lean); }
+  else if (lean) ctx.rotate(-lean);
   ctx.drawImage(sp.im, -(sp.s.cx * sc), -hy, w, hy);
   if (tint) {
     // the wash over the plate, inside the plate's own silhouette
@@ -3193,7 +3212,13 @@ function drawMonster(m, t) {
   if (!visOn(m, 70)) return;
   // a warping-in boss draws small and grows to full as the warp completes
   const r = m.r * (m.spawnT > 0 ? 0.12 + 0.88 * (1 - m.spawnT / BOSS_WARP) : 1);
-  const bob = Math.sin(m.wob) * 2;
+  // the plate, and the stride's dip for a running foe, are picked before any of
+  // the reads below, so the shadow, the venom haze and the hit flash all sit on
+  // the body where it is actually drawn
+  const spr = spriteOf(m);
+  // a running figure rides its stride instead of breathing; a standing one or a
+  // painted silhouette keeps the old breath
+  const bob = spr && spr.dip !== undefined ? spr.dip : Math.sin(m.wob) * 2;
   shadowAt(x, y + r * 0.28, r * 0.95, 0.32);
   if (m.elite) {
     ctx.strokeStyle = 'rgba(216,162,60,0.85)'; ctx.lineWidth = 2;
@@ -3211,7 +3236,8 @@ function drawMonster(m, t) {
     ctx.beginPath(); ctx.arc(x, y - r * 0.5 + bob, r * 1.16, 0, TAU); ctx.fill();
   }
   // the plate, or the painted blob when the art set has no plate for this foe
-  const spr = spriteOf(m);
+  // (the plate was picked at the top, so the shadow and the haze below sit on
+  // the body the plate actually draws)
   if (spr) paintSprite(spr, x, y, r, bob, m.angle, status ? tintFor(spr, status) : null);
   else {
   // body

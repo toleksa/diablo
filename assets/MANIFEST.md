@@ -70,10 +70,18 @@ The Comfy graphs live in `assets/workflows/` and run against the local ComfyUI s
   faster or longer-striding foe churns faster. A foe held by a door, standing on its range, asleep
   or warping out of a portal wears the standing plate, and a beat that has not arrived is drawn as
   the standing plate rather than as nothing, so the cycle cannot blink mid-fetch. The stride is
-  1.15 body radii per beat, which at the Goblin's own speed 150 gives about ten beats a second.
+  1.6 body radii per beat, which at the Goblin's own speed 150 gives about seven beats a second.
   The four beats carry two visually distinct key poses - the model repeated itself on the "left"
   and "right" clause at this seed, so beats 1 and 3 nearly coincide as do beats 2 and 4 - which
-  reads as a two-pose run held for a beat each, the honest limit of what this pass gave.
+  reads as a two-pose run held for a beat each.
+- On top of the four poses the body rides its stride, and that is what makes the walk legible: it
+  presses down as a foot plants and lifts as the trailing leg swings through, one down-and-up across
+  every two beats (the standard two-beat bounce of a four-frame run), and it leans about 3.5 degrees
+  into its travel, about its feet, with the mirrored plate leaning the other way round. Four poses
+  alone change only a limb on a 38 px figure, which shimmers rather than walks; the first cut of
+  this cycle shipped exactly that, which is why it looked like one image sliding over the floor.
+  The dip is `cos(PI * (p - 0.5))` in strides, so a contact beat carries the low point and a gather
+  beat the high one, and it is fed to the same `bob` the venom haze and the hit flash ride.
 - Status reads survive the swap: a poisoned or frozen plate is washed in its own silhouette
   (`tintFor` stamps the colour through the plate's alpha), the venom haze and bubbles are painted
   over whatever the foe is drawn as, and the hit flash re-draws the plate through `lighter`.
