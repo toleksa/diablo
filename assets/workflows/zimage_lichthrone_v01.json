@@ -1,0 +1,109 @@
+{
+  "1": {
+    "class_type": "UnetLoaderGGUF",
+    "inputs": {
+      "unet_name": "gguf/z_image_turbo-Q4_K_M.gguf"
+    }
+  },
+  "2": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "qwen_3_4b_fp8_mixed.safetensors",
+      "type": "lumina2",
+      "device": "cpu"
+    }
+  },
+  "3": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "ae.safetensors"
+    }
+  },
+  "4": {
+    "class_type": "ModelSamplingAuraFlow",
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "shift": 3
+    }
+  },
+  "5": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "A single environment concept tile for a dark fantasy action RPG: the whole interior of one small, closed gothic hall read from a high three-quarter isometric game angle. Bone-white ash masonry with cold iron fittings and battered iron fittings at the corners, and a single blood-red carpet running from a low gate at one end up to two steps of dais at the other. On the dais stands one tall gothic throne: a spined back crowned by a skull finial, wide flat arms, pale banners hung flat on the wall behind it. Free-standing iron candlesticks line the walls and flank the carpet, burning cold green candle flame, and a pale word glows above the seat. There is no gate, arch or portal anywhere in the room - the prize there is furniture. Palette strictly muted: obsidian #171719 shadows, charcoal #29282B stone, bone #C6BDAA worn edges and banners, blood burgundy #642A32 carpet, antique gold #A98A50 only on the throne fittings, no characters, no creatures, no user interface, no readable text.",
+      "clip": [
+        "2",
+        0
+      ]
+    }
+  },
+  "6": {
+    "class_type": "ConditioningZeroOut",
+    "inputs": {
+      "conditioning": [
+        "5",
+        0
+      ]
+    }
+  },
+  "7": {
+    "class_type": "EmptySD3LatentImage",
+    "inputs": {
+      "width": 1536,
+      "height": 864,
+      "batch_size": 1
+    }
+  },
+  "8": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "4",
+        0
+      ],
+      "seed": 406,
+      "steps": 8,
+      "cfg": 1,
+      "sampler_name": "res_multistep",
+      "scheduler": "simple",
+      "positive": [
+        "5",
+        0
+      ],
+      "negative": [
+        "6",
+        0
+      ],
+      "latent_image": [
+        "7",
+        0
+      ],
+      "denoise": 1
+    }
+  },
+  "9": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "8",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "10": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "9",
+        0
+      ],
+      "filename_prefix": "asset_lichthrone_v01"
+    }
+  }
+}

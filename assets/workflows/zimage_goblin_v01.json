@@ -1,0 +1,109 @@
+{
+  "1": {
+    "class_type": "UnetLoaderGGUF",
+    "inputs": {
+      "unet_name": "gguf/z_image_turbo-Q4_K_M.gguf"
+    }
+  },
+  "2": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "qwen_3_4b_fp8_mixed.safetensors",
+      "type": "lumina2",
+      "device": "cpu"
+    }
+  },
+  "3": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "ae.safetensors"
+    }
+  },
+  "4": {
+    "class_type": "ModelSamplingAuraFlow",
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "shift": 3
+    }
+  },
+  "5": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "A single enemy character render for a dark fantasy action RPG: a small hunched goblin seen from a slightly elevated three-quarter angle, full body, centered on a plain dark obsidian #171719 background with a soft rim light so it can be cut out cleanly. Sickly green skin (about #5d8f3a), oversized pointed ears, a wide flat face with sharp teeth and bright curious eyes, long ape-like arms, wiry fast silhouette, dynamic crouched posture with one foot on a broken flagstone. It wears ragged leather scraps and stolen bits of rusted mail tied with cord, and clutches a crude jagged cleaver. Dark Gothic Fantasy, realistic stylization, painterly detail and believable organic and material surfaces: matte leather, dull pitted mail. Muted palette only: green skin against muted brown #594536 rags, ash grey #68666A stolen mail, obsidian #171719 shadow. The goblin must read as a small, quick, fragile swarmling, smaller and lower than an armored hero. No text, no watermark.",
+      "clip": [
+        "2",
+        0
+      ]
+    }
+  },
+  "6": {
+    "class_type": "ConditioningZeroOut",
+    "inputs": {
+      "conditioning": [
+        "5",
+        0
+      ]
+    }
+  },
+  "7": {
+    "class_type": "EmptySD3LatentImage",
+    "inputs": {
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1
+    }
+  },
+  "8": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "4",
+        0
+      ],
+      "seed": 103,
+      "steps": 8,
+      "cfg": 1,
+      "sampler_name": "res_multistep",
+      "scheduler": "simple",
+      "positive": [
+        "5",
+        0
+      ],
+      "negative": [
+        "6",
+        0
+      ],
+      "latent_image": [
+        "7",
+        0
+      ],
+      "denoise": 1
+    }
+  },
+  "9": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "8",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "10": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "9",
+        0
+      ],
+      "filename_prefix": "asset_goblin_v01"
+    }
+  }
+}

@@ -1,0 +1,109 @@
+{
+  "1": {
+    "class_type": "UnetLoaderGGUF",
+    "inputs": {
+      "unet_name": "gguf/z_image_turbo-Q4_K_M.gguf"
+    }
+  },
+  "2": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "qwen_3_4b_fp8_mixed.safetensors",
+      "type": "lumina2",
+      "device": "cpu"
+    }
+  },
+  "3": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "ae.safetensors"
+    }
+  },
+  "4": {
+    "class_type": "ModelSamplingAuraFlow",
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "shift": 3
+    }
+  },
+  "5": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "A single boss character render for a dark fantasy action RPG: Goruk, the Goblin Warboss, the first dungeon level's overlord, seen from a slightly elevated three-quarter angle, full body, centered on a plain dark obsidian #171719 background with a soft rim light so the asset can be cut out cleanly. A huge goblinoid warlord, twice the size of an armored hero, with massive shoulders, thick hide, heavy hands and a hulking imposing boss silhouette that must stay readable against dungeon floor. War-painted deep red skin (blood burgundy #642A32 shading with warmer #b03a3a highlights), snarling flat goblin face with small bright eyes, heavy underbite. He wears heavy lamellar plates banded with antique gold #A98A50 edge trim, mismatched pauldrons, a broken spiked iron crown wedged on his head as a war trophy, muted brown #594536 hide breeches and a trophy belt of stolen signet rings and dog tags. Both hands drag a notched black-iron war cleaver whose edge glows a faint infernal orange #D85C27. Dark Gothic Fantasy, realistic stylization, painterly detail, physically believable materials: aged iron, leather, hide, tarnished gold. Bosses must be visually impressive without sacrificing readability, so keep the silhouette strong, uncluttered and distinct from ordinary goblins. No text, no watermark.",
+      "clip": [
+        "2",
+        0
+      ]
+    }
+  },
+  "6": {
+    "class_type": "ConditioningZeroOut",
+    "inputs": {
+      "conditioning": [
+        "5",
+        0
+      ]
+    }
+  },
+  "7": {
+    "class_type": "EmptySD3LatentImage",
+    "inputs": {
+      "width": 1024,
+      "height": 1536,
+      "batch_size": 1
+    }
+  },
+  "8": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "4",
+        0
+      ],
+      "seed": 305,
+      "steps": 8,
+      "cfg": 1,
+      "sampler_name": "res_multistep",
+      "scheduler": "simple",
+      "positive": [
+        "5",
+        0
+      ],
+      "negative": [
+        "6",
+        0
+      ],
+      "latent_image": [
+        "7",
+        0
+      ],
+      "denoise": 1
+    }
+  },
+  "9": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "8",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "10": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "9",
+        0
+      ],
+      "filename_prefix": "asset_goruk_v01"
+    }
+  }
+}

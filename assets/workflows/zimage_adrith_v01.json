@@ -1,0 +1,109 @@
+{
+  "1": {
+    "class_type": "UnetLoaderGGUF",
+    "inputs": {
+      "unet_name": "gguf/z_image_turbo-Q4_K_M.gguf"
+    }
+  },
+  "2": {
+    "class_type": "CLIPLoader",
+    "inputs": {
+      "clip_name": "qwen_3_4b_fp8_mixed.safetensors",
+      "type": "lumina2",
+      "device": "cpu"
+    }
+  },
+  "3": {
+    "class_type": "VAELoader",
+    "inputs": {
+      "vae_name": "ae.safetensors"
+    }
+  },
+  "4": {
+    "class_type": "ModelSamplingAuraFlow",
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "shift": 3
+    }
+  },
+  "5": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {
+      "text": "A single boss character sheet for a dark fantasy action RPG: an undead lich king standing full height and facing the viewer at a slight three-quarter angle, on a plain charcoal ground. He is bred far wider and taller than any ordinary overlord: broad flat shoulders under a tattered mantle, a crown of tall bone spires rising off a skull-like head, hollow sockets lit cold, a long reaping scythe held out in one hand with the blade curved over the head, and a cold spectral aura read at his feet. Bone-white and ash armour plates over rotted mail, antique gold edging only on the crown and the socket of the blade. Dark Gothic Fantasy, realistic stylization, painterly detail combined with physically believable materials: aged bone, pitted metal, rotted cloth. Palette strictly muted: bone #C6BDAA, ash grey #68666A, obsidian #171719, charcoal #29282B, antique gold #A98A50, with saturated color reserved for the cold aura. No text, no watermark, no user interface, one figure only.",
+      "clip": [
+        "2",
+        0
+      ]
+    }
+  },
+  "6": {
+    "class_type": "ConditioningZeroOut",
+    "inputs": {
+      "conditioning": [
+        "5",
+        0
+      ]
+    }
+  },
+  "7": {
+    "class_type": "EmptySD3LatentImage",
+    "inputs": {
+      "width": 1024,
+      "height": 1536,
+      "batch_size": 1
+    }
+  },
+  "8": {
+    "class_type": "KSampler",
+    "inputs": {
+      "model": [
+        "4",
+        0
+      ],
+      "seed": 507,
+      "steps": 8,
+      "cfg": 1,
+      "sampler_name": "res_multistep",
+      "scheduler": "simple",
+      "positive": [
+        "5",
+        0
+      ],
+      "negative": [
+        "6",
+        0
+      ],
+      "latent_image": [
+        "7",
+        0
+      ],
+      "denoise": 1
+    }
+  },
+  "9": {
+    "class_type": "VAEDecode",
+    "inputs": {
+      "samples": [
+        "8",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    }
+  },
+  "10": {
+    "class_type": "SaveImage",
+    "inputs": {
+      "images": [
+        "9",
+        0
+      ],
+      "filename_prefix": "asset_adrith_v01"
+    }
+  }
+}
