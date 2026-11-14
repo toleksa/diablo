@@ -20,6 +20,11 @@
 #            would land in the slot at eight different visual weights, which is
 #            exactly what ART_BIBLE.md 10.4 forbids
 #
+# A job may carry a fifth element: one box shared by a whole animation. Frames
+# cropped to their own bounds land a couple of pixels apart, which shuffles
+# visibly the moment the game switches frames, so the four beats of the goblin's
+# run are cut through the union of their bounds and share one body line.
+#
 #   chromakey.py <framing> '[["name","<chroma png>","<out png>","<preview png>"], ...]'
 #   e.g. chromakey.py figure '[["goblin","chroma.png","assets/character_goblin_cut_v01.png",
 #                              "goblin-preview.png"]]'
@@ -44,7 +49,7 @@ def field(a):
     return horiz * 0.5 + vert * 0.5
 
 
-def key(src_path, out_path, preview_path, d0=24.0, d1=86.0, framing='figure'):
+def key(src_path, out_path, preview_path, d0=24.0, d1=86.0, framing='figure', box=None):
     im = Image.open(src_path).convert('RGB')
     a = np.asarray(im, dtype=np.float64)
     w, h = im.size
@@ -56,23 +61,29 @@ def key(src_path, out_path, preview_path, d0=24.0, d1=86.0, framing='figure'):
     un = (a - (1.0 - aa[..., None]) * bg) / aa[..., None]
     b = np.where((alpha < 0.98)[..., None], np.clip(un, 0, 255), a)
     rgba = np.dstack([b.astype(np.uint8), (alpha * 255).astype(np.uint8)])
-    ys, xs = np.nonzero(alpha > 0.04)
-    l, r = int(xs.min()), int(xs.max())
-    t, bo = int(ys.min()), int(ys.max())
-    crop = Image.fromarray(rgba[t:bo + 1, l:r + 1])
-    if framing == 'panel':
-        # one square for the whole set: the panel keeps its own shape but every
-        # piece is scaled to the same side and centred in the same frame
-        cw, ch = r - l + 1, bo - t + 1
-        side = round(max(cw, ch) * (1.0 + 2 * MARGIN))
-        sc = side / max(cw, ch)
-        pw, ph = round(cw * sc), round(ch * sc)
-        frame = Image.new('RGBA', (w, h), (0, 0, 0, 0))
-        piece = crop.resize((pw, ph), Image.LANCZOS)
-        ox, oy = (w - pw) // 2, (h - ph) // 2
-        frame.paste(piece, (ox, oy), piece)
-        crop = frame
-        l, t, r, bo = ox, oy, ox + pw - 1, oy + ph - 1
+    if box:
+        # one box shared by a whole animation: every frame keeps the same bounds
+        # and the same body line, so switching frames cannot jitter
+        l, t, r, bo = [int(v) for v in box]
+        crop = Image.fromarray(rgba[t:bo + 1, l:r + 1])
+    else:
+        ys, xs = np.nonzero(alpha > 0.04)
+        l, r = int(xs.min()), int(xs.max())
+        t, bo = int(ys.min()), int(ys.max())
+        crop = Image.fromarray(rgba[t:bo + 1, l:r + 1])
+        if framing == 'panel':
+            # one square for the whole set: the panel keeps its own shape but every
+            # piece is scaled to the same side and centred in the same frame
+            cw, ch = r - l + 1, bo - t + 1
+            side = round(max(cw, ch) * (1.0 + 2 * MARGIN))
+            sc = side / max(cw, ch)
+            pw, ph = round(cw * sc), round(ch * sc)
+            frame = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+            piece = crop.resize((pw, ph), Image.LANCZOS)
+            ox, oy = (w - pw) // 2, (h - ph) // 2
+            frame.paste(piece, (ox, oy), piece)
+            crop = frame
+            l, t, r, bo = ox, oy, ox + pw - 1, oy + ph - 1
     crop.save(out_path)
     back = Image.new('RGBA', crop.size, (26, 21, 15, 255))   # the arena floor tone
     back.alpha_composite(crop)
@@ -88,7 +99,9 @@ if __name__ == '__main__':
     framing = sys.argv[1]
     jobs = json.loads(sys.argv[2])
     out = {}
-    for key_, src, dst, prev in jobs:
-        out[key_] = key(src, dst, prev, framing=framing)
+    for job in jobs:
+        key_, src, dst, prev = job[:4]
+        box = job[4] if len(job) > 4 else None
+        out[key_] = key(src, dst, prev, framing=framing, box=box)
         print(key_, out[key_], flush=True)
     print(json.dumps(out))

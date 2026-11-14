@@ -23,6 +23,10 @@ The Comfy graphs live in `assets/workflows/` and run against the local ComfyUI s
 | CHR-ZOM-001C | `character_zombie_cut_v01.png` | character | The zombie plate above, cut and cropped the same way | same graph re-rendered on a chroma plate (`assets/workflows/chroma_zombie_v01.json`, seed 204) and keyed by `assets/tools/chromakey.py` | `assets/workflows/chroma_zombie_v01.json` | 204 | `character_zombie_shambler_v01.png` | 605x906 | review | the plate the arena draws for `MTYPES.zombie` |
 | CHR-GOR-001C | `character_goruk_cut_v01.png` | character | The Goruk plate above, cut and cropped the same way | same graph re-rendered on a chroma plate (`assets/workflows/chroma_goruk_v01.json`, seed 305) and keyed by `assets/tools/chromakey.py` | `assets/workflows/chroma_goruk_v01.json` | 305 | `character_goruk_warboss_v01.png` | 885x1245 | review | the plate the arena draws for `BOSSES[0]`, `SPRITES.sig0` |
 | CHR-ADR-001C | `character_adrith_cut_v01.png` | character | The Adrith plate above, cut and cropped the same way | same graph re-rendered on a chroma plate (`assets/workflows/chroma_adrith_v01.json`, seed 507) and keyed by `assets/tools/chromakey.py` | `assets/workflows/chroma_adrith_v01.json` | 507 | `character_adrith_lichking_v01.png` | 815x1380 | review | the plate the arena draws for the last overlord, `SPRITES.lich` |
+| CHR-GOB-001W1 | `character_goblin_walkA_v01.png` | character | The goblin's run, beat 1 of 4 (contact): the same seed and brief with only its posture clause swapped for a stride, left leg reaching forward and the right arm swung back for balance | same graph re-run on a chroma ground at the same seed with the posture clause swapped (`assets/workflows/chroma_goblin_walkA_v01.json`) and keyed by `assets/tools/chromakey.py figure` with the four beats cut through ONE shared box | `assets/workflows/chroma_goblin_walkA_v01.json` | 103 | `character_goblin_cut_v01.png` (the same creature, the same seed) | 782x760 | review | beat 1 of the run cycle `SPRITES.fallen.run` in `game.js` picks by the ground a Goblin has covered |
+| CHR-GOB-001W2 | `character_goblin_walkB_v01.png` | character | The goblin's run, beat 2 of 4 (gather): the left leg planted under the body and the right knee lifted high behind it | same pass as above, `assets/workflows/chroma_goblin_walkB_v01.json` | `assets/workflows/chroma_goblin_walkB_v01.json` | 103 | as above | 782x760 | review | beat 2 of `SPRITES.fallen.run` |
+| CHR-GOB-001W3 | `character_goblin_walkC_v01.png` | character | The goblin's run, beat 3 of 4 (opposite contact): right leg reaching forward and the left arm swung back for balance | same pass as above, `assets/workflows/chroma_goblin_walkC_v01.json` | `assets/workflows/chroma_goblin_walkC_v01.json` | 103 | as above | 782x760 | review | beat 3 of `SPRITES.fallen.run` |
+| CHR-GOB-001W4 | `character_goblin_walkD_v01.png` | character | The goblin's run, beat 4 of 4 (opposite gather): right leg planted and the left knee lifted high behind it | same pass as above, `assets/workflows/chroma_goblin_walkD_v01.json` | `assets/workflows/chroma_goblin_walkD_v01.json` | 103 | as above | 782x760 | review | beat 4 of `SPRITES.fallen.run` |
 | UI-CLV-003 | `icon_skill_cleave_v03.png` | ui icon | A wide axe sweeping a bone-coloured arc, one object on a square panel with a thin antique gold rim | z-image_turbo Q4_K_M GGUF | `assets/workflows/icon_skill_cleave_v03.json` | 701 | the character set above, for the set's shared anchor | 512x512 (2x of the 256 nominal, for the 56 px slot) | review | the plate `HUD.iconSkill2` / `iconSkill3` wear for `SKILL_ICON.cleave` (issue #70) |
 | UI-QKA-003 | `icon_skill_earthquake_v03.png` | ui icon | A mailed fist landing in a cracked crater with a gold shock star | z-image_turbo Q4_K_M GGUF | `assets/workflows/icon_skill_earthquake_v03.json` | 702 | as above | 512x512 | review | `SKILL_ICON.earthquake` |
 | UI-HRO-003 | `icon_skill_herostrike_v03.png` | ui icon | A heavy hammer planted on an impact star, the foe shoved beyond it | z-image_turbo Q4_K_M GGUF | `assets/workflows/icon_skill_herostrike_v03.json` | 703 | as above | 512x512 | review | `SKILL_ICON.herostrike` |
@@ -34,7 +38,9 @@ The Comfy graphs live in `assets/workflows/` and run against the local ComfyUI s
 
 ## Set notes
 
-- prompts.txt blocks 1-7 are delivered here, block 8 (the icon set) is `planned`.
+- prompts.txt blocks 1-8 are delivered here. The goblin's four run beats are not a block of their
+  own: the movement animation was asked for on the game side, so the beats were generated from
+  block 3's brief at the same seed with only its posture clause swapped for a stride.
 - Comfy runs used cfg 1.0 with `ConditioningZeroOut` as the negative, which is how Z-Image-Turbo
   is meant to be sampled, so the `NEGATIVE:` blocks in prompts.txt were not pasted into the graph:
   with cfg 1.0 a negative prompt has no effect. Off-model wording is instead carried by the shared
@@ -43,12 +49,31 @@ The Comfy graphs live in `assets/workflows/` and run against the local ComfyUI s
   seed, then colour-keyed by `assets/tools/chromakey.py figure`, which also crops to the figure and reports
   `cx` (the body line) from the crop's left edge. `game.js` draws those cut plates and nothing else
   from the set, so the uncut renders in the table above stay for review only.
+- The four run beats are keyed the same way but cut through ONE box rather than their own bounds:
+  `assets/tools/chromakey.py figure` takes a fifth element in a job, one box shared by a whole
+  animation, because frames cropped to their own bounds land a couple of pixels apart and that
+  shuffles visibly the moment the game switches a beat. One shared box keeps one body line
+  (`cx: 379`) and one ground line for the whole cycle, which is what lets the beats be swapped
+  without the figure sliding. Cutting the same chroma output without that box reproduces the
+  per-frame bounds the first pass reported, and the four standing plates are reproduced
+  byte for byte by the tool's own no-box path.
 - What is wired in `game.js` now: the two backdrop plates as the realm's atmosphere (`THEMES[0].bd`
   and `FINAL_THEME.bd`, baked to half world size once per realm and laid over the stone as a
   multiply pass so an unlit room stays as black as it was), the four cut plates as the figures of
-  `MTYPES.fallen`, `MTYPES.zombie`, `BOSSES[0]` and the last overlord, and the eight icon plates on
+  `MTYPES.fallen`, `MTYPES.zombie`, `BOSSES[0]` and the last overlord, the four run-cycle beats as
+  that Goblin's movement animation (`SPRITES.fallen.run`), and the eight icon plates on
   the two skill slots. A foe with no plate keeps its painted silhouette, and a plate that has not
   loaded falls the figure back to that silhouette, so the game still runs with an empty `assets/`.
+- The run cycle is the only one so far and the only foe that has a plate to animate: `spriteOf`
+  swaps in a beat only while the foe is actually covering ground, and the beat is the one that
+  covered distance puts it on, so its feet pace its speed instead of sliding over the stone and a
+  faster or longer-striding foe churns faster. A foe held by a door, standing on its range, asleep
+  or warping out of a portal wears the standing plate, and a beat that has not arrived is drawn as
+  the standing plate rather than as nothing, so the cycle cannot blink mid-fetch. The stride is
+  1.15 body radii per beat, which at the Goblin's own speed 150 gives about ten beats a second.
+  The four beats carry two visually distinct key poses - the model repeated itself on the "left"
+  and "right" clause at this seed, so beats 1 and 3 nearly coincide as do beats 2 and 4 - which
+  reads as a two-pose run held for a beat each, the honest limit of what this pass gave.
 - Status reads survive the swap: a poisoned or frozen plate is washed in its own silhouette
   (`tintFor` stamps the colour through the plate's alpha), the venom haze and bubbles are painted
   over whatever the foe is drawn as, and the hit flash re-draws the plate through `lighter`.

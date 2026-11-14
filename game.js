@@ -229,7 +229,22 @@ function themeOf(cp) {
 const SPRITES = {
   // cx: the body line inside the cropped plate, in plate pixels, measured from
   // the crop's left edge; k: plate height as a multiple of the body radius
-  fallen: { src: 'assets/character_goblin_cut_v01.png', w: 776, h: 735, cx: 353, k: 2.95 },
+  fallen: { src: 'assets/character_goblin_cut_v01.png', w: 776, h: 735, cx: 353, k: 2.95,
+    // the goblin's run: four beats of the same plate, the same seed and every
+    // clause of its brief held word for word, with only its posture clause
+    // swapped for a stride (contact, gather, opposite contact, gather), so the
+    // creature keeps its look all the way through the cycle. All four are cut
+    // through ONE box, the union of their bounds, so the cycle shares one body
+    // line and one ground line and switching a beat cannot shuffle the figure.
+    // stride is the ground one beat covers, in body radii: the cycle is picked
+    // by the distance a foe has travelled, so its feet pace its speed instead
+    // of sliding over the stone
+    run: { stride: 1.15, w: 782, h: 760, cx: 379, k: 2.95, src: [
+      'assets/character_goblin_walkA_v01.png',
+      'assets/character_goblin_walkB_v01.png',
+      'assets/character_goblin_walkC_v01.png',
+      'assets/character_goblin_walkD_v01.png',
+    ] } },
   zombie: { src: 'assets/character_zombie_cut_v01.png', w: 605, h: 906, cx: 274, k: 2.75 },
   // the first level's overlord and the last one: the rest of the overlords keep
   // their painted silhouettes, since the set has no plate for them yet
@@ -237,6 +252,10 @@ const SPRITES = {
   lich: { src: 'assets/character_adrith_cut_v01.png', w: 815, h: 1380, cx: 443, k: 3.15 },
 };
 const ART_IMG = {};
+// how long a foe stays on a running beat after its last step: a shade longer
+// than a frame or two, so a foe that stops settles to its standing pose
+// instead of flickering between a beat and that pose
+const RUN_HOLD = 0.14;
 function artLoad(src) {
   if (!src || typeof Image !== 'function') return null;   // no canvas image here
   let im = ART_IMG[src];
@@ -253,6 +272,19 @@ function spriteOf(m) {
   const key = m.type === 'boss' ? (m.lich ? 'lich' : 'sig' + (m.sig || 0)) : m.type;
   const s = SPRITES[key];
   if (!s) return null;
+  const run = s.run;
+  // a foe that is travelling wears a beat of its run cycle: the beat is the one
+  // its own covered ground puts it on, so its feet pace its speed and never
+  // slide over the stone, and a foe that walks further strides churns faster.
+  // A beat that has not arrived is drawn as the standing plate rather than as
+  // nothing, so the cycle cannot blink mid-fetch
+  if (run && m.stepping > 0) {
+    const n = run.src.length;
+    const i = ((Math.floor(m.pace / (m.r * run.stride)) % n) + n) % n;
+    const src = run.src[i];
+    const im = artReady(artLoad(src));
+    if (im) return { im, s: { src, w: run.w, h: run.h, cx: run.cx, k: run.k } };
+  }
   const im = artReady(artLoad(s.src));
   return im ? { im, s } : null;
 }
@@ -354,7 +386,13 @@ function drawBackdrop() {
 // boot the fetches for every plate the set holds, so the first frame of a
 // fight never waits on one; a plate that has not arrived is drawn as its blob
 (function () {
-  for (const k in SPRITES) artLoad(SPRITES[k].src);
+  for (const k in SPRITES) {
+    const s = SPRITES[k];
+    artLoad(s.src);
+    // a whole cycle is fetched at once, so the first stride of a fight never
+    // waits on a beat mid-run
+    if (s.run) for (const src of s.run.src) artLoad(src);
+  }
   for (const t of THEMES) if (t.bd) artLoad(t.bd);
   if (FINAL_THEME.bd) artLoad(FINAL_THEME.bd);
 })();
@@ -633,6 +671,9 @@ function spawnMonster(type, x, y, elite, cp) {
     xp: d.xp, color: elite?'#d8a23c':d.color, touchCd: d.touchCd, cd: rand(0.4,1.2),
     ai: d.ai, range: d.range || (d.r + 27), elite: !!elite, angle: rand(0,TAU),
     hitFlash: 0, slow: 0, wob: rand(0,TAU), stun: 0, kx: 0, ky: 0,
+    // the run cycle's beat: the ground the foe has actually covered, and how
+    // long it has been on its feet (see spriteOf for the pick)
+    pace: 0, stepping: 0, px: x, py: y, // where it stood last frame, so a step can be measured
     // the dose a rogue's arrowhead leaves behind (issue #73): secs left,
     // the countdown to the next tick, and what the dose still has to give
     poison: 0, poisonClock: 1, poisonLeft: 0, poisonTicks: 0,
@@ -752,6 +793,7 @@ function spawnBoss(x, y, big, warp) {
     angle: 0, hitFlash: 0, slow: 0, wob: 0, dashCd: 2.5, summonCd: 5, stun: 0, kx: 0, ky: 0,
     poison: 0, poisonClock: 1, poisonLeft: 0, poisonTicks: 0,
     spawnT: warp ? BOSS_WARP : 0, spawnRing: 0, // mid-warp: not there yet (issue #77)
+    pace: 0, stepping: 0, px: x, py: y, // no run set for an overlord yet, but the beat is still paced for it
     act: false, aggro: 460, // waits in the boss room until the player steps near
     lich: BOSSES[bi].lich === true, graveCd: 6.5, graspCd: 4.2, // the lich king's hands (issue #69)
     homeX: x, homeY: y, leash: 0, leashT: 0, // his throne: bosses leash like any foe (issue #46)
@@ -1597,6 +1639,22 @@ function update(dt) {
         if (Math.hypot(P.x - m.x, P.y - m.y) < m.range + 12) hurtPlayer(m.dmg, m.x, m.y);
       }
     }
+  }
+
+  // the run cycle is paced by the ground a foe actually covered this frame, so
+  // every way a foe travels puts its feet on a beat: chasing, backing off,
+  // walking leashed home. A foe held by a door, on its range, asleep or
+  // warping out of a portal covers nothing and settles to its standing pose.
+  // This reads the foes rather than riding on the step above, because a step
+  // that is interrupted mid-iteration still moved the foe.
+  for (const m of game.monsters) {
+    if (m.dead) continue;
+    const tr = Math.hypot(m.x - m.px, m.y - m.py);
+    m.px = m.x; m.py = m.y;
+    // a foe folding out of a portal is not on its feet yet, and an ordinary
+    // foe simply has no warp to sit on
+    if (tr > 0.4 && !(m.spawnT > 0)) { m.pace += tr; m.stepping = RUN_HOLD; }
+    else m.stepping = Math.max(0, m.stepping - dt);
   }
 
   game.monsters = game.monsters.filter(m => !m.dead);
