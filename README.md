@@ -2,8 +2,11 @@
 
 Dark hack-and-slash dungeon crawler reimagining the moods of **Diablo III**,
 written from scratch in pure **HTML / CSS / JavaScript** — a single canvas
-engine, zero dependencies, zero external assets (all sound effects are
-generated procedurally with WebAudio). UI is fully in English.
+engine, zero dependencies. The only files it reads are the painted plates of
+the art set in `assets/`, and even those are optional: a plate that has not arrived
+falls its figure back to the painted silhouette, so the game still runs with an
+empty `assets/`. Every sound effect is still generated procedurally with
+WebAudio, and the UI is fully in English.
 
 ## How to play
 
@@ -42,9 +45,10 @@ still holds, the pack turned back into gold.
 |---|---|
 | **Right mouse button / click** | move to the clicked point; **hold it down** and the character keeps following the cursor, stopping the instant you release |
 | **Left mouse button** (hold) | attack with whatever is in your hand — an axe or a sword swings, a bow fires an arrow straight at the cursor, a staff looses a magic missile that curves only toward foes in front of it |
+| **Space** | a second attack key — a swung weapon keeps its auto-aim; with the cursor **not** held down a bow or a staff shot flies the way you are heading, so a running archer looses down his own line of travel rather than down the cursor (issue #78) |
 | **WASD / arrows** | movement (same as click-to-move) |
 | **Moving while you shoot** | walking never steers your shots: a bow or a staff keeps firing along the cursor line even as you strafe, so an archer running south looses his arrows where he is pointing rather than at his own heels (issue #67) |
-| **1** | healing potion — unlimited uses, one charge per 60 s (fresh at each checkpoint) |
+| **1** | healing potion — unlimited uses, one charge per 30 s (fresh at each checkpoint) |
 | **2** | your class' **opener** — the skillbar shows its own plate and names it; cheap on Mana, ready again in seconds |
 | **3** | your class' **finisher** — the skillbar shows its own plate and names it; way stronger, way more Mana, a long cooldown |
 | **C** | character sheet: attributes, equipment, inventory |
@@ -56,6 +60,10 @@ Clicking an **icon of a skill with the left mouse button** casts it directly —
 potion, your class' opener, its finisher or the attack of whatever you are holding — handy when you
 don't want to reach the keyboard. Aim is the cursor's at all times: only a hero
 the mouse has never been pointed for aims down his own walk (issue #67).
+
+The **L** key opens the developer menu — god mode, insta kill, an instant level, one
+spawned item per tier, a merchant at hand, the whole map revealed, a jump to the next level
+— a testing harness that no clean run has to touch.
 
 ## The loop
 
@@ -121,9 +129,13 @@ answers to your hands, then a victory window comes up over the hall, painted wit
 the prize — a draped marble figure on a plinth, laurel in her raised hand, the
 king's cold crown at her feet — above a tally of the **fame** you cleared and the
 **glory** you hoarded. Two buttons sit at its foot: **Return to the Menu** takes
-you back to the title screen, **Continue the Journey** closes the window, stands
-the hero up off the throne and hands control back to him; the seat has cooled
-meanwhile, so the prize cannot be claimed twice.
+you back to the title screen, **Continue the Journey** carries the hero past the
+throne into the **endless gauntlet** (issue #79): the window closes, he stands up off
+the cooled seat so the prize cannot be claimed twice, and stage fourteen begins - the
+halls keep regenerating under the final theme, the clamped overlord table hands the
+same last man back every time, and every one of those stages carries its own portal,
+so there is no last stage. The button says so itself: the caption **endless gauntlet**
+rides on it, under its own label.
 
 ## Systems
 
@@ -140,7 +152,8 @@ meanwhile, so the prize cannot be claimed twice.
   so a Barbarian cannot spin with a staff and a Mage cannot lob lightning through
   a bowstring — pressing the wrong one spends nothing and says so. Same shape
   every time: the opener is a solid single blow well past a plain attack (12-14
-  Mana, 4 s), the finisher is way stronger over an area (40-45 Mana, 11-13 s).
+  Mana, 2 s), the finisher is way stronger over an area (40-45 Mana, 5.5-6.5 s) —
+  issue #81 halved the whole skillbar, the potion included, in one pass.
   **Barbarian** — **Cleave** (a wider, longer swing, 1.7x) and **Earthquake** (hurl
   yourself at the crowd, 2.4x and a stun that holds). **Warrior** — **Hero Strike**
   (one planted blow, 2.1x, that shoves the foe back; with nothing in reach it
@@ -181,8 +194,9 @@ meanwhile, so the prize cannot be claimed twice.
   of that carpet and comes down only when his **whole model** fits inside the torch
   around you. He has three hands of his own: a **grave chorus** that raises three of
   the fallen at his feet, a **cold grasp** that pulses frost out of his ring and
-  leaves the hero **chilled** (his legs go at well under half speed for a few
-  seconds), and the overlord's charge. His death wakes the **throne** rather than a
+  leaves the hero **chilled** - his legs go at 0.58 of their usual speed for just over
+  three seconds and thaw on their own - and the overlord's charge. His death wakes the
+  **throne** rather than a
   gate: the seat burns cold and words itself, and touching it seats the hero there,
   which ends the run.
 - **Attributes**: Strength, Dexterity, Intelligence, Vitality — +3 points per
@@ -191,16 +205,23 @@ meanwhile, so the prize cannot be claimed twice.
   damage (an axe wants Strength, a sword Dexterity, a staff Intelligence —
   see **Weapon types** below), dexterity feeds crits, intelligence feeds max
   Mana - and, since issue #66, how fast that Mana fills back on its own - while
-  vitality feeds HP and very slow natural HP regen from level 5.
+  vitality feeds HP (issue #82 made life answer to it the way mana answers to
+  Intelligence: the pool is 60 + 14 per level past the first + 6 per Vitality plus
+  whatever the gear carries, so a fresh Barbarian sits at 126, a Warrior at 144, a
+  Rogue at 114 and a Mage at 96) and very slow natural HP regen from level 5.
 - **Mana** (blue): the size of the pool AND the pace it fills back at both belong to
   **Intelligence**, so the classes do not even agree on the same budget. A **Barbarian**
-  (Intelligence 6) holds 68 and gets roughly **1.3 a second**; a **Mage** (14) holds
-  116 and gets roughly **2.8 a second** - a third of what the old flat rate handed
+  (Intelligence 6) holds **40** and gets roughly **1.3 a second**; a **Mage** (14) holds
+  **104** and gets roughly **2.8 a second** - a third of what the old flat rate handed
   everyone, so the arcane is something you spend with care rather than a drum that
-  never stops. The character sheet prints your own rate next to the pool. Combat
+  never stops. The pool itself is 56 plus 8 per point of Intelligence past 8, so the
+  plate-and-axe pair sits at exactly one 40-mana finisher while the Mage holds a
+  little over two; the character sheet prints your own rate next to the pool. Combat
   swings feed a little back and blue Mana globes feed more. A **staff** shot drinks
   5 mana: with less than that left the staff stays silent and the toast says your
-  mana is too low.
+  mana is too low. A **fresh** run already starts with the pool full (issue #75), so
+  the first finisher is ready on the first frame; a continued journey keeps whatever
+  its save had left in it.
 - **Inventory**: 20-slot backpack. A full backpack **refuses new loot** —
   the item waits on the floor and you are told so,
   but you keep control too: each sheet row has a **discard ✕** (destroys the
@@ -223,7 +244,7 @@ meanwhile, so the prize cannot be claimed twice.
   Goblin Archers keeping distance), Zombies shamble in slow but heavy,
   Skeletons scuttle fast as glass cannons, Orc Brutes hit hard and
   sluggish, and Orc Shamans cast from afar — each checkpoint deepens
-  the mix; a **Goblin Warboss** guards the throne room. Elites wear
+  the mix; a **Goblin Warboss** guards the first stage's gate. Elites wear
   gold nameplates.
 - **Items**: common/magic/rare/legendary gear for weapon/helm/armour with
   affixes — common carries only its base stat (damage + attribute scaling
@@ -280,14 +301,24 @@ meanwhile, so the prize cannot be claimed twice.
 | `style.css` | gothic UI: panels, cooldown conic rings, rarity colors, English labels |
 | `game.js` | the whole engine: dungeon gen, lighting, AI, combat, progression, SFX |
 | `ART_BIBLE.md` | visual direction: palette, material and silhouette rules every asset must follow |
-| `prompts.txt` | the five image-generator prompts that will paint the art swap (location, warrior, goblin, zombie, first-level boss) |
+| `prompts.txt` | the eight image-generator prompts the art set was painted from (blocks 1-8 have all landed; the goblin's four run beats reuse block 3's brief at its own seed) |
+| `assets/` | the generated art set the game reads: two backdrop plates, four cut character plates, four goblin run-cycle beats, eight skill-icon plates |
+| `assets/MANIFEST.md` | one row per file in `assets/` per ART_BIBLE 12.3: provenance, seed, workflow, approval status |
+| `assets/workflows/` | the Comfy graphs behind the set, run against the local ComfyUI server |
+| `assets/tools/chromakey.py` | the colour-key pass that cuts the plates (`figure` framing for characters, `panel` for icons) |
+| `assets/oldruins.blend` | the Blender scene the Old Ruins backdrop was rendered from |
 
 ## Notes
 
 - Rendering: Canvas 2D with a pseudo-3D wall pass, darkness layer with
   torch/portal light holes and additive warm haloes. The player is a
   hand-drawn armored warrior — cuirass, pauldrons, greaved legs and a
-  sword arm — with a walk cycle (limbs counter-swing, boots lift).
+  sword arm — with a walk cycle (limbs counter-swing, boots lift). The **foes**
+  now wear the art set (issue #83): the Goblin, the Zombie, Goruk and the Lich King
+  draw from their cut plates, the Goblin's four run beats swap by the ground he has
+  covered at 1.6 body radii a beat and ride that stride - the body dips 0.1 of its
+  radius as a foot plants and leans 0.05 into its travel - the two backdrops lay
+  over the stone as a multiply pass and the eight skill plates ride the two slots.
 - Deterministic dungeon layouts per checkpoint (seeded hash), monster waves
   vary per run.
 - Item affixes name themselves by strength: each bonus kind has three affix
