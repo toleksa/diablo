@@ -230,24 +230,29 @@ const SPRITES = {
   // cx: the body line inside the cropped plate, in plate pixels, measured from
   // the crop's left edge; k: plate height as a multiple of the body radius
   fallen: { src: 'assets/character_goblin_cut_v01.png', w: 776, h: 735, cx: 353, k: 2.95,
-    // the goblin's run: four beats of the same plate, the same seed and every
-    // clause of its brief held word for word, with only its posture clause
-    // swapped for a stride (contact, gather, opposite contact, gather), so the
-    // creature keeps its look all the way through the cycle. All four are cut
-    // through ONE box, the union of their bounds, so the cycle shares one body
-    // line and one ground line and switching a beat cannot shuffle the figure.
-    // stride is the ground one beat covers, in body radii: the cycle is picked
-    // by the distance a foe has travelled, so its feet pace its speed instead
-    // of sliding over the stone. dip and lean are the body language the plates
-    // need on top of the four poses: a 38 px figure whose only change is a
-    // limb flickers instead of walking, so the body presses down as a foot
-    // plants, rides up as the trailing leg swings through, and leans into the
-    // direction of travel (see spriteOf and paintSprite for where they apply)
-    run: { stride: 1.6, dip: 0.16, lean: 0.06, w: 782, h: 760, cx: 379, k: 2.95, src: [
-      'assets/character_goblin_walkA_v01.png',
-      'assets/character_goblin_walkB_v01.png',
-      'assets/character_goblin_walkC_v01.png',
-      'assets/character_goblin_walkD_v01.png',
+    // the goblin's run: four beats of the plate above, same seed and same brief
+    // with only its posture clause rewritten, so the creature keeps its look
+    // through the cycle. The clause states the space each leg takes up - one
+    // foot planted flat under the shoulder, the other stretched out with only
+    // its toes down, then the upright moment with one leg lifted and swung
+    // forward - because naming left and right only made the model repeat
+    // itself: that first pass gave a cycle whose beats 1 and 3 and 2 and 4
+    // nearly coincided, which read as one image bobbing. These four silhouettes
+    // differ by 43 to 49 percent of their area from one beat to the next, so
+    // the legs really do march. All four are cut through ONE box, the union of
+    // their bounds, so the cycle shares one body line (cx) and one ground line
+    // and switching a beat cannot shuffle the figure. stride is the ground one
+    // beat covers, in body radii: the cycle is picked by the distance a foe has
+    // travelled, so its feet pace its speed instead of sliding over the stone.
+    // dip and lean are the body language on top of the four poses: the body
+    // presses down as a foot plants and rides up as the lifted leg swings
+    // through, and the figure leans into its travel (see spriteOf and paintSprite
+    // for where they apply)
+    run: { stride: 1.6, dip: 0.1, lean: 0.05, w: 628, h: 860, cx: 337, k: 2.95, src: [
+      'assets/character_goblin_walkA_v02.png',
+      'assets/character_goblin_walkB_v02.png',
+      'assets/character_goblin_walkC_v02.png',
+      'assets/character_goblin_walkD_v02.png',
     ] } },
   zombie: { src: 'assets/character_zombie_cut_v01.png', w: 605, h: 906, cx: 274, k: 2.75 },
   // the first level's overlord and the last one: the rest of the overlords keep

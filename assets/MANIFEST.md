@@ -23,10 +23,10 @@ The Comfy graphs live in `assets/workflows/` and run against the local ComfyUI s
 | CHR-ZOM-001C | `character_zombie_cut_v01.png` | character | The zombie plate above, cut and cropped the same way | same graph re-rendered on a chroma plate (`assets/workflows/chroma_zombie_v01.json`, seed 204) and keyed by `assets/tools/chromakey.py` | `assets/workflows/chroma_zombie_v01.json` | 204 | `character_zombie_shambler_v01.png` | 605x906 | review | the plate the arena draws for `MTYPES.zombie` |
 | CHR-GOR-001C | `character_goruk_cut_v01.png` | character | The Goruk plate above, cut and cropped the same way | same graph re-rendered on a chroma plate (`assets/workflows/chroma_goruk_v01.json`, seed 305) and keyed by `assets/tools/chromakey.py` | `assets/workflows/chroma_goruk_v01.json` | 305 | `character_goruk_warboss_v01.png` | 885x1245 | review | the plate the arena draws for `BOSSES[0]`, `SPRITES.sig0` |
 | CHR-ADR-001C | `character_adrith_cut_v01.png` | character | The Adrith plate above, cut and cropped the same way | same graph re-rendered on a chroma plate (`assets/workflows/chroma_adrith_v01.json`, seed 507) and keyed by `assets/tools/chromakey.py` | `assets/workflows/chroma_adrith_v01.json` | 507 | `character_adrith_lichking_v01.png` | 815x1380 | review | the plate the arena draws for the last overlord, `SPRITES.lich` |
-| CHR-GOB-001W1 | `character_goblin_walkA_v01.png` | character | The goblin's run, beat 1 of 4 (contact): the same seed and brief with only its posture clause swapped for a stride, left leg reaching forward and the right arm swung back for balance | same graph re-run on a chroma ground at the same seed with the posture clause swapped (`assets/workflows/chroma_goblin_walkA_v01.json`) and keyed by `assets/tools/chromakey.py figure` with the four beats cut through ONE shared box | `assets/workflows/chroma_goblin_walkA_v01.json` | 103 | `character_goblin_cut_v01.png` (the same creature, the same seed) | 782x760 | review | beat 1 of the run cycle `SPRITES.fallen.run` in `game.js` picks by the ground a Goblin has covered |
-| CHR-GOB-001W2 | `character_goblin_walkB_v01.png` | character | The goblin's run, beat 2 of 4 (gather): the left leg planted under the body and the right knee lifted high behind it | same pass as above, `assets/workflows/chroma_goblin_walkB_v01.json` | `assets/workflows/chroma_goblin_walkB_v01.json` | 103 | as above | 782x760 | review | beat 2 of `SPRITES.fallen.run` |
-| CHR-GOB-001W3 | `character_goblin_walkC_v01.png` | character | The goblin's run, beat 3 of 4 (opposite contact): right leg reaching forward and the left arm swung back for balance | same pass as above, `assets/workflows/chroma_goblin_walkC_v01.json` | `assets/workflows/chroma_goblin_walkC_v01.json` | 103 | as above | 782x760 | review | beat 3 of `SPRITES.fallen.run` |
-| CHR-GOB-001W4 | `character_goblin_walkD_v01.png` | character | The goblin's run, beat 4 of 4 (opposite gather): right leg planted and the left knee lifted high behind it | same pass as above, `assets/workflows/chroma_goblin_walkD_v01.json` | `assets/workflows/chroma_goblin_walkD_v01.json` | 103 | as above | 782x760 | review | beat 4 of `SPRITES.fallen.run` |
+| CHR-GOB-001W2-1 | `character_goblin_walkA_v02.png` | character | The goblin's run, beat 1 of 4 (contact): the leading foot planted flat under the shoulder with that knee bent, the other leg stretched out far behind on its toes, hips low, the arm over the planted leg wound back | the plate's own chroma graph re-run at the same seed with the posture clause restated as the space each leg takes up (`assets/workflows/chroma_goblin_walkA_v02.json`) and keyed by `assets/tools/chromakey.py figure` with all four beats cut through ONE shared box | `assets/workflows/chroma_goblin_walkA_v02.json` | 103 | `character_goblin_cut_v01.png` (the same creature, the same seed) | 628x860 | review | beat 1 of the run cycle `SPRITES.fallen.run` in `game.js` picks by the ground a Goblin has covered |
+| CHR-GOB-001W2-2 | `character_goblin_walkB_v02.png` | character | The goblin's run, beat 2 of 4 (passing): weight tall on one straight supporting leg, the other leg lifted clear and swung forward with the knee bent, legs almost together, chest lifted | same pass as above, `assets/workflows/chroma_goblin_walkB_v02.json` | `assets/workflows/chroma_goblin_walkB_v02.json` | 103 | as above | 628x860 | review | beat 2 of `SPRITES.fallen.run` |
+| CHR-GOB-001W2-3 | `character_goblin_walkC_v02.png` | character | The goblin's run, beat 3 of 4 (opposite contact): the same planted-and-stretched pair with the leading leg on the far side of the body, so the other foot plants | same pass as above, `assets/workflows/chroma_goblin_walkC_v02.json` | `assets/workflows/chroma_goblin_walkC_v02.json` | 103 | as above | 628x860 | review | beat 3 of `SPRITES.fallen.run` |
+| CHR-GOB-001W2-4 | `character_goblin_walkD_v02.png` | character | The goblin's run, beat 4 of 4 (opposite passing): weight tall on the other supporting leg, the first leg lifted and swung forward, the supporting leg on the far side | same pass as above, `assets/workflows/chroma_goblin_walkD_v02.json` | `assets/workflows/chroma_goblin_walkD_v02.json` | 103 | as above | 628x860 | review | beat 4 of `SPRITES.fallen.run` |
 | UI-CLV-003 | `icon_skill_cleave_v03.png` | ui icon | A wide axe sweeping a bone-coloured arc, one object on a square panel with a thin antique gold rim | z-image_turbo Q4_K_M GGUF | `assets/workflows/icon_skill_cleave_v03.json` | 701 | the character set above, for the set's shared anchor | 512x512 (2x of the 256 nominal, for the 56 px slot) | review | the plate `HUD.iconSkill2` / `iconSkill3` wear for `SKILL_ICON.cleave` (issue #70) |
 | UI-QKA-003 | `icon_skill_earthquake_v03.png` | ui icon | A mailed fist landing in a cracked crater with a gold shock star | z-image_turbo Q4_K_M GGUF | `assets/workflows/icon_skill_earthquake_v03.json` | 702 | as above | 512x512 | review | `SKILL_ICON.earthquake` |
 | UI-HRO-003 | `icon_skill_herostrike_v03.png` | ui icon | A heavy hammer planted on an impact star, the foe shoved beyond it | z-image_turbo Q4_K_M GGUF | `assets/workflows/icon_skill_herostrike_v03.json` | 703 | as above | 512x512 | review | `SKILL_ICON.herostrike` |
@@ -53,7 +53,7 @@ The Comfy graphs live in `assets/workflows/` and run against the local ComfyUI s
   `assets/tools/chromakey.py figure` takes a fifth element in a job, one box shared by a whole
   animation, because frames cropped to their own bounds land a couple of pixels apart and that
   shuffles visibly the moment the game switches a beat. One shared box keeps one body line
-  (`cx: 379`) and one ground line for the whole cycle, which is what lets the beats be swapped
+  (`cx: 337`) and one ground line for the whole cycle, which is what lets the beats be swapped
   without the figure sliding. Cutting the same chroma output without that box reproduces the
   per-frame bounds the first pass reported, and the four standing plates are reproduced
   byte for byte by the tool's own no-box path.
@@ -71,17 +71,28 @@ The Comfy graphs live in `assets/workflows/` and run against the local ComfyUI s
   or warping out of a portal wears the standing plate, and a beat that has not arrived is drawn as
   the standing plate rather than as nothing, so the cycle cannot blink mid-fetch. The stride is
   1.6 body radii per beat, which at the Goblin's own speed 150 gives about seven beats a second.
-  The four beats carry two visually distinct key poses - the model repeated itself on the "left"
-  and "right" clause at this seed, so beats 1 and 3 nearly coincide as do beats 2 and 4 - which
-  reads as a two-pose run held for a beat each.
-- On top of the four poses the body rides its stride, and that is what makes the walk legible: it
-  presses down as a foot plants and lifts as the trailing leg swings through, one down-and-up across
-  every two beats (the standard two-beat bounce of a four-frame run), and it leans about 3.5 degrees
-  into its travel, about its feet, with the mirrored plate leaning the other way round. Four poses
-  alone change only a limb on a 38 px figure, which shimmers rather than walks; the first cut of
-  this cycle shipped exactly that, which is why it looked like one image sliding over the floor.
-  The dip is `cos(PI * (p - 0.5))` in strides, so a contact beat carries the low point and a gather
-  beat the high one, and it is fed to the same `bob` the venom haze and the hit flash ride.
+  One beat to the next changes 43 to 49 percent of the silhouette's area (the two opposite pairs
+  change 24 to 29 percent), so the legs really do march; the box the four share is 628x860 and the
+  body line `cx: 337` is the plate's own midline, kept for all four so no beat switch can shuffle
+  the figure.
+- On top of the four poses the body rides its stride, and that is what makes the walk legible at
+  38 px: it presses down as a foot plants and lifts as the trailing leg swings through, one down-
+  and-up across every two beats (the standard two-beat bounce of a four-frame run), and it leans
+  about 3 degrees into its travel, about its feet, with the mirrored plate leaning the other way
+  round. The dip is `cos(PI * (p - 0.5))` in strides, so a contact beat carries the low point and
+  a passing beat the high one, and it is fed to the same `bob` the venom haze and the hit flash
+  ride, so those reads sit on the dipped body. A cycle of poses alone was tried first and is not
+  enough: poses that change only a limb on a figure this small shimmer instead of walking.
+- The run cycle took two passes and only the shipped one is in the repo, the same way the icon
+  set kept only its third pass. The first pass swapped only the posture clause of the plate's
+  brief and named which limb led, "left leg reaching forward", "right knee lifted behind" - at
+  this seed that wording made the model repeat itself: beats 1 and 3 and beats 2 and 4 landed
+  within 10 percent of each other's area and the cycle read as one image bobbing along the floor,
+  which is what it looked like in game. The shipped pass keeps the seed, the brief and the camera
+  and restates the pose as the space a leg takes up - one foot planted flat under the shoulder with
+  that knee bent, the other stretched out behind on its toes, hips low, then the upright moment
+  with the weight tall on one straight leg and the other lifted and swung forward with the knee
+  bent - and states the far/near side rather than left/right, which the model does act on.
 - Status reads survive the swap: a poisoned or frozen plate is washed in its own silhouette
   (`tintFor` stamps the colour through the plate's alpha), the venom haze and bubbles are painted
   over whatever the foe is drawn as, and the hit flash re-draws the plate through `lighter`.
